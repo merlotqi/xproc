@@ -1,0 +1,2 @@
+add_executable(xproc_ping_pong ping_pong.cpp)
+target_link_libraries(xproc_ping_pong PRIVATE xproc)

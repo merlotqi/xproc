@@ -73,51 +73,45 @@
 namespace xproc {
 namespace platform {
 
-struct platform_info
-{
-    static constexpr const char *os = XPROC_OS_NAME;
+struct platform_info {
+  static constexpr const char *os = XPROC_OS_NAME;
 
-    static constexpr bool is_linux()
-    {
+  static constexpr bool is_linux() {
 #ifdef XPROC_PLATFORM_LINUX
-        return true;
+    return true;
 #else
-        return false;
+    return false;
 #endif
-    }
+  }
 
-    static constexpr bool is_windows()
-    {
+  static constexpr bool is_windows() {
 #ifdef XPROC_PLATFORM_WINDOWS
-        return true;
+    return true;
 #else
-        return false;
+    return false;
 #endif
-    }
+  }
 };
 
-struct arch_info
-{
-    static constexpr const char *name = XPROC_ARCH_NAME;
+struct arch_info {
+  static constexpr const char *name = XPROC_ARCH_NAME;
 
-    static constexpr bool is_x86_64()
-    {
+  static constexpr bool is_x86_64() {
 #ifdef XPROC_ARCH_X86_64
-        return true;
+    return true;
 #else
-        return false;
+    return false;
 #endif
-    }
+  }
 
-    static constexpr bool is_arm64()
-    {
+  static constexpr bool is_arm64() {
 #ifdef XPROC_ARCH_ARM64
-        return true;
+    return true;
 #else
-        return false;
+    return false;
 #endif
-    }
+  }
 };
 
-}// namespace platform
-}// namespace xproc
+}  // namespace platform
+}  // namespace xproc

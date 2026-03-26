@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+if(@XPROC_EXPORT_WITH_NLOHMANN_JSON@)
+  find_dependency(nlohmann_json CONFIG)
+endif()
+if(@XPROC_EXPORT_WITH_PROTOBUF@)
+  find_dependency(Protobuf)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/xprocTargets.cmake")
