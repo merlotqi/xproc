@@ -1,32 +1,46 @@
-add_executable(xproc_ringbuffer_tests ringbuffer_spsc_test.cpp)
-target_link_libraries(xproc_ringbuffer_tests PRIVATE xproc)
-add_test(NAME xproc_ringbuffer_tests COMMAND xproc_ringbuffer_tests)
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG v1.14.0
+)
+set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+include(GoogleTest)
 
-add_executable(xproc_layout_validate_tests layout_validate_test.cpp)
-target_link_libraries(xproc_layout_validate_tests PRIVATE xproc)
-add_test(NAME xproc_layout_validate_tests COMMAND xproc_layout_validate_tests)
+# Register a test executable that links gtest_main and discovers individual TEST() cases.
+function(xproc_gtest_executable name)
+    add_executable(${name} ${ARGN})
+    target_link_libraries(${name} PRIVATE xproc GTest::gtest_main)
+    gtest_discover_tests(${name})
+endfunction()
 
-add_executable(xproc_ipc_observer_attach_tests ipc_observer_attach_test.cpp)
-target_link_libraries(xproc_ipc_observer_attach_tests PRIVATE xproc)
-add_test(NAME xproc_ipc_observer_attach_tests COMMAND xproc_ipc_observer_attach_tests)
+# Define all test files
+set(TEST_FILES
+    api_surface_test.cpp
+    ringbuffer_spsc_test.cpp
+    layout_validate_test.cpp
+    ipc_observer_attach_test.cpp
+    ipc_integration_test.cpp
+    protocol_codec_test.cpp
+    ringbuffer_full_ring_test.cpp
+)
+
+# Create test executables using foreach
+foreach(TEST_FILE ${TEST_FILES})
+    # Extract test name from filename (remove .cpp extension)
+    string(REPLACE ".cpp" "" TEST_NAME ${TEST_FILE})
+    string(REPLACE "_" "_" TEST_NAME ${TEST_NAME})
+    xproc_gtest_executable(xproc_${TEST_NAME}_tests ${TEST_FILE})
+endforeach()
 
 if(WIN32)
     add_executable(xproc_win32_wait_shm_tests win32_wait_shm_test.cpp)
-    target_link_libraries(xproc_win32_wait_shm_tests PRIVATE xproc)
-    add_test(NAME xproc_win32_wait_shm_tests COMMAND xproc_win32_wait_shm_tests)
+    target_link_libraries(xproc_win32_wait_shm_tests PRIVATE xproc GTest::gtest)
+    gtest_discover_tests(xproc_win32_wait_shm_tests)
 endif()
-
-add_executable(xproc_ipc_integration_tests ipc_integration_test.cpp)
-target_link_libraries(xproc_ipc_integration_tests PRIVATE xproc)
-add_test(NAME xproc_ipc_integration_tests COMMAND xproc_ipc_integration_tests)
-
-add_executable(xproc_protocol_codec_tests protocol_codec_test.cpp)
-target_link_libraries(xproc_protocol_codec_tests PRIVATE xproc)
-add_test(NAME xproc_protocol_codec_tests COMMAND xproc_protocol_codec_tests)
-
-add_executable(xproc_ringbuffer_full_ring_test ringbuffer_full_ring_test.cpp)
-target_link_libraries(xproc_ringbuffer_full_ring_test PRIVATE xproc)
-add_test(NAME xproc_ringbuffer_full_ring_test COMMAND xproc_ringbuffer_full_ring_test)
 
 if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
     set(_xproc_opt_serde_src optional_serde_test.cpp)
@@ -37,9 +51,16 @@ if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
         set(_xproc_opt_serde_gen ${PROTO_SRCS} ${PROTO_HDRS})
     endif()
     add_executable(xproc_optional_serde_tests ${_xproc_opt_serde_src} ${_xproc_opt_serde_gen})
-    target_link_libraries(xproc_optional_serde_tests PRIVATE xproc)
+    target_link_libraries(xproc_optional_serde_tests PRIVATE xproc GTest::gtest_main)
     if(XPROC_WITH_PROTOBUF)
         target_include_directories(xproc_optional_serde_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     endif()
-    add_test(NAME xproc_optional_serde_tests COMMAND xproc_optional_serde_tests)
+    gtest_discover_tests(xproc_optional_serde_tests)
 endif()
+
+# Create custom target to run all tests
+add_custom_target(xproc_run_tests
+    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running all xproc tests"
+)

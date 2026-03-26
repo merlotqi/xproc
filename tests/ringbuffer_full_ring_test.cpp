@@ -1,8 +1,12 @@
 // Deterministic full-ring test (Linux): pipe byte synchronizes producer entering third reserve.
 
+#include <gtest/gtest.h>
+
 #if !defined(__linux__)
 
-int main() { return 0; }
+TEST(RingbufferFullRing, RequiresLinux) {
+  GTEST_SKIP() << "Linux only";
+}
 
 #else
 
@@ -10,7 +14,6 @@ int main() { return 0; }
 
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
@@ -45,7 +48,7 @@ struct alignas(xproc::shm::shm_control_block) ring_arena {
 
 }  // namespace
 
-int main() {
+TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   constexpr std::uint32_t item = 8;
   constexpr std::uint64_t cap = 32;
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
@@ -68,12 +71,12 @@ int main() {
   w.commit(pos1);
 
   int pipefd[2];
-  assert(pipe(pipefd) == 0);
+  ASSERT_EQ(pipe(pipefd), 0);
 
   std::atomic<bool> third_done{false};
   std::thread producer([&] {
     char sync = 1;
-    assert(write(pipefd[1], &sync, 1) == 1);
+    ASSERT_EQ(write(pipefd[1], &sync, 1), 1);
     std::uint64_t pos2 = 0;
     void *buf2 = w.reserve(item, pos2);
     std::memcpy(buf2, "cccccccc", item);
@@ -82,21 +85,20 @@ int main() {
   });
 
   char sink;
-  assert(read(pipefd[0], &sink, 1) == 1);
+  ASSERT_EQ(read(pipefd[0], &sink, 1), 1);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
-  assert(!third_done.load(std::memory_order_acquire));
+  EXPECT_FALSE(third_done.load(std::memory_order_acquire));
 
-  assert(r.try_read(item, [](void *) {}));
+  EXPECT_TRUE(r.try_read(item, [](void *) {}));
 
   producer.join();
-  assert(third_done.load());
+  EXPECT_TRUE(third_done.load());
 
   close(pipefd[0]);
   close(pipefd[1]);
 
-  assert(r.try_read(item, [](void *p) { assert(std::memcmp(p, "bbbbbbbb", item) == 0); }));
-  assert(r.try_read(item, [](void *p) { assert(std::memcmp(p, "cccccccc", item) == 0); }));
-  return 0;
+  EXPECT_TRUE(r.try_read(item, [](void *p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
+  EXPECT_TRUE(r.try_read(item, [](void *p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
 }
 
 #endif

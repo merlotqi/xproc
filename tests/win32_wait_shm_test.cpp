@@ -1,8 +1,12 @@
 // Windows: WaitOnAddress / WakeByAddress, named file mapping, and cross-process commit_seq (CMake: WIN32 only).
 
+#include <gtest/gtest.h>
+
 #if !defined(_WIN32)
 
-int main() { return 0; }
+TEST(Win32WaitShm, RequiresWindows) {
+  GTEST_SKIP() << "Windows only";
+}
 
 #else
 
@@ -16,7 +20,6 @@ int main() { return 0; }
 #include <windows.h>
 
 #include <atomic>
-#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
@@ -71,7 +74,7 @@ void test_atomic_wait_notify_thread() {
   word.store(1u, std::memory_order_release);
   xproc::sync::atomic_notify_one(&word);
   waiter.join();
-  assert(progressed);
+  EXPECT_TRUE(progressed);
 }
 
 void test_shm_producer_observer_peek() {
@@ -91,16 +94,16 @@ void test_shm_producer_observer_peek() {
     bool ok = false;
     for (int i = 0; i < 5000 && !ok; ++i) {
       ok = obs.peek([&](const void *p, std::uint32_t len) {
-        assert(len == 4u);
+        EXPECT_EQ(len, 4u);
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));
-        assert(v == 0x11223344u);
+        EXPECT_EQ(v, 0x11223344u);
       });
       if (!ok) {
         std::this_thread::sleep_for(std::chrono::microseconds(200));
       }
     }
-    assert(ok);
+    EXPECT_TRUE(ok);
   }
 
   xproc::shm::shm::unlink(path);
@@ -111,7 +114,7 @@ void test_cross_process_commit_seq() {
   xproc::shm::shm::unlink(path);
 
   char exe_path[MAX_PATH];
-  assert(::GetModuleFileNameA(nullptr, exe_path, MAX_PATH) > 0);
+  ASSERT_GT(::GetModuleFileNameA(nullptr, exe_path, MAX_PATH), 0u);
 
   xproc::ipc::transport_options po;
   po.path = path;
@@ -132,17 +135,17 @@ void test_cross_process_commit_seq() {
     cmd_mut.push_back('\0');
 
     const BOOL ok = ::CreateProcessA(exe_path, cmd_mut.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi);
-    assert(ok);
+    ASSERT_TRUE(ok);
     ::CloseHandle(pi.hThread);
 
     ::Sleep(600);
     prod.send_fixed<std::uint32_t>(0xdeadbeefu);
 
-    assert(::WaitForSingleObject(pi.hProcess, 15000) == WAIT_OBJECT_0);
+    ASSERT_EQ(::WaitForSingleObject(pi.hProcess, 15000), WAIT_OBJECT_0);
     DWORD code = 1;
-    assert(::GetExitCodeProcess(pi.hProcess, &code));
+    ASSERT_TRUE(::GetExitCodeProcess(pi.hProcess, &code));
     ::CloseHandle(pi.hProcess);
-    assert(code == 0);
+    EXPECT_EQ(code, 0u);
   }
 
   xproc::shm::shm::unlink(path);
@@ -150,15 +153,16 @@ void test_cross_process_commit_seq() {
 
 }  // namespace
 
+TEST(Win32WaitShm, AtomicWaitNotifyThread) { test_atomic_wait_notify_thread(); }
+TEST(Win32WaitShm, ShmProducerObserverPeek) { test_shm_producer_observer_peek(); }
+TEST(Win32WaitShm, CrossProcessCommitSeq) { test_cross_process_commit_seq(); }
+
 int main(int argc, char **argv) {
   if (argc >= 3 && std::strcmp(argv[1], "--win-ipc-child") == 0) {
     return run_win_ipc_child(argv[2]);
   }
-
-  test_atomic_wait_notify_thread();
-  test_shm_producer_observer_peek();
-  test_cross_process_commit_seq();
-  return 0;
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
 
 #endif

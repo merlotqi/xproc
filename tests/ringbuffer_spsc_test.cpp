@@ -1,9 +1,10 @@
 #include <array>
 #include <atomic>
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <thread>
+
+#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
 
 namespace {
@@ -34,7 +35,7 @@ struct alignas(xproc::shm::shm_control_block) ring_arena {
   std::array<std::uint8_t, N> bytes{};
 };
 
-static void test_fixed_spsc() {
+TEST(RingbufferSpsc, FixedSpsc) {
   constexpr std::uint64_t cap = 4096;
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
@@ -52,7 +53,7 @@ static void test_fixed_spsc() {
   std::thread consumer([&] {
     while (received.load(std::memory_order_relaxed) < n) {
       if (r.try_read(item, [&](void *p) {
-            assert(std::memcmp(p, "0123456789abcdef", item) == 0);
+            EXPECT_EQ(std::memcmp(p, "0123456789abcdef", item), 0);
             received.fetch_add(1, std::memory_order_relaxed);
           })) {
         continue;
@@ -70,10 +71,10 @@ static void test_fixed_spsc() {
   }
 
   consumer.join();
-  assert(received.load() == n);
+  EXPECT_EQ(received.load(), n);
 }
 
-static void test_varlen_spsc_wrap() {
+TEST(RingbufferSpsc, VarlenSpscWrap) {
   constexpr std::uint64_t cap = 128;
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
@@ -102,11 +103,11 @@ static void test_varlen_spsc_wrap() {
   while (msgs < 2) {
     if (rd.try_read([&](void *ptr, std::uint32_t len) {
           if (msgs == 0) {
-            assert(len == strlen_a);
-            assert(std::memcmp(ptr, a, len) == 0);
+            EXPECT_EQ(len, strlen_a);
+            EXPECT_EQ(std::memcmp(ptr, a, len), 0);
           } else {
-            assert(len == strlen_b);
-            assert(std::memcmp(ptr, b, len) == 0);
+            EXPECT_EQ(len, strlen_b);
+            EXPECT_EQ(std::memcmp(ptr, b, len), 0);
           }
           ++msgs;
         })) {
@@ -115,21 +116,5 @@ static void test_varlen_spsc_wrap() {
     std::uint32_t last = hdr->rb_meta.commit_seq.load(std::memory_order_acquire);
     xproc::sync::atomic_wait(&hdr->rb_meta.commit_seq, last);
   }
-  assert(msgs == 2);
-}
-
-int main(int argc, char **argv) {
-  if (argc >= 2 && argv[1][0] >= '0' && argv[1][0] <= '1' && argv[1][1] == '\0') {
-    switch (argv[1][0]) {
-      case '0':
-        test_fixed_spsc();
-        return 0;
-      case '1':
-        test_varlen_spsc_wrap();
-        return 0;
-    }
-  }
-  test_fixed_spsc();
-  test_varlen_spsc_wrap();
-  return 0;
+  EXPECT_EQ(msgs, 2);
 }

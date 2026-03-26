@@ -1,13 +1,11 @@
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <string>
 
+#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
 
-namespace {
-
-void test_observer_peek_then_consumer_drains() {
+TEST(IpcObserverAttach, PeekThenConsumerDrains) {
   const std::string path = "/xproc_ipc_observer_attach_test";
   xproc::shm::shm::unlink(path);
 
@@ -23,17 +21,17 @@ void test_observer_peek_then_consumer_drains() {
     xproc::ipc::ipc_observer obs(opts);
     xproc::ipc::consumer_channel cons(opts);
 
-    assert(obs.attach_count() >= 2u);
+    EXPECT_GE(obs.attach_count(), 2u);
 
     prod.send_fixed<std::uint32_t>(0x99aabbccu);
 
     bool peeked = false;
     while (!peeked) {
       peeked = obs.peek([&](const void *p, std::uint32_t len) {
-        assert(len == sizeof(std::uint32_t));
+        EXPECT_EQ(len, sizeof(std::uint32_t));
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));
-        assert(v == 0x99aabbccu);
+        EXPECT_EQ(v, 0x99aabbccu);
       });
       if (!peeked) {
         const std::uint32_t c = obs.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
@@ -44,10 +42,10 @@ void test_observer_peek_then_consumer_drains() {
     bool consumed = false;
     while (!consumed) {
       consumed = cons.poll([&](void *p, std::uint32_t len) {
-        assert(len == sizeof(std::uint32_t));
+        EXPECT_EQ(len, sizeof(std::uint32_t));
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));
-        assert(v == 0x99aabbccu);
+        EXPECT_EQ(v, 0x99aabbccu);
       });
       if (!consumed) {
         const std::uint32_t c = cons.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
@@ -56,15 +54,8 @@ void test_observer_peek_then_consumer_drains() {
     }
 
     const xproc::ipc::ipc_ring_snapshot snap = obs.ring_snapshot();
-    assert(snap.write_pos >= snap.read_pos);
+    EXPECT_GE(snap.write_pos, snap.read_pos);
   }
 
   xproc::shm::shm::unlink(path);
-}
-
-}  // namespace
-
-int main() {
-  test_observer_peek_then_consumer_drains();
-  return 0;
 }

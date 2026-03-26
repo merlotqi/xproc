@@ -1,0 +1,148 @@
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+#include <cstring>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include <gtest/gtest.h>
+#include <xproc/xproc.hpp>
+
+TEST(ApiSurface, PlatformInfoAndProcessId) {
+  EXPECT_NE(xproc::platform::platform_info::os, nullptr);
+  EXPECT_NE(xproc::platform::arch_info::name, nullptr);
+  EXPECT_GT(xproc::platform::current_process_id(), 0);
+  EXPECT_NE(xproc::platform::platform_info::is_linux(), xproc::platform::platform_info::is_windows());
+}
+
+TEST(ApiSurface, AtomicWaitNotifyOne) {
+  alignas(8) std::atomic<std::uint32_t> word{0u};
+  std::atomic<bool> progressed{false};
+  std::thread waiter([&] {
+    xproc::sync::atomic_wait(&word, 0u);
+    progressed.store(true, std::memory_order_release);
+  });
+  std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  word.store(1u, std::memory_order_release);
+  xproc::sync::atomic_notify_one(&word);
+  waiter.join();
+  EXPECT_TRUE(progressed.load(std::memory_order_acquire));
+}
+
+TEST(ApiSurface, AtomicWaitNotifyAll) {
+  alignas(8) std::atomic<std::uint32_t> word{0u};
+  std::atomic<int> progressed{0};
+  std::thread w1([&] {
+    xproc::sync::atomic_wait(&word, 0u);
+    progressed.fetch_add(1, std::memory_order_release);
+  });
+  std::thread w2([&] {
+    xproc::sync::atomic_wait(&word, 0u);
+    progressed.fetch_add(1, std::memory_order_release);
+  });
+  std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  word.store(1u, std::memory_order_release);
+  xproc::sync::atomic_notify_all(&word);
+  w1.join();
+  w2.join();
+  EXPECT_EQ(progressed.load(std::memory_order_acquire), 2);
+}
+
+TEST(ApiSurface, AtomicBackoffPauseAndReset) {
+  std::atomic<std::uint32_t> v{0u};
+  xproc::sync::atomic_backoff backoff(/*spin_threshold=*/0);
+  backoff.pause(v, 1u);
+  backoff.reset();
+  SUCCEED();
+}
+
+TEST(ApiSurface, ShmOpenModeCreateOpenReadAndErrors) {
+  const std::string path = "/xproc_api_surface_shm_modes";
+  xproc::shm::shm::unlink(path);
+
+  xproc::shm::shm creator;
+  ASSERT_TRUE(creator.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::create));
+  creator.detach();
+
+  xproc::shm::shm opener;
+  ASSERT_TRUE(opener.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::open));
+  opener.detach();
+
+  xproc::shm::shm reader;
+  ASSERT_TRUE(reader.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::read));
+  reader.detach();
+
+  xproc::shm::shm open_create;
+  ASSERT_TRUE(
+      open_create.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::open_create));
+  open_create.detach();
+
+  xproc::shm::shm missing;
+  EXPECT_FALSE(missing.open("/xproc_api_surface_missing", 4096, xproc::shm::shm_open_mode::open));
+  EXPECT_NE(missing.last_os_error(), 0);
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(ApiSurface, IpcRuntimeRunAndStop) {
+  const std::string path = "/xproc_api_surface_runtime";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options opts;
+  opts.path = path;
+  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 16384;
+  opts.type = xproc::ipc::channel_type::fixed;
+  opts.item_size = 4;
+
+  xproc::ipc::producer_channel producer(opts);
+  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::ipc_runtime runtime(consumer);
+
+  std::atomic<bool> got{false};
+  std::thread rt([&] {
+    auto executor = [](auto task) { task(); };
+    runtime.run(executor, [&](const std::uint8_t* data, std::size_t len) {
+      EXPECT_EQ(len, 4u);
+      std::uint32_t v = 0;
+      std::memcpy(&v, data, sizeof(v));
+      EXPECT_EQ(v, 0x12345678u);
+      got.store(true, std::memory_order_release);
+      runtime.stop();
+    });
+  });
+
+  producer.send_fixed<std::uint32_t>(0x12345678u);
+
+  for (int i = 0; i < 100 && !got.load(std::memory_order_acquire); ++i) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  EXPECT_TRUE(got.load(std::memory_order_acquire));
+  runtime.stop();
+  rt.join();
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(ApiSurface, IpcInspectorPolymorphism) {
+  const std::string path = "/xproc_api_surface_inspector";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options opts;
+  opts.path = path;
+  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 8192;
+  opts.type = xproc::ipc::channel_type::fixed;
+  opts.item_size = sizeof(std::uint32_t);
+
+  xproc::ipc::producer_channel producer(opts);
+  xproc::ipc::ipc_observer observer(opts);
+  producer.send_fixed<std::uint32_t>(1u);
+
+  const xproc::ipc::IIpcRingInspector& insp = observer;
+  const xproc::ipc::IIpcAttachCountView& attach = observer;
+  const auto snap = insp.ring_snapshot();
+  EXPECT_GE(snap.attach_count, attach.attach_count());
+  EXPECT_GE(snap.commit_seq, 1u);
+
+  xproc::shm::shm::unlink(path);
+}

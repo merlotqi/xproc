@@ -1,9 +1,9 @@
 #include <atomic>
-#include <cassert>
 #include <cstdint>
 #include <string>
 #include <thread>
 
+#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
 
 #if defined(XPROC_WITH_PROTOBUF)
@@ -13,7 +13,7 @@
 namespace {
 
 #if defined(XPROC_WITH_NLOHMANN_JSON)
-void test_nlohmann_json_roundtrip() {
+TEST(OptionalSerde, NlohmannJsonRoundtrip) {
   const std::string path = "/xproc_optional_json_test";
   xproc::shm::shm::unlink(path);
 
@@ -53,15 +53,15 @@ void test_nlohmann_json_roundtrip() {
   }
 
   consumer.join();
-  assert(received["x"].get<int>() == 42);
-  assert(received["y"].get<std::string>() == "ipc");
+  EXPECT_EQ(received["x"].get<int>(), 42);
+  EXPECT_EQ(received["y"].get<std::string>(), "ipc");
 
   xproc::shm::shm::unlink(path);
 }
 #endif
 
 #if defined(XPROC_WITH_PROTOBUF)
-void test_protobuf_roundtrip() {
+TEST(OptionalSerde, ProtobufRoundtrip) {
   const std::string path = "/xproc_optional_proto_test";
   xproc::shm::shm::unlink(path);
 
@@ -103,21 +103,17 @@ void test_protobuf_roundtrip() {
   }
 
   consumer.join();
-  assert(received.x() == 7);
-  assert(received.y() == -3);
+  EXPECT_EQ(received.x(), 7);
+  EXPECT_EQ(received.y(), -3);
 
   xproc::shm::shm::unlink(path);
 }
 #endif
 
-}  // namespace
-
-int main() {
-#if defined(XPROC_WITH_NLOHMANN_JSON)
-  test_nlohmann_json_roundtrip();
-#endif
-#if defined(XPROC_WITH_PROTOBUF)
-  test_protobuf_roundtrip();
-#endif
-  return 0;
+#if !defined(XPROC_WITH_NLOHMANN_JSON) && !defined(XPROC_WITH_PROTOBUF)
+TEST(OptionalSerde, DisabledByBuildOptions) {
+  GTEST_SKIP() << "Enable XPROC_WITH_NLOHMANN_JSON or XPROC_WITH_PROTOBUF to run optional serde tests.";
 }
+#endif
+
+}  // namespace

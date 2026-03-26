@@ -1,11 +1,12 @@
 #include <atomic>
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
+
+#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
 
 namespace {
@@ -17,7 +18,7 @@ struct always_fail_encode_codec {
   static bool decode(const std::byte *, std::size_t, message_type &) noexcept { return true; }
 };
 
-static void test_codec_exception_on_encode_failure() {
+TEST(ProtocolCodec, CodecExceptionOnEncodeFailure) {
   const std::string path = "/xproc_codec_exc_test";
   xproc::shm::shm::unlink(path);
   xproc::ipc::transport_options opts;
@@ -31,12 +32,12 @@ static void test_codec_exception_on_encode_failure() {
     xproc::ipc::send_encoded<always_fail_encode_codec>(prod, always_fail_encode_codec::message_type{});
   } catch (const xproc::ipc::codec_exception &e) {
     threw = true;
-    assert(e.code() == xproc::ipc::codec_error::encode_failed);
+    EXPECT_EQ(e.code(), xproc::ipc::codec_error::encode_failed);
     const std::error_code ec = e.ec();
-    assert(ec == xproc::ipc::codec_error::encode_failed);
-    assert(std::string(ec.category().name()) == "xproc.codec");
+    EXPECT_EQ(ec, xproc::ipc::codec_error::encode_failed);
+    EXPECT_EQ(std::string(ec.category().name()), "xproc.codec");
   }
-  assert(threw);
+  EXPECT_TRUE(threw);
   xproc::shm::shm::unlink(path);
 }
 
@@ -86,7 +87,7 @@ struct point_codec {
   }
 };
 
-static void test_template_codecs_varlen_shm() {
+TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
   const std::string path = "/xproc_protocol_codec_test";
   xproc::shm::shm::unlink(path);
 
@@ -124,13 +125,13 @@ static void test_template_codecs_varlen_shm() {
   }
 
   consumer.join();
-  assert(received.x == 0x11223344u);
-  assert(received.y == 0x55667788u);
+  EXPECT_EQ(received.x, 0x11223344u);
+  EXPECT_EQ(received.y, 0x55667788u);
 
   xproc::shm::shm::unlink(path);
 }
 
-static void test_span_codec_varlen_typed_channels() {
+TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
   const std::string path = "/xproc_protocol_span_codec_test";
   xproc::shm::shm::unlink(path);
 
@@ -169,13 +170,13 @@ static void test_span_codec_varlen_typed_channels() {
   }
 
   consumer.join();
-  assert(received.size() == sizeof(blob));
-  assert(std::memcmp(received.data(), blob, sizeof(blob)) == 0);
+  EXPECT_EQ(received.size(), sizeof(blob));
+  EXPECT_EQ(std::memcmp(received.data(), blob, sizeof(blob)), 0);
 
   xproc::shm::shm::unlink(path);
 }
 
-static void test_raw_pod_and_bounded_bytes() {
+TEST(ProtocolCodec, RawPodAndBoundedBytes) {
   const std::string path = "/xproc_protocol_pod_test";
   xproc::shm::shm::unlink(path);
   xproc::ipc::transport_options opts;
@@ -207,12 +208,12 @@ static void test_raw_pod_and_bounded_bytes() {
     xproc::ipc::send_encoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(prod, std::uint64_t{0xc0dec0dec0deull});
   }
   th.join();
-  assert(got == 0xc0dec0dec0deull);
+  EXPECT_EQ(got, 0xc0dec0dec0deull);
 
   xproc::shm::shm::unlink(path);
 }
 
-static void test_identity_icodec_varlen() {
+TEST(ProtocolCodec, IdentityIcodecVarlen) {
   const std::string path = "/xproc_protocol_icodec_test";
   xproc::shm::shm::unlink(path);
   xproc::ipc::transport_options opts;
@@ -248,19 +249,10 @@ static void test_identity_icodec_varlen() {
     xproc::ipc::send_encoded(prod, idc, reinterpret_cast<const std::byte *>(msg), std::strlen(msg), scratch);
   }
   th.join();
-  assert(got.size() == std::strlen(msg));
-  assert(std::memcmp(got.data(), msg, got.size()) == 0);
+  EXPECT_EQ(got.size(), std::strlen(msg));
+  EXPECT_EQ(std::memcmp(got.data(), msg, got.size()), 0);
 
   xproc::shm::shm::unlink(path);
 }
 
 }  // namespace
-
-int main() {
-  test_codec_exception_on_encode_failure();
-  test_template_codecs_varlen_shm();
-  test_span_codec_varlen_typed_channels();
-  test_raw_pod_and_bounded_bytes();
-  test_identity_icodec_varlen();
-  return 0;
-}

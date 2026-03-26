@@ -1,15 +1,19 @@
-// Linux-only: shared memory, fork, and futex cross-process behaviour.
+// Linux: shared memory, fork, and futex cross-process behaviour.
+// Other platforms: tests register as skipped.
+
+#include <gtest/gtest.h>
 
 #if !defined(__linux__)
 
-int main() { return 0; }
+TEST(IpcIntegration, RequiresLinux) {
+  GTEST_SKIP() << "Linux only";
+}
 
 #else
 
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
@@ -18,25 +22,18 @@ int main() { return 0; }
 #include <thread>
 #include <xproc/xproc.hpp>
 
-namespace {
-
-void test_fixed_item_size_zero_rejected() {
+TEST(IpcIntegration, FixedItemSizeZeroRejected) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_test_item_zero";
   opts.shm_size = sizeof(xproc::shm::shm_control_block) + 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 0;
-  bool threw = false;
-  try {
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::producer);
-    (void)ch;
-  } catch (const std::invalid_argument &) {
-    threw = true;
-  }
-  assert(threw);
+  EXPECT_THROW(
+      (void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::producer),
+      std::invalid_argument);
 }
 
-void test_observer_endpoint_rejected() {
+TEST(IpcIntegration, ObserverEndpointRejected) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_test_observer";
   opts.shm_size = sizeof(xproc::shm::shm_control_block) + 1024;
@@ -65,17 +62,16 @@ void test_observer_endpoint_rejected() {
     (void)ep;
   } catch (const std::logic_error &e) {
     threw = true;
-    const std::string w(e.what());
-    assert(w.find("ipc_observer") != std::string::npos);
+    EXPECT_NE(std::string(e.what()).find("ipc_observer"), std::string::npos);
   }
-  assert(threw);
+  EXPECT_TRUE(threw);
 }
 
-void test_consumer_layout_error_includes_reason() {
+TEST(IpcIntegration, ConsumerLayoutErrorIncludesReason) {
   const char *path = "/xproc_test_layout_msg";
   xproc::shm::shm::unlink(path);
   xproc::shm::shm sm;
-  assert(sm.open(path, sizeof(xproc::shm::shm_control_block) + 512, xproc::shm::shm_open_mode::open_create));
+  ASSERT_TRUE(sm.open(path, sizeof(xproc::shm::shm_control_block) + 512, xproc::shm::shm_open_mode::open_create));
   sm.detach();
 
   xproc::ipc::transport_options opts;
@@ -85,51 +81,41 @@ void test_consumer_layout_error_includes_reason() {
   opts.item_size = 4;
   opts.create_if_missing = false;
 
-  bool threw = false;
   try {
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
-    (void)ch;
+    (void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::consumer);
+    FAIL() << "expected layout_exception";
   } catch (const xproc::shm::layout_exception &e) {
-    threw = true;
-    assert(e.code() == xproc::shm::layout_validate_error::bad_magic);
-    const std::string w(e.what());
-    assert(w.find("bad magic") != std::string::npos);
+    EXPECT_EQ(e.code(), xproc::shm::layout_validate_error::bad_magic);
+    EXPECT_NE(std::string(e.what()).find("bad magic"), std::string::npos);
   }
-  assert(threw);
   xproc::shm::shm::unlink(path);
 }
 
-void test_shm_size_rejected() {
+TEST(IpcIntegration, ShmSizeRejected) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_test_shm_too_small";
   opts.shm_size = 1;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 4;
-  bool threw = false;
-  try {
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::producer);
-    (void)ch;
-  } catch (const std::invalid_argument &) {
-    threw = true;
-  }
-  assert(threw);
+  EXPECT_THROW((void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::producer),
+               std::invalid_argument);
 }
 
-void test_validate_layout_mismatch() {
+TEST(IpcIntegration, ValidateLayoutMismatch) {
   xproc::shm::shm_control_block h{};
   using lm = xproc::shm::shm_layout_manager;
   h.magic = lm::EXPECTED_MAGIC;
   h.version_major = lm::VERSION_MAJOR;
   h.version_minor = lm::VERSION_MINOR;
   h.header_size = sizeof(xproc::shm::shm_control_block);
-  h.layout_type = 0;  // fixed
+  h.layout_type = 0;
   h.data_capacity = 4096;
   h.data_alignment = 8;
   h.is_ready.store(true, std::memory_order_release);
-  assert(!lm::validate(&h, 100, 1u, 8u));  // consumer expects variable (1)
+  EXPECT_FALSE(lm::validate(&h, 100, 1u, 8u));
 }
 
-void test_role_send_poll() {
+TEST(IpcIntegration, RoleSendPoll) {
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + 256;
   xproc::ipc::transport_options o;
   o.path = "/xproc_role_test";
@@ -138,15 +124,11 @@ void test_role_send_poll() {
   o.item_size = 4;
   xproc::shm::shm::unlink(o.path);
   xproc::ipc::ipc_channel prod(o, xproc::ipc::ipc_endpoint::role::producer);
-  bool caught = false;
-  try {
-    prod.poll([](void *, std::uint32_t) {});
-  } catch (const std::logic_error &) {
-    caught = true;
-  }
-  assert(caught);
+  EXPECT_THROW(prod.poll([](void *, std::uint32_t) {}), std::logic_error);
   xproc::shm::shm::unlink(o.path);
 }
+
+namespace {
 
 int cross_process_futex_block_main(const char *shm_path) {
   pid_t pid = fork();
@@ -258,29 +240,18 @@ int cross_process_varlen_main(const char *shm_path) {
 
 }  // namespace
 
-int main(int argc, char **argv) {
-  (void)argc;
-  (void)argv;
-  test_fixed_item_size_zero_rejected();
-  test_observer_endpoint_rejected();
-  test_consumer_layout_error_includes_reason();
-  test_shm_size_rejected();
-  test_validate_layout_mismatch();
-  test_role_send_poll();
-
+TEST(IpcIntegration, CrossProcessFutexBlock) {
   std::string base = "/xproc_ipc_integration_";
   std::string a = base + "futex";
-  std::string b = base + "varlen";
   xproc::shm::shm::unlink(a.c_str());
-  xproc::shm::shm::unlink(b.c_str());
+  EXPECT_EQ(cross_process_futex_block_main(a.c_str()), 0);
+}
 
-  if (cross_process_futex_block_main(a.c_str()) != 0) {
-    return 1;
-  }
-  if (cross_process_varlen_main(b.c_str()) != 0) {
-    return 1;
-  }
-  return 0;
+TEST(IpcIntegration, CrossProcessVarlen) {
+  std::string base = "/xproc_ipc_integration_";
+  std::string b = base + "varlen";
+  xproc::shm::shm::unlink(b.c_str());
+  EXPECT_EQ(cross_process_varlen_main(b.c_str()), 0);
 }
 
 #endif
