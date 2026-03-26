@@ -11,8 +11,8 @@
 #include <xproc/shm/shm.hpp>
 #include <xproc/shm/shm_layout.hpp>
 
-#include "xproc/shm/shm_layout_manager.hpp"
-#include "xproc/shm/shm_open_mode.hpp"
+#include <xproc/shm/shm_layout_manager.hpp>
+#include <xproc/shm/shm_open_mode.hpp>
 
 namespace xproc {
 namespace ipc {

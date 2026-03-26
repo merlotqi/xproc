@@ -32,6 +32,9 @@ static void test_codec_exception_on_encode_failure() {
   } catch (const xproc::ipc::codec_exception &e) {
     threw = true;
     assert(e.code() == xproc::ipc::codec_error::encode_failed);
+    const std::error_code ec = e.ec();
+    assert(ec == xproc::ipc::codec_error::encode_failed);
+    assert(std::string(ec.category().name()) == "xproc.codec");
   }
   assert(threw);
   xproc::shm::shm::unlink(path);

@@ -9,7 +9,7 @@
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
 
-#include "xproc/ipc/ipc_options.hpp"
+#include <xproc/ipc/ipc_options.hpp>
 
 namespace xproc {
 namespace ipc {

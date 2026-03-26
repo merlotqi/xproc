@@ -41,13 +41,33 @@ enum class layout_validate_error {
   capacity_insufficient,
 };
 
-inline const std::error_category& layout_error_category() noexcept {
+inline const std::error_category &layout_error_category() noexcept {
   class layout_error_category_impl final : public std::error_category {
    public:
-    const char* name() const noexcept override { return "xproc.layout"; }
+    const char *name() const noexcept override { return "xproc.layout"; }
     std::string message(int ev) const override {
-      const auto e = static_cast<layout_validate_error>(ev);
-      return shm_layout_manager::layout_validate_cstr(e);
+      switch (static_cast<layout_validate_error>(ev)) {
+        case layout_validate_error::ok:
+          return "ok";
+        case layout_validate_error::not_attached:
+          return "shared memory mapping is not attached";
+        case layout_validate_error::bad_magic:
+          return "bad magic (not an xproc segment or corrupted)";
+        case layout_validate_error::not_ready_timeout:
+          return "control block not ready (timeout waiting for is_ready)";
+        case layout_validate_error::version_mismatch:
+          return "layout version mismatch";
+        case layout_validate_error::header_size_mismatch:
+          return "header_size does not match this build";
+        case layout_validate_error::layout_type_mismatch:
+          return "layout_type mismatch (fixed vs variable)";
+        case layout_validate_error::alignment_invalid:
+          return "data_alignment invalid or does not match expected value";
+        case layout_validate_error::capacity_insufficient:
+          return "data_capacity smaller than expected for this endpoint";
+        default:
+          return "unknown layout validation error";
+      }
     }
   };
   static layout_error_category_impl instance;
@@ -85,3 +105,8 @@ class shm_layout_manager {
 
 }  // namespace shm
 }  // namespace xproc
+
+namespace std {
+template <>
+struct is_error_code_enum<xproc::shm::layout_validate_error> : true_type {};
+}  // namespace std

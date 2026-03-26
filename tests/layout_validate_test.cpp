@@ -78,6 +78,9 @@ void test_layout_exception_carries_code() {
     throw xproc::shm::layout_exception("test: ", err::bad_magic);
   } catch (const xproc::shm::layout_exception &e) {
     assert(e.code() == err::bad_magic);
+    const std::error_code ec = e.ec();
+    assert(ec == err::bad_magic);
+    assert(std::string(ec.category().name()) == "xproc.layout");
   }
 }
 

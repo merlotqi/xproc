@@ -1,5 +1,6 @@
 #pragma once
 
+// ipc include files.
 #include <xproc/ipc/codec_exception.hpp>
 #include <xproc/ipc/ipc_channel.hpp>
 #include <xproc/ipc/ipc_endpoint.hpp>
@@ -8,24 +9,45 @@
 #include <xproc/ipc/ipc_observer.hpp>
 #include <xproc/ipc/ipc_options.hpp>
 #include <xproc/ipc/ipc_runtime.hpp>
+
+// platform include files.
 #include <xproc/platform/platform.hpp>
 #include <xproc/platform/process.hpp>
+
+// protocol include files.
 #include <xproc/protocol/codec_traits.hpp>
 #include <xproc/protocol/codecs.hpp>
 #include <xproc/protocol/json_codec_stub.hpp>
 #include <xproc/protocol/protobuf_stub.hpp>
 #include <xproc/protocol/protocol.hpp>
+
+// ringbuffer include files.
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/iringbuffer.hpp>
 #include <xproc/ringbuffer/ringbuffer_error.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
+
+// shm include files.
 #include <xproc/shm/layout_exception.hpp>
 #include <xproc/shm/shm.hpp>
 #include <xproc/shm/shm_backend.hpp>
 #include <xproc/shm/shm_layout.hpp>
 #include <xproc/shm/shm_layout_manager.hpp>
 #include <xproc/shm/shm_open_mode.hpp>
+
+// sync include files.
 #include <xproc/sync/atomic_backoff.hpp>
 #include <xproc/sync/atomic_wait.hpp>
+
+namespace xproc {
+
+using namespace ipc;
+using namespace platform;
+using namespace protocol;
+using namespace ringbuffer;
+using namespace shm;
+using namespace sync;
+
+}  // namespace xproc

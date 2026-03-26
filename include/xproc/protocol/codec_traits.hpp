@@ -6,15 +6,6 @@
 namespace xproc {
 namespace protocol {
 
-// Codec contract (C++17; no std::concept):
-//
-//   using message_type = ...;
-//   static constexpr std::size_t max_encoded_size() noexcept;
-//   static bool encode(std::byte *dst, std::size_t cap, const message_type &msg, std::size_t &out_len) noexcept;
-//   static bool decode(const std::byte *src, std::size_t len, message_type &out) noexcept;
-//
-// Framing (version ids, checksums, etc.) lives inside encode/decode. The ring carries raw bytes only.
-
 namespace codec_traits_detail {
 
 template <typename Codec, typename = void>
