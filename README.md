@@ -109,6 +109,9 @@ cmake -S . -B build -DXPROC_WITH_PROTOBUF=ON
 
 # With both tests and examples
 cmake -S . -B build -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON
+
+# With benchmarks (Google Benchmark via FetchContent)
+cmake -S . -B build -DXPROC_BUILD_BENCHMARKS=ON
 ```
 
 ### Running Tests
@@ -123,6 +126,22 @@ ctest
 ```bash
 cd build
 ./examples/xproc_ping_pong
+```
+
+### Running Benchmarks
+
+Each benchmark source is a separate executable under `build/benchmarks/` (`xproc_bench_ipc`, `xproc_bench_ringbuffer`, etc.). To build and run all of them in one step:
+
+```bash
+cmake -S . -B build -DXPROC_BUILD_BENCHMARKS=ON
+cmake --build build --target xproc_run_benchmarks
+```
+
+Or run a single suite, for example:
+
+```bash
+cmake --build build --target xproc_bench_ipc --parallel
+./build/benchmarks/xproc_bench_ipc
 ```
 
 ## Architecture Overview

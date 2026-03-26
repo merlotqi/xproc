@@ -79,6 +79,11 @@ if(XPROC_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
+option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
+if(XPROC_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
+
 set(XPROC_EXPORT_WITH_NLOHMANN_JSON 0)
 if(XPROC_WITH_NLOHMANN_JSON)
     set(XPROC_EXPORT_WITH_NLOHMANN_JSON 1)
