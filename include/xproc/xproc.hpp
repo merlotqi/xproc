@@ -1,5 +1,6 @@
 #pragma once
 
+#include <xproc/ipc/codec_exception.hpp>
 #include <xproc/ipc/ipc_channel.hpp>
 #include <xproc/ipc/ipc_endpoint.hpp>
 #include <xproc/ipc/ipc_inspector.hpp>

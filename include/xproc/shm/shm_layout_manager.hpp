@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <system_error>
 #include <xproc/shm/shm.hpp>
 #include <xproc/shm/shm_layout.hpp>
 
@@ -39,6 +40,23 @@ enum class layout_validate_error {
   alignment_invalid,
   capacity_insufficient,
 };
+
+inline const std::error_category& layout_error_category() noexcept {
+  class layout_error_category_impl final : public std::error_category {
+   public:
+    const char* name() const noexcept override { return "xproc.layout"; }
+    std::string message(int ev) const override {
+      const auto e = static_cast<layout_validate_error>(ev);
+      return shm_layout_manager::layout_validate_cstr(e);
+    }
+  };
+  static layout_error_category_impl instance;
+  return instance;
+}
+
+inline std::error_code make_error_code(layout_validate_error e) noexcept {
+  return {static_cast<int>(e), layout_error_category()};
+}
 
 class shm_layout_manager {
  public:

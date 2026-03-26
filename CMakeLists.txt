@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14...3.24)
 project(xproc VERSION 0.2.0 LANGUAGES CXX)
 
 if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux")
-    message(FATAL_ERROR "xproc supports Linux and Windows only (found ${CMAKE_SYSTEM_NAME})")
+    message(FATAL_ERROR "xproc supports Linux and Windows only (found ${CMAKE_SYSTEM_NAME}); see docs/design.md")
 endif()
 
 if(WIN32)

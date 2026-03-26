@@ -13,7 +13,7 @@ High-performance **Single Producer Single Consumer (SPSC)** Inter-Process Commun
 - **Variable-length payloads** can avoid extra copies in the ring (payload pointer is valid for the duration of `poll` / `peek` callbacks only)
 - **Observer** read-only attach (`ipc_observer`) for snapshots / `peek` without advancing `read_pos` (weak consistency if a consumer runs concurrently)
 - **Multiple serialization formats**: Built-in codecs, optional JSON (nlohmann/json), optional Protocol Buffers
-- **Errors**: `std::invalid_argument` / `std::logic_error` for misuse; `xproc::shm::layout_exception` (with `layout_validate_error code()`) for layout failures; `shm::last_os_error()` after failed `shm::open()`
+- **Errors**: `std::invalid_argument` / `std::logic_error` for misuse; `xproc::shm::layout_exception` (with `layout_validate_error code()`) for layout failures; `xproc::ipc::codec_exception` (with `codec_error code()`) for `send_encoded` / `poll_decoded` failures; `shm::last_os_error()` after failed `shm::open()`
 - **Cache-line aligned** control block to reduce false sharing
 
 ## Quick Start
@@ -188,11 +188,17 @@ Key synchronization fields:
 - **Requirements**: POSIX shared memory support
 
 ### Windows
-- **Shared Memory**: `CreateFileMapping` + `MapViewOfFile` (full section mapped; `VirtualQuery` must report `RegionSize >= opts.shm_size`)
+- **Shared Memory**: `CreateFileMapping` + `MapViewOfFile` (full section mapped; `VirtualQuery` must report `RegionSize >= opts.shm_size`; smaller sections fail `open`)
 - **Synchronization**: `WaitOnAddress` / `WakeByAddress*` (Windows 8+)
 - **Requirements**: Windows 8 or later
+- **Naming**: Logical paths map to `Local\xproc_<hash>_…` (FNV-1a + sanitized suffix). Use **unique path strings** (PID, random salt, session id) in tests and long-running services to avoid accidental name reuse; see [docs/design.md](docs/design.md).
+- **`shm::unlink`**: No-op on Windows; do not rely on it to clear a name before reuse.
 
-**Note**: Only Linux and Windows are supported. Other platforms will fail during CMake configuration.
+**Note**: Only Linux and Windows are supported. Other platforms fail CMake configuration with a clear error.
+
+### Tests on Windows
+
+The `xproc_win32_wait_shm_tests` target runs `tests/win32_wait_shm_test.cpp`, including a **child process** that waits on `commit_seq` and receives a message from the parent (see [docs/design.md](docs/design.md)).
 
 ## Advanced Usage
 
@@ -258,6 +264,7 @@ rt.stop();
 
 - **`validate_transport_options`**: Central checks on `path`, `shm_size`, `item_size` (fixed), and `data_align` (`ipc_options.hpp`); used by `ipc_endpoint` / `ipc_observer`.
 - **Layout**: `xproc::shm::layout_exception` derives from `std::runtime_error` and exposes `layout_validate_error code()` for programmatic handling.
+- **Codec / wire size**: `xproc::ipc::codec_exception` exposes `codec_error code()` for encode/decode failures and fixed-slot overflow in `send_encoded` / `poll_decoded` / `IByteCodec` overload.
 - **Role misuse**: `std::logic_error` when calling `send_*` or `poll` on the wrong role.
 - **SHM open failure**: `shm::last_os_error()` returns POSIX `errno` or Windows `GetLastError()` (as `int`) after a failed `open()`.
 
@@ -276,6 +283,17 @@ rt.stop();
 4. **Use view-based codecs** only when you copy or process synchronously inside the poll handler
 5. **Monitor buffer utilization** to tune performance
 
+## Installing / `find_package`
+
+After `cmake --install`, consumers use:
+
+```cmake
+find_package(xproc CONFIG REQUIRED)
+target_link_libraries(my_target PRIVATE xproc::xproc)
+```
+
+If xproc was built with `-DXPROC_WITH_NLOHMANN_JSON=ON` or `-DXPROC_WITH_PROTOBUF=ON`, the generated `xprocConfig.cmake` runs `find_dependency` for those packages so transitive headers link correctly.
+
 ## Contributing
 
 1. Fork the repository
@@ -283,6 +301,8 @@ rt.stop();
 3. Write tests for new functionality
 4. Ensure all tests pass
 5. Submit a pull request
+
+**Shared memory paths in tests**: Prefer **unique** `transport_options::path` values (e.g. include process id or a random suffix). On Windows, `shm::unlink` does not remove a mapping name; unique paths avoid stale-segment collisions across CI runs.
 
 ## License
 

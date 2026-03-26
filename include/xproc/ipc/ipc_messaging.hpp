@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <xproc/ipc/codec_exception.hpp>
 #include <xproc/ipc/ipc_channel.hpp>
 #include <xproc/protocol/codec_traits.hpp>
 #include <xproc/protocol/protocol.hpp>
@@ -24,26 +25,28 @@ void send_encoded_dispatch(ipc_channel &ch, const typename Codec::message_type &
   if constexpr (cap <= send_encoded_stack_buf_max_v) {
     std::array<std::byte, cap> buf{};
     if (!Codec::encode(buf.data(), buf.size(), msg, out_len)) {
-      throw std::runtime_error("send_encoded: encode failed");
+      throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
     if (ch.options().type == channel_type::variable) {
       ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
-        throw std::runtime_error("send_encoded: encoded size exceeds item_size for fixed channel");
+        throw codec_exception(codec_error::wire_exceeds_item_size,
+                              "send_encoded: encoded size exceeds item_size for fixed channel");
       }
       ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len));
     }
   } else {
     std::vector<std::byte> buf(cap);
     if (!Codec::encode(buf.data(), buf.size(), msg, out_len)) {
-      throw std::runtime_error("send_encoded: encode failed");
+      throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
     if (ch.options().type == channel_type::variable) {
       ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
-        throw std::runtime_error("send_encoded: encoded size exceeds item_size for fixed channel");
+        throw codec_exception(codec_error::wire_exceeds_item_size,
+                              "send_encoded: encoded size exceeds item_size for fixed channel");
       }
       ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len));
     }
@@ -64,8 +67,9 @@ void send_encoded(producer_channel &ch, const typename Codec::message_type &msg)
   send_encoded<Codec>(ch.as_ipc_channel(), msg);
 }
 
-// Decodes into message_type and passes to handler. If decode uses a view into ring memory
-// (e.g. span_codec / string_view), copy out inside handler before returning if you use msg async.
+// Decodes into message_type and passes to handler. Decode failures throw codec_exception.
+// If decode uses a view into ring memory (e.g. span_codec / string_view), copy out inside the handler
+// before returning if you use msg async.
 template <typename Codec, typename F>
 bool poll_decoded(ipc_channel &ch, F &&handler) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
@@ -73,7 +77,7 @@ bool poll_decoded(ipc_channel &ch, F &&handler) {
   typename Codec::message_type msg{};
   return ch.poll([&](void *p, std::uint32_t len) {
     if (!Codec::decode(static_cast<const std::byte *>(p), static_cast<std::size_t>(len), msg)) {
-      throw std::runtime_error("poll_decoded: decode failed");
+      throw codec_exception(codec_error::decode_failed, "poll_decoded: decode failed");
     }
     std::forward<F>(handler)(msg);
   });
@@ -96,7 +100,8 @@ inline void send_encoded(ipc_channel &ch, const protocol::IByteCodec &codec, con
         ch.send_varlen(scratch.data(), static_cast<std::uint32_t>(wire_len));
       } else {
         if (wire_len > static_cast<std::size_t>(ch.options().item_size)) {
-          throw std::runtime_error("send_encoded(IByteCodec): wire length exceeds item_size");
+          throw codec_exception(codec_error::wire_exceeds_item_size,
+                                "send_encoded(IByteCodec): wire length exceeds item_size");
         }
         ch.send_fixed_bytes(scratch.data(), static_cast<std::uint32_t>(wire_len));
       }
@@ -104,7 +109,8 @@ inline void send_encoded(ipc_channel &ch, const protocol::IByteCodec &codec, con
     }
     cap *= 2;
     if (cap > 16 * 1024 * 1024) {
-      throw std::runtime_error("send_encoded(IByteCodec): wrap failed (scratch cap)");
+      throw codec_exception(codec_error::wrap_scratch_cap_exceeded,
+                            "send_encoded(IByteCodec): wrap failed (scratch cap)");
     }
   }
 }

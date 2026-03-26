@@ -44,7 +44,24 @@ void test_observer_endpoint_rejected() {
   opts.item_size = 4;
   bool threw = false;
   try {
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
     xproc::ipc::ipc_endpoint ep(opts, xproc::ipc::ipc_endpoint::role::observer);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
     (void)ep;
   } catch (const std::logic_error &e) {
     threw = true;

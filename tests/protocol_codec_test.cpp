@@ -10,6 +10,34 @@
 
 namespace {
 
+struct always_fail_encode_codec {
+  struct message_type {};
+  static constexpr std::size_t max_encoded_size() noexcept { return 4; }
+  static bool encode(std::byte *, std::size_t, const message_type &, std::size_t &) noexcept { return false; }
+  static bool decode(const std::byte *, std::size_t, message_type &) noexcept { return true; }
+};
+
+static void test_codec_exception_on_encode_failure() {
+  const std::string path = "/xproc_codec_exc_test";
+  xproc::shm::shm::unlink(path);
+  xproc::ipc::transport_options opts;
+  opts.path = path;
+  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 4096;
+  opts.type = xproc::ipc::channel_type::variable;
+  opts.create_if_missing = true;
+  bool threw = false;
+  try {
+    xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
+    xproc::ipc::send_encoded<always_fail_encode_codec>(prod, always_fail_encode_codec::message_type{});
+  } catch (const xproc::ipc::codec_exception &e) {
+    threw = true;
+    assert(e.code() == xproc::ipc::codec_error::encode_failed);
+  }
+  assert(threw);
+  xproc::shm::shm::unlink(path);
+}
+
+
 static_assert(xproc::protocol::is_codec_v<xproc::protocol::span_codec<64>>);
 
 // Manual little-endian wire layout (not memcpy of struct): custom serialization example.
@@ -226,6 +254,7 @@ static void test_identity_icodec_varlen() {
 }  // namespace
 
 int main() {
+  test_codec_exception_on_encode_failure();
   test_template_codecs_varlen_shm();
   test_span_codec_varlen_typed_channels();
   test_raw_pod_and_bounded_bytes();

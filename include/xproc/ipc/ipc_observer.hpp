@@ -16,8 +16,9 @@
 namespace xproc {
 namespace ipc {
 
-// Read-only attach: does not advance read_pos. Does not bump attach_count (observe_only); attach_count()
-// only reflects producer/consumer refcount maintained by writable mappings.
+// Read-only attach: does not advance read_pos. Uses observe_only: does not bump attach_count; attach_count()
+// in the control block only reflects producer/consumer writable mappings. IIpcAttachCountView here is a
+// read-only view of that field for metrics—not evidence that this observer incremented the counter.
 class ipc_observer : public IIpcRingInspector, public IIpcAttachCountView {
  public:
   explicit ipc_observer(const transport_options &opts) : opts_(opts) {

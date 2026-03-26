@@ -34,7 +34,8 @@ std::uint64_t fnv1a64(const std::string &path) {
   return h;
 }
 
-// Local\xproc_<fnv_hex>_<sanitized_path_suffix> — FNV reduces collisions vs. sanitize-only names.
+// Local\xproc_<fnv_hex>_<sanitized_path_suffix>. FNV-1a lowers collision risk but different logical paths
+// can still map to the same object name; callers should use unique path strings (see docs/design.md).
 std::string mapping_name_from_path(const std::string &path) {
   std::string n = "Local\\xproc_";
   char hex[17];

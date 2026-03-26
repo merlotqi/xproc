@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <xproc/ipc/ipc_options.hpp>
 #include <xproc/platform/process.hpp>
 #include <xproc/shm/layout_exception.hpp>
@@ -21,8 +22,7 @@ class ipc_endpoint {
   enum class role {
     producer,
     consumer,
-    // Prefer ipc_observer for read-only attach; ipc_endpoint does not implement this role.
-    observer
+    observer [[deprecated("use xproc::ipc::ipc_observer for read-only attach")]]
   };
 
   explicit ipc_endpoint(const transport_options& opts, role rle) : role_(rle), opts_(opts) { establish_connection(); }
@@ -49,7 +49,10 @@ class ipc_endpoint {
 
  private:
   void establish_connection() {
-    if (role_ == role::observer) {
+    using role_ut = std::underlying_type_t<role>;
+    // Reject deprecated observer without naming role::observer (avoids -Wdeprecated-declarations in every TU).
+    constexpr role_ut k_observer_ut = static_cast<role_ut>(role::consumer) + 1;
+    if (static_cast<role_ut>(role_) == k_observer_ut) {
       throw std::logic_error(
           "ipc_endpoint: observer role is not supported here; use ipc_observer (read-only attach) instead");
     }
