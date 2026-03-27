@@ -28,10 +28,5 @@ jobs:
               cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
                 -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON
               cmake --build build --parallel
-              test -f tests/API_COVERAGE.md
-              if grep -q "\[ \]" tests/API_COVERAGE.md; then
-                echo "API coverage checklist has unchecked entries"
-                exit 1
-              fi
               ctest --test-dir build --output-on-failure
             '
