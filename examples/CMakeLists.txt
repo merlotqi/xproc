@@ -1,3 +1,5 @@
+add_subdirectory(extern/taskflow)
+
 set(XPROC_EXAMPLE_FILES
     ping_pong.cpp
     fixed_channel_inprocess.cpp
@@ -14,3 +16,9 @@ foreach(example_file ${XPROC_EXAMPLE_FILES})
     add_executable(xproc_${example_name} "${example_file}")
     target_link_libraries(xproc_${example_name} PRIVATE xproc)
 endforeach()
+
+add_executable(xproc_ipc_taskflow_runtime_demo ipc_taskflow_runtime_demo.cpp)
+target_link_libraries(xproc_ipc_taskflow_runtime_demo PRIVATE xproc TaskFlow::TaskFlow)
+
+add_executable(xproc_ipc_taskflow_pipeline_demo ipc_taskflow_pipeline_demo.cpp)
+target_link_libraries(xproc_ipc_taskflow_pipeline_demo PRIVATE xproc TaskFlow::TaskFlow)

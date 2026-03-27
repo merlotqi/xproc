@@ -175,6 +175,10 @@ cd build
 ./examples/xproc_ping_pong
 ```
 
+**`xproc_ipc_taskflow_runtime_demo`** ([`examples/ipc_taskflow_runtime_demo.cpp`](examples/ipc_taskflow_runtime_demo.cpp)) uses the embedded [TaskFlow](examples/extern/taskflow/) library (`TaskFlow::TaskFlow` via `examples/CMakeLists.txt`) to run `ipc_runtime` message handlers on `TaskManager`'s thread pool. The example waits for each pool task to finish before returning to the runtime poll loop so shutdown stays correct on Windows (where `atomic_wait` on `commit_seq` does not wake on `stop()` alone). It is built whenever examples are enabled; see TaskFlow's [README](examples/extern/taskflow/README.md) and [LICENSE](examples/extern/taskflow/LICENSE).
+
+**`xproc_ipc_taskflow_pipeline_demo`** ([`examples/ipc_taskflow_pipeline_demo.cpp`](examples/ipc_taskflow_pipeline_demo.cpp)) sends a batch of fixed-slot messages and, for each one, runs three chained TaskFlow stages (decode / compute / finalize) with progress updates and a small CPU loop in the compute stage. `TaskManager` is started with at least two worker threads so nested `submit_task` + wait cannot deadlock. The same per-message `future` synchronization as the runtime demo applies to the outer `ipc_runtime` dispatch.
+
 ### Running Benchmarks
 
 Each benchmark source is a separate executable under `build/benchmarks/` (`xproc_bench_ipc`, `xproc_bench_ringbuffer`, etc.). To build and run all of them in one step:
