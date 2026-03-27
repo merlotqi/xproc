@@ -9,13 +9,13 @@
 namespace xproc {
 namespace shm {
 
-shm_control_block *shm_layout_manager::format(shm &sm, size_t capacity, bool is_creator, uint32_t layout_type,
+shm_control_block* shm_layout_manager::format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type,
                                               uint32_t data_alignment, layout_attach_behavior behavior) {
   if (!sm.is_attached()) {
     return nullptr;
   }
 
-  auto *header = static_cast<shm_control_block *>(sm.addr());
+  auto* header = static_cast<shm_control_block*>(sm.addr());
   if (is_creator) {
     _init_header(header, capacity, layout_type, data_alignment);
   } else {
@@ -35,7 +35,7 @@ bool is_power_of_two_uint32(uint32_t x) { return x >= 4u && (x & (x - 1u)) == 0u
 
 }  // namespace
 
-const char *shm_layout_manager::layout_validate_cstr(layout_validate_error e) noexcept {
+const char* shm_layout_manager::layout_validate_cstr(layout_validate_error e) noexcept {
   switch (e) {
     case layout_validate_error::ok:
       return "ok";
@@ -60,7 +60,7 @@ const char *shm_layout_manager::layout_validate_cstr(layout_validate_error e) no
   }
 }
 
-layout_validate_error shm_layout_manager::validate_detailed(const shm_control_block *header, size_t expected_capacity,
+layout_validate_error shm_layout_manager::validate_detailed(const shm_control_block* header, size_t expected_capacity,
                                                             uint32_t expected_layout_type,
                                                             uint32_t expected_data_alignment) {
   if (header == nullptr) {
@@ -103,13 +103,13 @@ layout_validate_error shm_layout_manager::validate_detailed(const shm_control_bl
   return layout_validate_error::ok;
 }
 
-bool shm_layout_manager::validate(shm_control_block *header, size_t expected_capacity, uint32_t expected_layout_type,
+bool shm_layout_manager::validate(shm_control_block* header, size_t expected_capacity, uint32_t expected_layout_type,
                                   uint32_t expected_data_alignment) {
   return validate_detailed(header, expected_capacity, expected_layout_type, expected_data_alignment) ==
          layout_validate_error::ok;
 }
 
-void shm_layout_manager::_init_header(shm_control_block *header, size_t capacity, uint32_t layout_type,
+void shm_layout_manager::_init_header(shm_control_block* header, size_t capacity, uint32_t layout_type,
                                       uint32_t data_alignment) {
   header->magic = EXPECTED_MAGIC;
   header->version_major = VERSION_MAJOR;

@@ -9,17 +9,17 @@ namespace ringbuffer {
 
 class ringbuffer_view {
  public:
-  explicit ringbuffer_view(shm::shm_control_block *header)
-      : header_(header), data_(reinterpret_cast<uint8_t *>(header) + header->header_size) {}
+  explicit ringbuffer_view(shm::shm_control_block* header)
+      : header_(header), data_(reinterpret_cast<uint8_t*>(header) + header->header_size) {}
 
   inline std::size_t capacity() const { return header_->data_capacity; }
 
  protected:
   inline size_t map_pos(uint64_t pos) const { return static_cast<size_t>(pos % header_->data_capacity); }
 
-  inline uint8_t *get_ptr(uint64_t pos) { return data_ + map_pos(pos); }
+  inline uint8_t* get_ptr(uint64_t pos) { return data_ + map_pos(pos); }
 
-  inline const uint8_t *get_ptr(uint64_t pos) const { return data_ + map_pos(pos); }
+  inline const uint8_t* get_ptr(uint64_t pos) const { return data_ + map_pos(pos); }
 
   inline uint64_t bytes_to_end(uint64_t pos) const { return header_->data_capacity - map_pos(pos); }
 
@@ -29,8 +29,8 @@ class ringbuffer_view {
   }
 
  protected:
-  shm::shm_control_block *header_;
-  uint8_t *data_;
+  shm::shm_control_block* header_;
+  uint8_t* data_;
 };
 
 }  // namespace ringbuffer

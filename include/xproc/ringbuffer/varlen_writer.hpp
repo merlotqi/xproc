@@ -14,7 +14,7 @@ class varlen_writer : public ringbuffer_view {
  public:
   using ringbuffer_view::ringbuffer_view;
 
-  void *reserve(uint32_t len, uint64_t &out_pos) {
+  void* reserve(uint32_t len, uint64_t& out_pos) {
     const uint32_t total_len = align_size(len + sizeof(details::varlen_message_header));
 
     while (true) {
@@ -30,7 +30,7 @@ class varlen_writer : public ringbuffer_view {
       uint64_t to_end = bytes_to_end(curr_write);
       if (to_end < total_len) {
         if (header_->rb_meta.write_pos.compare_exchange_strong(curr_write, curr_write + to_end)) {
-          auto *h = reinterpret_cast<details::varlen_message_header *>(get_ptr(curr_write));
+          auto* h = reinterpret_cast<details::varlen_message_header*>(get_ptr(curr_write));
           h->status.store(2, std::memory_order_release);  // 2 = Dummy
         }
         continue;
@@ -38,7 +38,7 @@ class varlen_writer : public ringbuffer_view {
 
       if (header_->rb_meta.write_pos.compare_exchange_strong(curr_write, curr_write + total_len)) {
         out_pos = curr_write;
-        auto *h = reinterpret_cast<details::varlen_message_header *>(get_ptr(out_pos));
+        auto* h = reinterpret_cast<details::varlen_message_header*>(get_ptr(out_pos));
         h->length = len;
         h->status.store(0, std::memory_order_relaxed);
 
@@ -48,7 +48,7 @@ class varlen_writer : public ringbuffer_view {
   }
 
   void commit(uint64_t pos) {
-    auto *h = reinterpret_cast<details::varlen_message_header *>(get_ptr(pos));
+    auto* h = reinterpret_cast<details::varlen_message_header*>(get_ptr(pos));
     h->status.store(1, std::memory_order_release);  // 1 = Ready
 
     header_->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);

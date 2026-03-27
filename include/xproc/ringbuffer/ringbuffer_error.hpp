@@ -12,7 +12,7 @@ enum class ringbuffer_error {
   invalid_argument
 };
 
-inline const char *ringbuffer_error_cstr(ringbuffer_error e) noexcept {
+inline const char* ringbuffer_error_cstr(ringbuffer_error e) noexcept {
   switch (e) {
     case ringbuffer_error::ok:
       return "ok";

@@ -1,10 +1,11 @@
+#include <gtest/gtest.h>
+
 #include <atomic>
 #include <cstdint>
 #include <string>
 #include <thread>
-
-#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
+
 
 #if defined(XPROC_WITH_PROTOBUF)
 #include "test_point.pb.h"
@@ -32,7 +33,7 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
     }
     xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
-      if (xproc::ipc::poll_decoded<xproc::protocol::nlohmann_json_codec<4096>>(ch, [&](const nlohmann::json &m) {
+      if (xproc::ipc::poll_decoded<xproc::protocol::nlohmann_json_codec<4096>>(ch, [&](const nlohmann::json& m) {
             received = m;
             got_msg.store(true, std::memory_order_release);
           })) {
@@ -82,7 +83,7 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
     }
     xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
-      if (xproc::ipc::poll_decoded<codec>(ch, [&](const xproc::test::TestPoint &m) {
+      if (xproc::ipc::poll_decoded<codec>(ch, [&](const xproc::test::TestPoint& m) {
             received = m;
             got_msg.store(true, std::memory_order_release);
           })) {

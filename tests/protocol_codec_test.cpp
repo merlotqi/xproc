@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <atomic>
 #include <cstdint>
 #include <cstring>
@@ -6,17 +8,16 @@
 #include <string_view>
 #include <thread>
 #include <vector>
-
-#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
+
 
 namespace {
 
 struct always_fail_encode_codec {
   struct message_type {};
   static constexpr std::size_t max_encoded_size() noexcept { return 4; }
-  static bool encode(std::byte *, std::size_t, const message_type &, std::size_t &) noexcept { return false; }
-  static bool decode(const std::byte *, std::size_t, message_type &) noexcept { return true; }
+  static bool encode(std::byte*, std::size_t, const message_type&, std::size_t&) noexcept { return false; }
+  static bool decode(const std::byte*, std::size_t, message_type&) noexcept { return true; }
 };
 
 TEST(ProtocolCodec, CodecExceptionOnEncodeFailure) {
@@ -31,7 +32,7 @@ TEST(ProtocolCodec, CodecExceptionOnEncodeFailure) {
   try {
     xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
     xproc::ipc::send_encoded<always_fail_encode_codec>(prod, always_fail_encode_codec::message_type{});
-  } catch (const xproc::ipc::codec_exception &e) {
+  } catch (const xproc::ipc::codec_exception& e) {
     threw = true;
     EXPECT_EQ(e.code(), xproc::ipc::codec_error::encode_failed);
     const std::error_code ec = e.ec();
@@ -41,7 +42,6 @@ TEST(ProtocolCodec, CodecExceptionOnEncodeFailure) {
   EXPECT_TRUE(threw);
   xproc::shm::shm::unlink(path);
 }
-
 
 static_assert(xproc::protocol::is_codec_v<xproc::protocol::span_codec<64>>);
 
@@ -54,21 +54,21 @@ struct point_codec {
 
   static constexpr std::size_t max_encoded_size() noexcept { return 8; }
 
-  static void write_u32_le(std::byte *d, std::uint32_t v) noexcept {
-    auto *p = reinterpret_cast<unsigned char *>(d);
+  static void write_u32_le(std::byte* d, std::uint32_t v) noexcept {
+    auto* p = reinterpret_cast<unsigned char*>(d);
     p[0] = static_cast<unsigned char>(v & 0xffu);
     p[1] = static_cast<unsigned char>((v >> 8) & 0xffu);
     p[2] = static_cast<unsigned char>((v >> 16) & 0xffu);
     p[3] = static_cast<unsigned char>((v >> 24) & 0xffu);
   }
 
-  static std::uint32_t read_u32_le(const std::byte *d) noexcept {
-    auto *p = reinterpret_cast<const unsigned char *>(d);
+  static std::uint32_t read_u32_le(const std::byte* d) noexcept {
+    auto* p = reinterpret_cast<const unsigned char*>(d);
     return static_cast<std::uint32_t>(p[0]) | (static_cast<std::uint32_t>(p[1]) << 8) |
            (static_cast<std::uint32_t>(p[2]) << 16) | (static_cast<std::uint32_t>(p[3]) << 24);
   }
 
-  static bool encode(std::byte *dst, std::size_t cap, const message_type &msg, std::size_t &out_len) noexcept {
+  static bool encode(std::byte* dst, std::size_t cap, const message_type& msg, std::size_t& out_len) noexcept {
     if (cap < 8) {
       return false;
     }
@@ -78,7 +78,7 @@ struct point_codec {
     return true;
   }
 
-  static bool decode(const std::byte *src, std::size_t len, message_type &out) noexcept {
+  static bool decode(const std::byte* src, std::size_t len, message_type& out) noexcept {
     if (len < 8) {
       return false;
     }
@@ -109,7 +109,7 @@ TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
       xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
       consumer_attached_promise.set_value();
       while (!got_msg.load(std::memory_order_acquire)) {
-        if (xproc::ipc::poll_decoded<point_codec>(ch, [&](const point_codec::message_type &m) {
+        if (xproc::ipc::poll_decoded<point_codec>(ch, [&](const point_codec::message_type& m) {
               received = m;
               got_msg.store(true, std::memory_order_release);
             })) {
@@ -155,7 +155,7 @@ TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
       consumer_attached_promise.set_value();
       while (true) {
         if (xproc::ipc::poll_decoded<xproc::protocol::span_codec<128>>(
-                ch, [&](const xproc::protocol::span_codec<128>::message_type &m) {
+                ch, [&](const xproc::protocol::span_codec<128>::message_type& m) {
                   received.assign(m.data(), m.data() + static_cast<std::ptrdiff_t>(m.size()));
                 })) {
           break;
@@ -195,7 +195,7 @@ TEST(ProtocolCodec, RawPodAndBoundedBytes) {
       consumer_attached_promise.set_value();
       while (true) {
         if (xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(
-                ch, [&](const std::uint64_t &v) { got = v; })) {
+                ch, [&](const std::uint64_t& v) { got = v; })) {
           break;
         }
         std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
@@ -225,7 +225,7 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
   std::thread consumer_th;
 
   xproc::protocol::identity_byte_codec idc;
-  const char *msg = "icodec";
+  const char* msg = "icodec";
   std::vector<std::byte> scratch;
   {
     xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
@@ -233,8 +233,8 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
       xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
       consumer_attached_promise.set_value();
       while (got.empty()) {
-        if (ch.poll([&](void *p, std::uint32_t len) {
-              got.assign(static_cast<std::uint8_t *>(p), static_cast<std::uint8_t *>(p) + len);
+        if (ch.poll([&](void* p, std::uint32_t len) {
+              got.assign(static_cast<std::uint8_t*>(p), static_cast<std::uint8_t*>(p) + len);
             })) {
           continue;
         }
@@ -243,7 +243,7 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
       }
     });
     consumer_attached.wait();
-    xproc::ipc::send_encoded(prod, idc, reinterpret_cast<const std::byte *>(msg), std::strlen(msg), scratch);
+    xproc::ipc::send_encoded(prod, idc, reinterpret_cast<const std::byte*>(msg), std::strlen(msg), scratch);
   }
   consumer_th.join();
   EXPECT_EQ(got.size(), std::strlen(msg));

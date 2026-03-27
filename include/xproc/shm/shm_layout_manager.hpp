@@ -14,7 +14,7 @@ struct embedded_layout_version {
   std::uint32_t minor{0};
 };
 
-inline embedded_layout_version read_embedded_layout_version(const shm_control_block *h) noexcept {
+inline embedded_layout_version read_embedded_layout_version(const shm_control_block* h) noexcept {
   embedded_layout_version v;
   if (!h) {
     return v;
@@ -41,10 +41,10 @@ enum class layout_validate_error {
   capacity_insufficient,
 };
 
-inline const std::error_category &layout_error_category() noexcept {
+inline const std::error_category& layout_error_category() noexcept {
   class layout_error_category_impl final : public std::error_category {
    public:
-    const char *name() const noexcept override { return "xproc.layout"; }
+    const char* name() const noexcept override { return "xproc.layout"; }
     std::string message(int ev) const override {
       switch (static_cast<layout_validate_error>(ev)) {
         case layout_validate_error::ok:
@@ -87,20 +87,20 @@ class shm_layout_manager {
   static constexpr uint16_t VERSION_MAJOR = 0;
   static constexpr uint32_t VERSION_MINOR = 2;
 
-  static shm_control_block *format(shm &sm, size_t capacity, bool is_creator, uint32_t layout_type,
+  static shm_control_block* format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type,
                                    uint32_t data_alignment,
                                    layout_attach_behavior behavior = layout_attach_behavior::count_ref);
 
-  static bool validate(shm_control_block *header, size_t expected_capacity, uint32_t expected_layout_type,
+  static bool validate(shm_control_block* header, size_t expected_capacity, uint32_t expected_layout_type,
                        uint32_t expected_data_alignment);
 
-  static layout_validate_error validate_detailed(const shm_control_block *header, size_t expected_capacity,
+  static layout_validate_error validate_detailed(const shm_control_block* header, size_t expected_capacity,
                                                  uint32_t expected_layout_type, uint32_t expected_data_alignment);
 
-  static const char *layout_validate_cstr(layout_validate_error e) noexcept;
+  static const char* layout_validate_cstr(layout_validate_error e) noexcept;
 
  private:
-  static void _init_header(shm_control_block *header, size_t capacity, uint32_t layout_type, uint32_t data_alignment);
+  static void _init_header(shm_control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment);
 };
 
 }  // namespace shm

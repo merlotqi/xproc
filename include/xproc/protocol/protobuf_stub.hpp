@@ -24,7 +24,7 @@ struct protobuf_message_codec {
 
   static constexpr std::size_t max_encoded_size() noexcept { return MaxWire; }
 
-  static bool encode(std::byte *dst, std::size_t cap, const MessageType &msg, std::size_t &out_len) noexcept {
+  static bool encode(std::byte* dst, std::size_t cap, const MessageType& msg, std::size_t& out_len) noexcept {
     const std::uint64_t need64 = msg.ByteSizeLong();
     if (need64 > static_cast<std::uint64_t>(MaxWire) || need64 > cap ||
         need64 > static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
@@ -38,7 +38,7 @@ struct protobuf_message_codec {
     return true;
   }
 
-  static bool decode(const std::byte *src, std::size_t len, MessageType &out) noexcept {
+  static bool decode(const std::byte* src, std::size_t len, MessageType& out) noexcept {
     if (len > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
       return false;
     }

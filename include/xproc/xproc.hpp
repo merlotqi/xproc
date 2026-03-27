@@ -3,12 +3,15 @@
 // ipc include files.
 #include <xproc/ipc/codec_exception.hpp>
 #include <xproc/ipc/ipc_channel.hpp>
+#include <xproc/ipc/ipc_channel_interface.hpp>
 #include <xproc/ipc/ipc_endpoint.hpp>
 #include <xproc/ipc/ipc_inspector.hpp>
 #include <xproc/ipc/ipc_messaging.hpp>
 #include <xproc/ipc/ipc_observer.hpp>
 #include <xproc/ipc/ipc_options.hpp>
 #include <xproc/ipc/ipc_runtime.hpp>
+#include <xproc/ipc/ipc_transport_factory.hpp>
+#include <xproc/ipc/socket_channel.hpp>
 
 // platform include files.
 #include <xproc/platform/platform.hpp>

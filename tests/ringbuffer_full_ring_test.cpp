@@ -1,7 +1,6 @@
 // Linux only: pipe byte synchronizes producer entering third reserve (see tests/CMakeLists.txt).
 
 #include <gtest/gtest.h>
-
 #include <unistd.h>
 
 #include <array>
@@ -12,9 +11,10 @@
 #include <thread>
 #include <xproc/xproc.hpp>
 
+
 namespace {
 
-void init_header(xproc::shm::shm_control_block &h, std::uint64_t cap, std::uint32_t layout_type,
+void init_header(xproc::shm::shm_control_block& h, std::uint64_t cap, std::uint32_t layout_type,
                  std::uint32_t data_align) {
   using lm = xproc::shm::shm_layout_manager;
   h.magic = lm::EXPECTED_MAGIC;
@@ -45,7 +45,7 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   constexpr std::uint64_t cap = 32;
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto *hdr = reinterpret_cast<xproc::shm::shm_control_block *>(arena.bytes.data());
+  auto* hdr = reinterpret_cast<xproc::shm::shm_control_block*>(arena.bytes.data());
   new (hdr) xproc::shm::shm_control_block{};
   init_header(*hdr, cap, 0, 8);
 
@@ -53,12 +53,12 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   xproc::ringbuffer::fixed_reader r(hdr);
 
   std::uint64_t pos0 = 0;
-  void *buf0 = w.reserve(item, pos0);
+  void* buf0 = w.reserve(item, pos0);
   std::memcpy(buf0, "aaaaaaaa", item);
   w.commit(pos0);
 
   std::uint64_t pos1 = 0;
-  void *buf1 = w.reserve(item, pos1);
+  void* buf1 = w.reserve(item, pos1);
   std::memcpy(buf1, "bbbbbbbb", item);
   w.commit(pos1);
 
@@ -70,7 +70,7 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
     char sync = 1;
     ASSERT_EQ(write(pipefd[1], &sync, 1), 1);
     std::uint64_t pos2 = 0;
-    void *buf2 = w.reserve(item, pos2);
+    void* buf2 = w.reserve(item, pos2);
     std::memcpy(buf2, "cccccccc", item);
     w.commit(pos2);
     third_done.store(true, std::memory_order_release);
@@ -81,7 +81,7 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
   EXPECT_FALSE(third_done.load(std::memory_order_acquire));
 
-  EXPECT_TRUE(r.try_read(item, [](void *) {}));
+  EXPECT_TRUE(r.try_read(item, [](void*) {}));
 
   producer.join();
   EXPECT_TRUE(third_done.load());
@@ -89,6 +89,6 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   close(pipefd[0]);
   close(pipefd[1]);
 
-  EXPECT_TRUE(r.try_read(item, [](void *p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
-  EXPECT_TRUE(r.try_read(item, [](void *p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
+  EXPECT_TRUE(r.try_read(item, [](void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
+  EXPECT_TRUE(r.try_read(item, [](void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
 }

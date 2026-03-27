@@ -1,10 +1,11 @@
+#include <gtest/gtest.h>
+
 #include <atomic>
 #include <cstring>
 #include <string>
 #include <system_error>
-
-#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
+
 
 using lm = xproc::shm::shm_layout_manager;
 using err = xproc::shm::layout_validate_error;
@@ -87,7 +88,7 @@ TEST(LayoutValidate, ValidateTransportOptionsRejectsInvalidAlignAndItemSize) {
 TEST(LayoutValidate, LayoutExceptionCarriesCodeAndErrorCode) {
   try {
     throw xproc::shm::layout_exception("test: ", err::bad_magic);
-  } catch (const xproc::shm::layout_exception &e) {
+  } catch (const xproc::shm::layout_exception& e) {
     EXPECT_EQ(e.code(), err::bad_magic);
     const std::error_code ec = e.ec();
     EXPECT_EQ(ec, err::bad_magic);

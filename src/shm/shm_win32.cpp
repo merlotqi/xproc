@@ -31,7 +31,7 @@ std::mutex g_win32_shm_mutex;
 std::unordered_map<std::string, HANDLE> g_canonical_shm_handle;
 
 struct ProcessViewEntry {
-  void *addr{nullptr};
+  void* addr{nullptr};
   HANDLE section_handle{nullptr};
   int refcount{0};
 };
@@ -39,7 +39,7 @@ struct ProcessViewEntry {
 // One MapViewOfFile per (object name, map access, size) in this process so producer/consumer share a VA.
 std::unordered_map<std::string, ProcessViewEntry> g_process_views;
 
-std::uint64_t fnv1a64(const std::string &path) {
+std::uint64_t fnv1a64(const std::string& path) {
   constexpr std::uint64_t kOffset = 14695981039346656037ULL;
   constexpr std::uint64_t kPrime = 1099511628211ULL;
   std::uint64_t h = kOffset;
@@ -52,7 +52,7 @@ std::uint64_t fnv1a64(const std::string &path) {
 
 // <namespace>\xproc_<fnv_hex>_<sanitized_path_suffix>. FNV-1a lowers collision risk but different logical paths
 // can still map to the same object name; callers should use unique path strings (see docs/design.rst).
-std::string mapping_name_from_path(const std::string &path, const std::string &ns) {
+std::string mapping_name_from_path(const std::string& path, const std::string& ns) {
   if (ns != "Local" && ns != "Global") {
     return {};
   }
@@ -77,15 +77,15 @@ std::string mapping_name_from_path(const std::string &path, const std::string &n
   return n;
 }
 
-std::string view_registry_key(const std::string &internal_name, DWORD map_access, std::size_t size_bytes) {
+std::string view_registry_key(const std::string& internal_name, DWORD map_access, std::size_t size_bytes) {
   return internal_name + "|" + std::to_string(static_cast<unsigned long long>(map_access)) + "|" +
          std::to_string(static_cast<unsigned long long>(size_bytes));
 }
 
 // Map the full section; require VirtualQuery RegionSize >= opts.shm_size (caller may have rounded
 // CreateFileMapping size up — extra tail bytes are unused; Linux mmap uses exact length).
-bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes, void **out_addr) {
-  void *p = ::MapViewOfFile(h, map_access, 0, 0, 0);
+bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes, void** out_addr) {
+  void* p = ::MapViewOfFile(h, map_access, 0, 0, 0);
   if (!p) {
     return false;
   }
@@ -105,9 +105,9 @@ bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes,
 
 }  // namespace
 
-shm::shm(shm &&other) noexcept { *this = std::move(other); }
+shm::shm(shm&& other) noexcept { *this = std::move(other); }
 
-shm &shm::operator=(shm &&other) noexcept {
+shm& shm::operator=(shm&& other) noexcept {
   if (this != &other) {
     detach();
 
@@ -127,8 +127,7 @@ shm &shm::operator=(shm &&other) noexcept {
   return *this;
 }
 
-bool shm::open(const std::string &name, size_t size, shm_open_mode mode,
-               const std::string &win32_object_namespace) {
+bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const std::string& win32_object_namespace) {
   last_os_error_ = 0;
   name_ = mapping_name_from_path(name, win32_object_namespace);
   if (name_.empty()) {
@@ -153,8 +152,7 @@ bool shm::open(const std::string &name, size_t size, shm_open_mode mode,
       }
     }
     if (dup_src != nullptr) {
-      if (!::DuplicateHandle(GetCurrentProcess(), dup_src, GetCurrentProcess(), &h, 0, FALSE,
-                             DUPLICATE_SAME_ACCESS)) {
+      if (!::DuplicateHandle(GetCurrentProcess(), dup_src, GetCurrentProcess(), &h, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
         last_os_error_ = static_cast<int>(::GetLastError());
         return false;
       }
@@ -206,7 +204,7 @@ bool shm::open(const std::string &name, size_t size, shm_open_mode mode,
     }
   }
 
-  void *p = nullptr;
+  void* p = nullptr;
   if (!map_and_verify_size(h, map_access, size_, &p)) {
     last_os_error_ = static_cast<int>(::GetLastError());
     ::CloseHandle(h);
@@ -254,10 +252,10 @@ void shm::detach() {
     std::lock_guard<std::mutex> lock(g_win32_shm_mutex);
     const auto it = g_process_views.find(vkey_copy);
     if (it != g_process_views.end()) {
-      ProcessViewEntry &e = it->second;
+      ProcessViewEntry& e = it->second;
       e.refcount -= 1;
       if (e.refcount <= 0) {
-        void *const ap = e.addr;
+        void* const ap = e.addr;
         HANDLE const eh = e.section_handle;
         g_process_views.erase(it);
         const auto cit = g_canonical_shm_handle.find(name_copy);
@@ -296,7 +294,7 @@ void shm::detach() {
   size_ = 0;
 }
 
-void shm::unlink(const std::string &name) {
+void shm::unlink(const std::string& name) {
   (void)name;
   // No POSIX-style shm_unlink on Windows; last CloseHandle on the mapping object releases the name.
 }

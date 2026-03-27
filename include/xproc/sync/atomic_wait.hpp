@@ -6,13 +6,13 @@ namespace xproc {
 namespace sync {
 
 template <typename T>
-void atomic_wait(const std::atomic<T> *atomic, T old);
+void atomic_wait(const std::atomic<T>* atomic, T old);
 
 template <typename T>
-void atomic_notify_one(const std::atomic<T> *atomic);
+void atomic_notify_one(const std::atomic<T>* atomic);
 
 template <typename T>
-void atomic_notify_all(const std::atomic<T> *atomic);
+void atomic_notify_all(const std::atomic<T>* atomic);
 
 }  // namespace sync
 }  // namespace xproc

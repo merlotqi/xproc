@@ -14,7 +14,7 @@ class fixed_writer : public ringbuffer_view {
  public:
   using ringbuffer_view::ringbuffer_view;
 
-  void *reserve(uint32_t item_size, uint64_t &out_pos) {
+  void* reserve(uint32_t item_size, uint64_t& out_pos) {
     const uint32_t total_len = align_size(item_size + sizeof(details::fixed_message_header));
     while (true) {
       uint64_t curr_write = header_->rb_meta.write_pos.load(std::memory_order_relaxed);
@@ -28,7 +28,7 @@ class fixed_writer : public ringbuffer_view {
 
       if (header_->rb_meta.write_pos.compare_exchange_strong(curr_write, curr_write + total_len)) {
         out_pos = curr_write;
-        auto *h = reinterpret_cast<details::fixed_message_header *>(get_ptr(out_pos));
+        auto* h = reinterpret_cast<details::fixed_message_header*>(get_ptr(out_pos));
         h->status.store(0, std::memory_order_relaxed);
         return get_ptr(out_pos + sizeof(details::fixed_message_header));
       }
@@ -36,7 +36,7 @@ class fixed_writer : public ringbuffer_view {
   }
 
   void commit(uint64_t pos) {
-    auto *h = reinterpret_cast<details::fixed_message_header *>(get_ptr(pos));
+    auto* h = reinterpret_cast<details::fixed_message_header*>(get_ptr(pos));
     h->status.store(1, std::memory_order_release);
     header_->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
     sync::atomic_notify_one(&header_->rb_meta.commit_seq);

@@ -1,0 +1,477 @@
+#include <chrono>
+#include <cstring>
+#include <mutex>
+#include <stdexcept>
+#include <string>
+#include <thread>
+#include <xproc/ipc/ipc_options.hpp>
+#include <xproc/ipc/socket_channel.hpp>
+
+
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
+namespace xproc {
+namespace ipc {
+namespace {
+
+constexpr std::uint32_t k_max_varlen = 16u * 1024u * 1024u;
+
+inline std::uint32_t load_le32(const void* p) {
+  auto b = static_cast<const std::uint8_t*>(p);
+  return static_cast<std::uint32_t>(b[0]) | (static_cast<std::uint32_t>(b[1]) << 8) |
+         (static_cast<std::uint32_t>(b[2]) << 16) | (static_cast<std::uint32_t>(b[3]) << 24);
+}
+
+inline void store_le32(void* p, std::uint32_t v) {
+  auto b = static_cast<std::uint8_t*>(p);
+  b[0] = static_cast<std::uint8_t>(v & 0xffu);
+  b[1] = static_cast<std::uint8_t>((v >> 8) & 0xffu);
+  b[2] = static_cast<std::uint8_t>((v >> 16) & 0xffu);
+  b[3] = static_cast<std::uint8_t>((v >> 24) & 0xffu);
+}
+
+#if defined(_WIN32)
+
+void winsock_init() {
+  static std::once_flag once;
+  std::call_once(once, [] {
+    WSADATA w{};
+    if (::WSAStartup(MAKEWORD(2, 2), &w) != 0) {
+      throw std::runtime_error("WSAStartup failed");
+    }
+  });
+}
+
+using sock_handle = SOCKET;
+
+sock_handle invalid_sock() { return INVALID_SOCKET; }
+
+bool is_invalid(sock_handle s) { return s == INVALID_SOCKET; }
+
+void close_handle(sock_handle s) noexcept {
+  if (!is_invalid(s)) {
+    ::closesocket(s);
+  }
+}
+
+void write_full_sock(sock_handle s, const void* data, std::size_t len) {
+  const auto* p = static_cast<const char*>(data);
+  std::size_t left = len;
+  while (left > 0) {
+    const int chunk = static_cast<int>(std::min<std::size_t>(left, static_cast<std::size_t>(INT_MAX)));
+    const int r = ::send(s, p, chunk, 0);
+    if (r <= 0) {
+      throw std::runtime_error("socket send failed");
+    }
+    p += r;
+    left -= static_cast<std::size_t>(r);
+  }
+}
+
+void read_exact_sock(sock_handle s, void* data, std::size_t len) {
+  char* p = static_cast<char*>(data);
+  std::size_t left = len;
+  while (left > 0) {
+    const int chunk = static_cast<int>(std::min<std::size_t>(left, static_cast<std::size_t>(INT_MAX)));
+    const int r = ::recv(s, p, chunk, MSG_WAITALL);
+    if (r <= 0) {
+      throw std::runtime_error("socket recv failed or closed");
+    }
+    p += r;
+    left -= static_cast<std::size_t>(r);
+  }
+}
+
+#else
+
+using sock_handle = int;
+
+sock_handle invalid_sock() { return -1; }
+
+bool is_invalid(sock_handle s) { return s < 0; }
+
+void close_handle(sock_handle s) noexcept {
+  if (!is_invalid(s)) {
+    ::close(s);
+  }
+}
+
+void write_full_sock(sock_handle s, const void* data, std::size_t len) {
+  const auto* p = static_cast<const std::uint8_t*>(data);
+  std::size_t left = len;
+  while (left > 0) {
+    const ssize_t r = ::send(s, p, left, 0);
+    if (r <= 0) {
+      throw std::runtime_error("socket send failed");
+    }
+    p += static_cast<std::size_t>(r);
+    left -= static_cast<std::size_t>(r);
+  }
+}
+
+void read_exact_sock(sock_handle s, void* data, std::size_t len) {
+  auto* p = static_cast<std::uint8_t*>(data);
+  std::size_t left = len;
+  while (left > 0) {
+    const ssize_t r = ::recv(s, p, left, MSG_WAITALL);
+    if (r <= 0) {
+      throw std::runtime_error("socket recv failed or closed");
+    }
+    p += static_cast<std::size_t>(r);
+    left -= static_cast<std::size_t>(r);
+  }
+}
+
+#endif
+
+sock_handle tcp_connect(const std::string& host, std::uint16_t port) {
+#if defined(_WIN32)
+  winsock_init();
+#endif
+  const std::string port_str = std::to_string(static_cast<int>(port));
+  addrinfo hints{};
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
+  addrinfo* res = nullptr;
+  const int gai = ::getaddrinfo(host.c_str(), port_str.c_str(), &hints, &res);
+  if (gai != 0 || res == nullptr) {
+    throw std::runtime_error("getaddrinfo failed for socket transport");
+  }
+  sock_handle s = invalid_sock();
+  for (addrinfo* it = res; it != nullptr; it = it->ai_next) {
+    s = static_cast<sock_handle>(::socket(it->ai_family, it->ai_socktype, it->ai_protocol));
+    if (is_invalid(s)) {
+      continue;
+    }
+    if (::connect(static_cast<sock_handle>(s), it->ai_addr, static_cast<int>(it->ai_addrlen)) == 0) {
+      break;
+    }
+    close_handle(s);
+    s = invalid_sock();
+  }
+  ::freeaddrinfo(res);
+  if (is_invalid(s)) {
+    throw std::runtime_error("socket connect failed");
+  }
+  return s;
+}
+
+sock_handle tcp_listen(std::uint16_t port, std::uint16_t* out_bound_port) {
+#if defined(_WIN32)
+  winsock_init();
+#endif
+  const std::string port_str = std::to_string(static_cast<int>(port));
+  addrinfo hints{};
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
+  hints.ai_flags = AI_PASSIVE;
+  addrinfo* res = nullptr;
+  if (::getaddrinfo(nullptr, port_str.c_str(), &hints, &res) != 0 || res == nullptr) {
+    throw std::runtime_error("getaddrinfo(listen) failed");
+  }
+  sock_handle listen_fd = invalid_sock();
+  for (addrinfo* it = res; it != nullptr; it = it->ai_next) {
+    listen_fd = static_cast<sock_handle>(::socket(it->ai_family, it->ai_socktype, it->ai_protocol));
+    if (is_invalid(listen_fd)) {
+      continue;
+    }
+    int yes = 1;
+#if defined(_WIN32)
+    ::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&yes), sizeof(yes));
+#else
+    ::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+#endif
+    if (::bind(listen_fd, it->ai_addr, static_cast<int>(it->ai_addrlen)) != 0) {
+      close_handle(listen_fd);
+      listen_fd = invalid_sock();
+      continue;
+    }
+    if (::listen(listen_fd, 1) != 0) {
+      close_handle(listen_fd);
+      listen_fd = invalid_sock();
+      continue;
+    }
+    break;
+  }
+  ::freeaddrinfo(res);
+  if (is_invalid(listen_fd)) {
+    throw std::runtime_error("socket bind/listen failed");
+  }
+  if (out_bound_port != nullptr && port == 0) {
+    sockaddr_storage ss{};
+    socklen_t slen = sizeof(ss);
+    if (::getsockname(listen_fd, reinterpret_cast<sockaddr*>(&ss), &slen) == 0) {
+      if (ss.ss_family == AF_INET) {
+        *out_bound_port = ntohs(reinterpret_cast<sockaddr_in*>(&ss)->sin_port);
+      } else if (ss.ss_family == AF_INET6) {
+        *out_bound_port = ntohs(reinterpret_cast<sockaddr_in6*>(&ss)->sin6_port);
+      }
+    }
+  } else if (out_bound_port != nullptr) {
+    *out_bound_port = port;
+  }
+  return listen_fd;
+}
+
+sock_handle tcp_accept(sock_handle listen_fd) {
+  const sock_handle c = static_cast<sock_handle>(::accept(listen_fd, nullptr, nullptr));
+  if (is_invalid(c)) {
+    throw std::runtime_error("socket accept failed");
+  }
+  return c;
+}
+
+}  // namespace
+
+void socket_producer_transport::close_sock() noexcept {
+#if defined(_WIN32)
+  close_handle(static_cast<SOCKET>(sock_));
+  sock_ = static_cast<std::uintptr_t>(INVALID_SOCKET);
+#else
+  close_handle(sock_);
+  sock_ = -1;
+#endif
+}
+
+socket_producer_transport::socket_producer_transport(const transport_options& opts) : opts_(opts) {
+  validate_transport_options(opts_);
+  if (opts_.backend != transport_backend::socket) {
+    throw std::logic_error("socket_producer_transport: backend must be socket");
+  }
+  for (int attempt = 0; attempt < 200; ++attempt) {
+    try {
+#if defined(_WIN32)
+      sock_ = static_cast<std::uintptr_t>(tcp_connect(opts_.socket_host, opts_.socket_port));
+#else
+      sock_ = tcp_connect(opts_.socket_host, opts_.socket_port);
+#endif
+      return;
+    } catch (...) {
+      if (attempt + 1 >= 200) {
+        throw;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  }
+}
+
+socket_producer_transport::~socket_producer_transport() { close_sock(); }
+
+void socket_producer_transport::write_full(const void* data, std::size_t len) {
+#if defined(_WIN32)
+  write_full_sock(static_cast<SOCKET>(sock_), data, len);
+#else
+  write_full_sock(sock_, data, len);
+#endif
+}
+
+void socket_producer_transport::send_fixed_bytes(const void* data, std::uint32_t payload_len) {
+  if (opts_.type != channel_type::fixed) {
+    throw std::logic_error("socket_producer: fixed_bytes requires fixed channel");
+  }
+  if (payload_len > opts_.item_size) {
+    throw std::invalid_argument("socket_producer: payload_len exceeds item_size");
+  }
+  std::vector<std::uint8_t> buf(static_cast<std::size_t>(opts_.item_size), 0);
+  std::memcpy(buf.data(), data, static_cast<std::size_t>(payload_len));
+  write_full(buf.data(), buf.size());
+}
+
+void socket_producer_transport::send_fixed_sized(const void* data, std::uint32_t byte_length) {
+  if (opts_.type != channel_type::fixed) {
+    throw std::logic_error("socket_producer: send_fixed_sized requires fixed channel");
+  }
+  if (byte_length > opts_.item_size) {
+    throw std::invalid_argument("socket_producer: byte_length exceeds item_size");
+  }
+  std::vector<std::uint8_t> buf(static_cast<std::size_t>(opts_.item_size), 0);
+  std::memcpy(buf.data(), data, static_cast<std::size_t>(byte_length));
+  write_full(buf.data(), buf.size());
+}
+
+void socket_producer_transport::send_varlen(const void* data, std::uint32_t len) {
+  if (opts_.type != channel_type::variable) {
+    throw std::logic_error("socket_producer: send_varlen requires variable channel");
+  }
+  if (len > k_max_varlen) {
+    throw std::invalid_argument("socket_producer: len too large");
+  }
+  std::uint8_t prefix[4];
+  store_le32(prefix, len);
+  write_full(prefix, sizeof(prefix));
+  if (len > 0) {
+    write_full(data, len);
+  }
+}
+
+void socket_consumer_transport::close_listen() noexcept {
+#if defined(_WIN32)
+  close_handle(static_cast<SOCKET>(listen_));
+  listen_ = static_cast<std::uintptr_t>(INVALID_SOCKET);
+#else
+  close_handle(listen_);
+  listen_ = -1;
+#endif
+}
+
+void socket_consumer_transport::close_sock() noexcept {
+#if defined(_WIN32)
+  close_handle(static_cast<SOCKET>(sock_));
+  sock_ = static_cast<std::uintptr_t>(INVALID_SOCKET);
+#else
+  close_handle(sock_);
+  sock_ = -1;
+#endif
+}
+
+socket_consumer_transport::socket_consumer_transport(const transport_options& opts) : opts_(opts) {
+  validate_transport_options(opts_);
+  if (opts_.backend != transport_backend::socket) {
+    throw std::logic_error("socket_consumer_transport: backend must be socket");
+  }
+  if (!opts_.socket_listen) {
+    throw std::invalid_argument("socket_consumer_transport: consumer requires socket_listen=true");
+  }
+  std::uint16_t bound = opts_.socket_port;
+#if defined(_WIN32)
+  listen_ = static_cast<std::uintptr_t>(tcp_listen(opts_.socket_port, &bound));
+  sock_ = static_cast<std::uintptr_t>(INVALID_SOCKET);
+#else
+  listen_ = tcp_listen(opts_.socket_port, &bound);
+  sock_ = -1;
+#endif
+  opts_.socket_port = bound;
+}
+
+socket_consumer_transport::~socket_consumer_transport() {
+  close_sock();
+  close_listen();
+}
+
+bool socket_consumer_transport::ensure_peer_connected() {
+#if defined(_WIN32)
+  if (sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET)) {
+    return true;
+  }
+  const SOCKET ls = static_cast<SOCKET>(listen_);
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(ls, &readfds);
+  TIMEVAL tv{};
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+  if (::select(0, &readfds, nullptr, nullptr, &tv) <= 0 || !FD_ISSET(ls, &readfds)) {
+    return false;
+  }
+  const SOCKET c = ::accept(ls, nullptr, nullptr);
+  if (c == INVALID_SOCKET) {
+    return false;
+  }
+  sock_ = static_cast<std::uintptr_t>(c);
+  close_listen();
+  return true;
+#else
+  if (sock_ >= 0) {
+    return true;
+  }
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(listen_, &readfds);
+  timeval tv{};
+  if (::select(listen_ + 1, &readfds, nullptr, nullptr, &tv) <= 0 || !FD_ISSET(listen_, &readfds)) {
+    return false;
+  }
+  const int c = ::accept(listen_, nullptr, nullptr);
+  if (c < 0) {
+    return false;
+  }
+  sock_ = c;
+  close_listen();
+  return true;
+#endif
+}
+
+void socket_consumer_transport::wait_when_empty() { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+
+bool socket_consumer_transport::poll_impl(const std::function<void(void*, std::uint32_t)>& handler) {
+  if (!ensure_peer_connected()) {
+    return false;
+  }
+
+#if defined(_WIN32)
+  const SOCKET s = static_cast<SOCKET>(sock_);
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(s, &readfds);
+  TIMEVAL tv{};
+  tv.tv_sec = 0;
+  tv.tv_usec = 0;
+  const int sel = ::select(0, &readfds, nullptr, nullptr, &tv);
+  if (sel <= 0 || !FD_ISSET(s, &readfds)) {
+    return false;
+  }
+#else
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(sock_, &readfds);
+  timeval tv{};
+  const int sel = ::select(sock_ + 1, &readfds, nullptr, nullptr, &tv);
+  if (sel <= 0 || !FD_ISSET(sock_, &readfds)) {
+    return false;
+  }
+#endif
+
+  try {
+    if (opts_.type == channel_type::fixed) {
+      std::vector<std::uint8_t> buf(static_cast<std::size_t>(opts_.item_size));
+#if defined(_WIN32)
+      read_exact_sock(static_cast<SOCKET>(sock_), buf.data(), buf.size());
+#else
+      read_exact_sock(sock_, buf.data(), buf.size());
+#endif
+      handler(buf.data(), static_cast<std::uint32_t>(buf.size()));
+      return true;
+    }
+    std::uint32_t len_le = 0;
+#if defined(_WIN32)
+    read_exact_sock(static_cast<SOCKET>(sock_), &len_le, sizeof(len_le));
+#else
+    read_exact_sock(sock_, &len_le, sizeof(len_le));
+#endif
+    const std::uint32_t len = load_le32(&len_le);
+    if (len > k_max_varlen) {
+      throw std::runtime_error("socket_consumer: varlen too large");
+    }
+    std::vector<std::uint8_t> payload(len);
+    if (len > 0) {
+#if defined(_WIN32)
+      read_exact_sock(static_cast<SOCKET>(sock_), payload.data(), len);
+#else
+      read_exact_sock(sock_, payload.data(), len);
+#endif
+    }
+    handler(payload.data(), len);
+    return true;
+  } catch (const std::runtime_error&) {
+    return false;
+  }
+}
+
+}  // namespace ipc
+}  // namespace xproc

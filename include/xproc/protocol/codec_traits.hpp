@@ -26,9 +26,9 @@ struct encode_returns_bool : std::false_type {};
 
 template <typename Codec>
 struct encode_returns_bool<Codec, std::void_t<typename Codec::message_type>>
-    : std::is_same<decltype(Codec::encode(std::declval<std::byte *>(), std::declval<std::size_t>(),
-                                          std::declval<const typename Codec::message_type &>(),
-                                          std::declval<std::size_t &>())),
+    : std::is_same<decltype(Codec::encode(std::declval<std::byte*>(), std::declval<std::size_t>(),
+                                          std::declval<const typename Codec::message_type&>(),
+                                          std::declval<std::size_t&>())),
                    bool> {};
 
 template <typename Codec, typename = void>
@@ -36,8 +36,8 @@ struct decode_returns_bool : std::false_type {};
 
 template <typename Codec>
 struct decode_returns_bool<Codec, std::void_t<typename Codec::message_type>>
-    : std::is_same<decltype(Codec::decode(std::declval<const std::byte *>(), std::declval<std::size_t>(),
-                                          std::declval<typename Codec::message_type &>())),
+    : std::is_same<decltype(Codec::decode(std::declval<const std::byte*>(), std::declval<std::size_t>(),
+                                          std::declval<typename Codec::message_type&>())),
                    bool> {};
 
 }  // namespace codec_traits_detail

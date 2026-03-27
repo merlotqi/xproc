@@ -16,7 +16,7 @@ class atomic_backoff {
   explicit atomic_backoff(uint32_t spin_threshold = default_spin_threshold)
       : spin_threshold_(spin_threshold), iterations_(0) {}
   template <typename T>
-  void pause(const std::atomic<T> &atomic, T old) {
+  void pause(const std::atomic<T>& atomic, T old) {
     iterations_++;
     if (iterations_ <= spin_threshold_) {
       XPROC_CPU_PAUSE();

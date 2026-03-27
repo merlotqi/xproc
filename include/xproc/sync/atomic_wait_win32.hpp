@@ -6,8 +6,8 @@
 #include <chrono>
 #include <cstdint>
 #include <thread>
-
 #include <xproc/platform/platform.hpp>
+
 
 namespace xproc {
 namespace sync {
@@ -17,7 +17,7 @@ namespace sync {
 // threads (or two processes) never wake each other. Use a polling wait with backoff instead.
 
 template <typename T>
-inline void atomic_wait(const std::atomic<T> *atomic, T old) {
+inline void atomic_wait(const std::atomic<T>* atomic, T old) {
   static_assert(sizeof(T) == 4, "atomic_wait(win32): only 32-bit atomics are supported");
   std::uint32_t iteration = 0;
   while (true) {
@@ -37,12 +37,12 @@ inline void atomic_wait(const std::atomic<T> *atomic, T old) {
 }
 
 template <typename T>
-inline void atomic_notify_one(const std::atomic<T> *) {
+inline void atomic_notify_one(const std::atomic<T>*) {
   // No-op: waiters poll (see atomic_wait).
 }
 
 template <typename T>
-inline void atomic_notify_all(const std::atomic<T> *) {}
+inline void atomic_notify_all(const std::atomic<T>*) {}
 
 }  // namespace sync
 }  // namespace xproc

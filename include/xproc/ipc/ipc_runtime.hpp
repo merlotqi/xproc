@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <vector>
 #include <xproc/ipc/ipc_channel.hpp>
+#include <xproc/ipc/ipc_channel_interface.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
 namespace xproc {
@@ -28,36 +29,50 @@ namespace ipc {
 // not catch handler exceptions.
 class ipc_runtime {
  public:
-  explicit ipc_runtime(ipc_channel &channel) : channel_(channel) {}
-  explicit ipc_runtime(consumer_channel &channel) : channel_(channel.as_ipc_channel()) {}
+  explicit ipc_runtime(ipc_channel& channel) : shm_(&channel), iface_(nullptr) {}
+  explicit ipc_runtime(consumer_channel& channel) : shm_(&channel.as_ipc_channel()), iface_(nullptr) {}
+  explicit ipc_runtime(IConsumerChannel& channel) : shm_(nullptr), iface_(&channel) {}
 
   template <typename Executor, typename Handler>
-  void run(Executor &&pool_executor, Handler &&handler) {
+  void run(Executor&& pool_executor, Handler&& handler) {
     using HandlerStore = typename std::decay<Handler>::type;
     HandlerStore h = std::forward<Handler>(handler);
     running_.store(true);
     while (running_.load(std::memory_order_relaxed)) {
-      bool has_data = channel_.poll([&](void *ptr, uint32_t len) {
-        std::vector<std::uint8_t> copy_data(static_cast<std::uint8_t *>(ptr), static_cast<std::uint8_t *>(ptr) + len);
-        pool_executor([data = std::move(copy_data), h]() mutable { h(data.data(), data.size()); });
-      });
+      bool has_data = false;
+      if (shm_ != nullptr) {
+        has_data = shm_->poll([&](void* ptr, uint32_t len) {
+          std::vector<std::uint8_t> copy_data(static_cast<std::uint8_t*>(ptr), static_cast<std::uint8_t*>(ptr) + len);
+          pool_executor([data = std::move(copy_data), h]() mutable { h(data.data(), data.size()); });
+        });
+      } else {
+        has_data = iface_->poll([&](void* ptr, uint32_t len) {
+          std::vector<std::uint8_t> copy_data(static_cast<std::uint8_t*>(ptr), static_cast<std::uint8_t*>(ptr) + len);
+          pool_executor([data = std::move(copy_data), h]() mutable { h(data.data(), data.size()); });
+        });
+      }
 
       if (!has_data) {
-        const uint32_t last_commit = channel_.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        sync::atomic_wait(&channel_.header()->rb_meta.commit_seq, last_commit);
+        if (shm_ != nullptr && shm_->header() != nullptr) {
+          const uint32_t last_commit = shm_->header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+          sync::atomic_wait(&shm_->header()->rb_meta.commit_seq, last_commit);
+        } else if (iface_ != nullptr) {
+          iface_->wait_when_empty();
+        }
       }
     }
   }
 
   void stop() {
     running_.store(false, std::memory_order_release);
-    if (channel_.header() != nullptr) {
-      sync::atomic_notify_all(&channel_.header()->rb_meta.commit_seq);
+    if (shm_ != nullptr && shm_->header() != nullptr) {
+      sync::atomic_notify_all(&shm_->header()->rb_meta.commit_seq);
     }
   }
 
  private:
-  ipc_channel &channel_;
+  ipc_channel* shm_{nullptr};
+  IConsumerChannel* iface_{nullptr};
   std::atomic_bool running_{false};
 };
 

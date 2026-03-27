@@ -17,7 +17,7 @@ struct raw_pod_codec {
 
   static constexpr std::size_t max_encoded_size() noexcept { return sizeof(T); }
 
-  static bool encode(std::byte *dst, std::size_t cap, const T &msg, std::size_t &out_len) noexcept {
+  static bool encode(std::byte* dst, std::size_t cap, const T& msg, std::size_t& out_len) noexcept {
     static_assert(std::is_trivially_copyable<T>::value, "raw_pod_codec requires trivially copyable T");
     if (cap < sizeof(T)) {
       return false;
@@ -27,7 +27,7 @@ struct raw_pod_codec {
     return true;
   }
 
-  static bool decode(const std::byte *src, std::size_t len, T &out) noexcept {
+  static bool decode(const std::byte* src, std::size_t len, T& out) noexcept {
     if (len < sizeof(T)) {
       return false;
     }
@@ -46,7 +46,7 @@ struct bounded_bytes_codec {
 
   static constexpr std::size_t max_encoded_size() noexcept { return MaxPayload; }
 
-  static bool encode(std::byte *dst, std::size_t cap, const message_type &msg, std::size_t &out_len) noexcept {
+  static bool encode(std::byte* dst, std::size_t cap, const message_type& msg, std::size_t& out_len) noexcept {
     if (msg.size > MaxPayload || static_cast<std::size_t>(msg.size) > cap) {
       return false;
     }
@@ -55,7 +55,7 @@ struct bounded_bytes_codec {
     return true;
   }
 
-  static bool decode(const std::byte *src, std::size_t len, message_type &out) noexcept {
+  static bool decode(const std::byte* src, std::size_t len, message_type& out) noexcept {
     if (len > MaxPayload) {
       return false;
     }
@@ -73,7 +73,7 @@ struct span_codec {
 
   static constexpr std::size_t max_encoded_size() noexcept { return MaxN; }
 
-  static bool encode(std::byte *dst, std::size_t cap, message_type msg, std::size_t &out_len) noexcept {
+  static bool encode(std::byte* dst, std::size_t cap, message_type msg, std::size_t& out_len) noexcept {
     if (msg.size() > MaxN || msg.size() > cap) {
       return false;
     }
@@ -82,7 +82,7 @@ struct span_codec {
     return true;
   }
 
-  static bool decode(const std::byte *src, std::size_t len, message_type &out) noexcept {
+  static bool decode(const std::byte* src, std::size_t len, message_type& out) noexcept {
     if (len > MaxN) {
       return false;
     }

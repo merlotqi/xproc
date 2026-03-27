@@ -15,14 +15,14 @@ class varlen_reader : public ringbuffer_view {
   using ringbuffer_view::ringbuffer_view;
 
   template <typename F>
-  bool try_read(F &&handler) {
+  bool try_read(F&& handler) {
     uint64_t curr_read = header_->rb_meta.read_pos.load(std::memory_order_acquire);
     uint64_t write_end = header_->rb_meta.write_pos.load(std::memory_order_acquire);
     if (write_end == curr_read) {
       return false;
     }
 
-    auto *h = reinterpret_cast<details::varlen_message_header *>(get_ptr(curr_read));
+    auto* h = reinterpret_cast<details::varlen_message_header*>(get_ptr(curr_read));
     uint32_t status = h->status.load(std::memory_order_acquire);
 
     if (status == 1) {
@@ -47,16 +47,16 @@ class varlen_reader : public ringbuffer_view {
 
   // Observer: walk from current read_pos without mutating shared state (skips dummy slots locally).
   template <typename F>
-  bool try_peek(F &&handler) const {
+  bool try_peek(F&& handler) const {
     uint64_t r = header_->rb_meta.read_pos.load(std::memory_order_acquire);
     const uint64_t write_end = header_->rb_meta.write_pos.load(std::memory_order_acquire);
 
     while (r != write_end) {
-      const auto *h = reinterpret_cast<const details::varlen_message_header *>(get_ptr(r));
+      const auto* h = reinterpret_cast<const details::varlen_message_header*>(get_ptr(r));
       const uint32_t status = h->status.load(std::memory_order_acquire);
 
       if (status == 1) {
-        std::forward<F>(handler)(static_cast<const void *>(get_ptr(r + sizeof(details::varlen_message_header))),
+        std::forward<F>(handler)(static_cast<const void*>(get_ptr(r + sizeof(details::varlen_message_header))),
                                  h->length);
         return true;
       }

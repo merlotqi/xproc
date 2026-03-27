@@ -21,7 +21,7 @@ namespace ipc {
 // read-only view of that field for metrics—not evidence that this observer incremented the counter.
 class ipc_observer : public IIpcRingInspector, public IIpcAttachCountView {
  public:
-  explicit ipc_observer(const transport_options &opts) : opts_(opts) {
+  explicit ipc_observer(const transport_options& opts) : opts_(opts) {
     validate_transport_options(opts_);
     if (!shm_.open(opts_.path, opts_.shm_size, shm::shm_open_mode::read, opts_.win32_object_namespace)) {
       std::string msg = "ipc_observer: failed to attach shm path: " + opts_.path;
@@ -40,7 +40,7 @@ class ipc_observer : public IIpcRingInspector, public IIpcAttachCountView {
     header_ = shm::shm_layout_manager::format(shm_, data_capacity, false, layout_type, data_align,
                                               shm::layout_attach_behavior::observe_only);
     if (!header_) {
-      const auto *raw = static_cast<const shm::shm_control_block *>(shm_.addr());
+      const auto* raw = static_cast<const shm::shm_control_block*>(shm_.addr());
       const auto err = shm::shm_layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align);
       throw shm::layout_exception("ipc_observer: ", err);
     }
@@ -54,13 +54,13 @@ class ipc_observer : public IIpcRingInspector, public IIpcAttachCountView {
 
   ~ipc_observer() override = default;
 
-  ipc_observer(const ipc_observer &) = delete;
-  ipc_observer &operator=(const ipc_observer &) = delete;
+  ipc_observer(const ipc_observer&) = delete;
+  ipc_observer& operator=(const ipc_observer&) = delete;
 
-  const transport_options &options() const noexcept { return opts_; }
+  const transport_options& options() const noexcept { return opts_; }
 
-  shm::shm_control_block *header() noexcept { return header_; }
-  const shm::shm_control_block *header() const noexcept { return header_; }
+  shm::shm_control_block* header() noexcept { return header_; }
+  const shm::shm_control_block* header() const noexcept { return header_; }
 
   ipc_ring_snapshot ring_snapshot() const override {
     ipc_ring_snapshot s;
@@ -83,7 +83,7 @@ class ipc_observer : public IIpcRingInspector, public IIpcAttachCountView {
 
   // Fixed: handler(const void *payload, uint32_t len) with len == item_size. Variable: same as ipc_channel::poll.
   template <typename F>
-  bool peek(F &&handler) {
+  bool peek(F&& handler) {
     if (opts_.type == channel_type::fixed) {
       return fixed_reader_->try_peek(opts_.item_size, std::forward<F>(handler));
     }
@@ -93,7 +93,7 @@ class ipc_observer : public IIpcRingInspector, public IIpcAttachCountView {
  private:
   transport_options opts_;
   shm::shm shm_;
-  shm::shm_control_block *header_{nullptr};
+  shm::shm_control_block* header_{nullptr};
   std::unique_ptr<ringbuffer::fixed_reader> fixed_reader_;
   std::unique_ptr<ringbuffer::varlen_reader> varlen_reader_;
 };

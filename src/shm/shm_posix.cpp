@@ -1,10 +1,11 @@
-#include <cerrno>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <xproc/shm/shm.hpp>
+
 
 #if defined(_WIN32)
 #error shm_posix.cpp must not be built on Windows
@@ -13,9 +14,9 @@
 namespace xproc {
 namespace shm {
 
-shm::shm(shm &&other) noexcept { *this = std::move(other); }
+shm::shm(shm&& other) noexcept { *this = std::move(other); }
 
-shm &shm::operator=(shm &&other) noexcept {
+shm& shm::operator=(shm&& other) noexcept {
   if (this != &other) {
     detach();
 
@@ -33,8 +34,7 @@ shm &shm::operator=(shm &&other) noexcept {
   return *this;
 }
 
-bool shm::open(const std::string &name, size_t size, shm_open_mode mode,
-               const std::string &win32_object_namespace) {
+bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const std::string& win32_object_namespace) {
   (void)win32_object_namespace;
   last_os_error_ = 0;
   name_ = name;
@@ -90,7 +90,7 @@ void shm::detach() {
   }
 }
 
-void shm::unlink(const std::string &name) { shm_unlink(name.c_str()); }
+void shm::unlink(const std::string& name) { shm_unlink(name.c_str()); }
 
 }  // namespace shm
 }  // namespace xproc

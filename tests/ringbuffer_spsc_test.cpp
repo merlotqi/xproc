@@ -1,15 +1,16 @@
+#include <gtest/gtest.h>
+
 #include <array>
 #include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <thread>
-
-#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
+
 
 namespace {
 
-void init_header(xproc::shm::shm_control_block &h, std::uint64_t cap, std::uint32_t layout_type,
+void init_header(xproc::shm::shm_control_block& h, std::uint64_t cap, std::uint32_t layout_type,
                  std::uint32_t data_align) {
   using xproc::shm::shm_layout_manager;
   h.magic = shm_layout_manager::EXPECTED_MAGIC;
@@ -42,7 +43,7 @@ TEST(RingbufferSpsc, FixedSpsc) {
   constexpr std::uint64_t cap = 65536;
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto *hdr = reinterpret_cast<xproc::shm::shm_control_block *>(arena.bytes.data());
+  auto* hdr = reinterpret_cast<xproc::shm::shm_control_block*>(arena.bytes.data());
   new (hdr) xproc::shm::shm_control_block{};
   init_header(*hdr, cap, 0, 8);
 
@@ -55,7 +56,7 @@ TEST(RingbufferSpsc, FixedSpsc) {
 
   std::thread consumer([&] {
     while (received.load(std::memory_order_relaxed) < n) {
-      if (r.try_read(item, [&](void *p) {
+      if (r.try_read(item, [&](void* p) {
             EXPECT_EQ(std::memcmp(p, "0123456789abcdef", item), 0);
             received.fetch_add(1, std::memory_order_relaxed);
           })) {
@@ -68,7 +69,7 @@ TEST(RingbufferSpsc, FixedSpsc) {
 
   for (int i = 0; i < n; ++i) {
     std::uint64_t pos = 0;
-    void *buf = w.reserve(item, pos);
+    void* buf = w.reserve(item, pos);
     std::memcpy(buf, "0123456789abcdef", item);
     w.commit(pos);
   }
@@ -81,30 +82,30 @@ TEST(RingbufferSpsc, VarlenSpscWrap) {
   constexpr std::uint64_t cap = 128;
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto *hdr = reinterpret_cast<xproc::shm::shm_control_block *>(arena.bytes.data());
+  auto* hdr = reinterpret_cast<xproc::shm::shm_control_block*>(arena.bytes.data());
   new (hdr) xproc::shm::shm_control_block{};
   init_header(*hdr, cap, 1, 8);
 
   xproc::ringbuffer::varlen_writer w(hdr);
   xproc::ringbuffer::varlen_reader rd(hdr);
 
-  const char *a = "hello";
-  const char *b = "variable-length";
+  const char* a = "hello";
+  const char* b = "variable-length";
   std::size_t strlen_a = std::strlen(a);
   std::size_t strlen_b = std::strlen(b);
   std::uint64_t p0 = 0;
-  void *b0 = w.reserve(static_cast<std::uint32_t>(strlen_a), p0);
+  void* b0 = w.reserve(static_cast<std::uint32_t>(strlen_a), p0);
   std::memcpy(b0, a, strlen_a);
   w.commit(p0);
 
   std::uint64_t p1 = 0;
-  void *b1 = w.reserve(static_cast<std::uint32_t>(strlen_b), p1);
+  void* b1 = w.reserve(static_cast<std::uint32_t>(strlen_b), p1);
   std::memcpy(b1, b, strlen_b);
   w.commit(p1);
 
   int msgs = 0;
   while (msgs < 2) {
-    if (rd.try_read([&](void *ptr, std::uint32_t len) {
+    if (rd.try_read([&](void* ptr, std::uint32_t len) {
           if (msgs == 0) {
             EXPECT_EQ(len, strlen_a);
             EXPECT_EQ(std::memcmp(ptr, a, len), 0);

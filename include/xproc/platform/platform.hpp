@@ -74,7 +74,7 @@ namespace xproc {
 namespace platform {
 
 struct platform_info {
-  static constexpr const char *os = XPROC_OS_NAME;
+  static constexpr const char* os = XPROC_OS_NAME;
 
   static constexpr bool is_linux() {
 #ifdef XPROC_PLATFORM_LINUX
@@ -94,7 +94,7 @@ struct platform_info {
 };
 
 struct arch_info {
-  static constexpr const char *name = XPROC_ARCH_NAME;
+  static constexpr const char* name = XPROC_ARCH_NAME;
 
   static constexpr bool is_x86_64() {
 #ifdef XPROC_ARCH_X86_64

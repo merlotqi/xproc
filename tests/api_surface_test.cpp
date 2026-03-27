@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -5,9 +7,8 @@
 #include <string>
 #include <thread>
 #include <vector>
-
-#include <gtest/gtest.h>
 #include <xproc/xproc.hpp>
+
 
 TEST(ApiSurface, PlatformInfoAndProcessId) {
   EXPECT_NE(xproc::platform::platform_info::os, nullptr);

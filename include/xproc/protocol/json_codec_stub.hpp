@@ -19,7 +19,7 @@ struct nlohmann_json_codec {
 
   static constexpr std::size_t max_encoded_size() noexcept { return MaxWire; }
 
-  static bool encode(std::byte *dst, std::size_t cap, const nlohmann::json &msg, std::size_t &out_len) noexcept {
+  static bool encode(std::byte* dst, std::size_t cap, const nlohmann::json& msg, std::size_t& out_len) noexcept {
     try {
       const std::string s = msg.dump();
       if (s.size() > MaxWire || s.size() > cap) {
@@ -33,9 +33,9 @@ struct nlohmann_json_codec {
     }
   }
 
-  static bool decode(const std::byte *src, std::size_t len, nlohmann::json &out) noexcept {
+  static bool decode(const std::byte* src, std::size_t len, nlohmann::json& out) noexcept {
     try {
-      out = nlohmann::json::parse(reinterpret_cast<const char *>(src), reinterpret_cast<const char *>(src) + len);
+      out = nlohmann::json::parse(reinterpret_cast<const char*>(src), reinterpret_cast<const char*>(src) + len);
       return true;
     } catch (...) {
       return false;

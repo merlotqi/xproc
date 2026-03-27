@@ -1,7 +1,6 @@
 // Linux only: shared memory, fork, and futex cross-process behaviour (see tests/CMakeLists.txt).
 
 #include <gtest/gtest.h>
-
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -13,15 +12,14 @@
 #include <thread>
 #include <xproc/xproc.hpp>
 
+
 TEST(IpcIntegration, FixedItemSizeZeroRejected) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_test_item_zero";
   opts.shm_size = sizeof(xproc::shm::shm_control_block) + 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 0;
-  EXPECT_THROW(
-      (void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::producer),
-      std::invalid_argument);
+  EXPECT_THROW((void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::producer), std::invalid_argument);
 }
 
 TEST(IpcIntegration, ObserverEndpointRejected) {
@@ -51,7 +49,7 @@ TEST(IpcIntegration, ObserverEndpointRejected) {
 #pragma warning(pop)
 #endif
     (void)ep;
-  } catch (const std::logic_error &e) {
+  } catch (const std::logic_error& e) {
     threw = true;
     EXPECT_NE(std::string(e.what()).find("ipc_observer"), std::string::npos);
   }
@@ -59,7 +57,7 @@ TEST(IpcIntegration, ObserverEndpointRejected) {
 }
 
 TEST(IpcIntegration, ConsumerLayoutErrorIncludesReason) {
-  const char *path = "/xproc_test_layout_msg";
+  const char* path = "/xproc_test_layout_msg";
   xproc::shm::shm::unlink(path);
   xproc::shm::shm sm;
   ASSERT_TRUE(sm.open(path, sizeof(xproc::shm::shm_control_block) + 512, xproc::shm::shm_open_mode::open_create));
@@ -75,7 +73,7 @@ TEST(IpcIntegration, ConsumerLayoutErrorIncludesReason) {
   try {
     (void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::consumer);
     FAIL() << "expected layout_exception";
-  } catch (const xproc::shm::layout_exception &e) {
+  } catch (const xproc::shm::layout_exception& e) {
     EXPECT_EQ(e.code(), xproc::shm::layout_validate_error::bad_magic);
     EXPECT_NE(std::string(e.what()).find("bad magic"), std::string::npos);
   }
@@ -88,8 +86,7 @@ TEST(IpcIntegration, ShmSizeRejected) {
   opts.shm_size = 1;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 4;
-  EXPECT_THROW((void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::producer),
-               std::invalid_argument);
+  EXPECT_THROW((void)xproc::ipc::ipc_channel(opts, xproc::ipc::ipc_endpoint::role::producer), std::invalid_argument);
 }
 
 TEST(IpcIntegration, ValidateLayoutMismatch) {
@@ -115,13 +112,13 @@ TEST(IpcIntegration, RoleSendPoll) {
   o.item_size = 4;
   xproc::shm::shm::unlink(o.path);
   xproc::ipc::ipc_channel prod(o, xproc::ipc::ipc_endpoint::role::producer);
-  EXPECT_THROW(prod.poll([](void *, std::uint32_t) {}), std::logic_error);
+  EXPECT_THROW(prod.poll([](void*, std::uint32_t) {}), std::logic_error);
   xproc::shm::shm::unlink(o.path);
 }
 
 namespace {
 
-int cross_process_futex_block_main(const char *shm_path) {
+int cross_process_futex_block_main(const char* shm_path) {
   pid_t pid = fork();
   if (pid < 0) {
     return 1;
@@ -142,7 +139,7 @@ int cross_process_futex_block_main(const char *shm_path) {
     std::uint32_t val = 0;
     bool got = false;
     while (!got) {
-      got = ch.poll([&](void *p, std::uint32_t len) {
+      got = ch.poll([&](void* p, std::uint32_t len) {
         (void)len;
         std::memcpy(&val, p, sizeof(val));
       });
@@ -178,13 +175,13 @@ int cross_process_futex_block_main(const char *shm_path) {
   return 0;
 }
 
-int cross_process_varlen_main(const char *shm_path) {
+int cross_process_varlen_main(const char* shm_path) {
   pid_t pid = fork();
   if (pid < 0) {
     return 1;
   }
 
-  const char *msg = "hello-varlen-ipc";
+  const char* msg = "hello-varlen-ipc";
 
   if (pid == 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(80));
@@ -197,7 +194,7 @@ int cross_process_varlen_main(const char *shm_path) {
 
     bool got = false;
     while (!got) {
-      got = ch.poll([&](void *p, std::uint32_t len) {
+      got = ch.poll([&](void* p, std::uint32_t len) {
         if (len != std::strlen(msg) || std::memcmp(p, msg, len) != 0) {
           _exit(3);
         }
