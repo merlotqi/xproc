@@ -1,0 +1,9 @@
+.git
+.github
+**/build
+**/build-*
+**/_deps
+**/.cache
+**/.vs
+**/.idea
+**/.cursor

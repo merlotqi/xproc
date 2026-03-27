@@ -11,6 +11,8 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 build
+docs/_build
+docs/.venv
 .cache
 .vscode
 # CLion

@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <new>
 #include <vector>
 
 #include <xproc/shm/shm_layout_manager.hpp>

@@ -98,6 +98,45 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ```
 
+By default the `xproc` target is a **static** library. For a **shared** library (`libxproc.so` / `xproc.dll`):
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_SHARED=ON
+cmake --build build
+```
+
+### Install and pkg-config
+
+After installing to a prefix (headers, library, CMake package, and `lib/pkgconfig/xproc.pc`):
+
+```bash
+cmake --install build --prefix /usr/local
+```
+
+Consume with pkg-config (point `PKG_CONFIG_PATH` at `$(prefix)/lib/pkgconfig` if needed):
+
+```bash
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+pkg-config --cflags --libs xproc
+```
+
+`Libs.private` lists `-pthread` and `-lrt` on Linux so `pkg-config --libs --static xproc` can link a **static** `libxproc.a`. If you enable optional JSON or Protobuf codecs, those dependencies are not added to `xproc.pc`; pull in their flags separately (or use `find_package(xproc)`).
+
+### Docker
+
+The repo root [`Dockerfile`](Dockerfile) provides a minimal Ubuntu 22.04 image with GCC, CMake, Ninja, and pkg-config. Build the image, mount the source tree, then configure as usual:
+
+```bash
+docker build -t xproc:dev .
+docker run --rm -it -v "$(pwd):/workspace" -w /workspace xproc:dev bash
+# inside the container:
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+CI runs the same flow in [`.github/workflows/docker.yml`](.github/workflows/docker.yml).
+
 ### Build with Optional Features
 
 ```bash
@@ -329,6 +368,7 @@ If xproc was built with `-DXPROC_WITH_NLOHMANN_JSON=ON` or `-DXPROC_WITH_PROTOBU
 
 ## See Also
 
+- [Documentation (reStructuredText)](docs/) — Sphinx sources; build HTML with `sphinx-build -b html docs docs/_build/html` (see [docs/requirements.txt](docs/requirements.txt))
 - [Examples](examples/) - Usage examples and demonstrations
 - [Tests](tests/) - Comprehensive test suite
 - [Protocol Buffer definitions](proto/) - Message format definitions

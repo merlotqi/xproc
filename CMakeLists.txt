@@ -31,16 +31,31 @@ if(WIN32)
 else()
     list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/shm/shm_posix.cpp")
 endif()
-add_library(xproc STATIC ${XPROC_HEADERS} ${XPROC_SOURCES})
+
+option(XPROC_BUILD_SHARED "Build libxproc as a shared library" OFF)
+if(XPROC_BUILD_SHARED)
+    add_library(xproc SHARED ${XPROC_HEADERS} ${XPROC_SOURCES})
+else()
+    add_library(xproc STATIC ${XPROC_HEADERS} ${XPROC_SOURCES})
+endif()
 add_library(xproc::xproc ALIAS xproc)
 
-target_include_directories(xproc PUBLIC 
+if(XPROC_BUILD_SHARED AND WIN32)
+    set_target_properties(xproc PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
+target_include_directories(xproc PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
+set(XPROC_PKGCONFIG_LIBS_PRIVATE "")
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     if(LIB_RT)
         target_link_libraries(xproc PUBLIC ${LIB_RT})
+        set(XPROC_PKGCONFIG_LIBS_PRIVATE "-pthread -lrt")
+    else()
+        set(XPROC_PKGCONFIG_LIBS_PRIVATE "-pthread")
     endif()
     target_link_libraries(xproc PUBLIC Threads::Threads)
 endif()
@@ -104,8 +119,23 @@ write_basic_package_version_file(
     COMPATIBILITY SameMajorVersion
 )
 
-install(TARGETS xproc EXPORT xprocTargets)
+set(prefix "${CMAKE_INSTALL_PREFIX}")
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/xproc.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/xproc.pc"
+    @ONLY
+)
+
+install(
+    TARGETS xproc
+    EXPORT xprocTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xproc.pc" DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/xprocConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/xprocConfigVersion.cmake"

@@ -1,0 +1,35 @@
+name: Docker
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  docker-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build toolchain image
+        run: docker build -t xproc-ci:local .
+
+      - name: Configure, build, and test in container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            xproc-ci:local \
+            bash -lc '
+              set -euo pipefail
+              cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON
+              cmake --build build --parallel
+              test -f tests/API_COVERAGE.md
+              if grep -q "\[ \]" tests/API_COVERAGE.md; then
+                echo "API coverage checklist has unchecked entries"
+                exit 1
+              fi
+              ctest --test-dir build --output-on-failure
+            '

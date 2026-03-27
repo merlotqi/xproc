@@ -1,0 +1,23 @@
+# Default owner for all files
+* merlotrain.mc@gmail.com
+
+# Core library
+/include/ merlotrain.mc@gmail.com
+/src/ merlotrain.mc@gmail.com
+
+# Tests and benchmarks
+/tests/ merlotrain.mc@gmail.com
+/benchmarks/ merlotrain.mc@gmail.com
+
+# Build and packaging
+/CMakeLists.txt merlotrain.mc@gmail.com
+/cmake/ merlotrain.mc@gmail.com
+/Dockerfile merlotrain.mc@gmail.com
+/.dockerignore merlotrain.mc@gmail.com
+
+# CI / automation
+/.github/workflows/ merlotrain.mc@gmail.com
+
+# Documentation
+/README.md merlotrain.mc@gmail.com
+/docs/ merlotrain.mc@gmail.com
