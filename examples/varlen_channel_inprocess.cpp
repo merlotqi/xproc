@@ -7,8 +7,8 @@
 #include <string>
 #include <thread>
 #include <vector>
-
 #include <xproc/xproc.hpp>
+
 
 int main() {
   const std::string path = "/xproc_example_varlen_inprocess";

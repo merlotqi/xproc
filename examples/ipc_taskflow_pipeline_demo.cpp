@@ -9,11 +9,11 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <taskflow/task_manager.hpp>
 #include <thread>
 #include <vector>
-
-#include <taskflow/task_manager.hpp>
 #include <xproc/xproc.hpp>
+
 
 namespace {
 
@@ -23,10 +23,10 @@ struct PipelineState {
   std::uint64_t computed{0};
 };
 
-void submit_and_wait(taskflow::TaskManager &manager, std::function<void(taskflow::TaskCtx &)> body) {
+void submit_and_wait(taskflow::TaskManager& manager, std::function<void(taskflow::TaskCtx&)> body) {
   auto settled = std::make_shared<std::promise<void>>();
   std::future<void> fut = settled->get_future();
-  manager.submit_task([body = std::move(body), settled](taskflow::TaskCtx &ctx) mutable {
+  manager.submit_task([body = std::move(body), settled](taskflow::TaskCtx& ctx) mutable {
     body(ctx);
     if (!ctx.is_completed()) {
       ctx.success();
@@ -47,11 +47,10 @@ std::uint64_t scramble(std::uint64_t x) {
 }  // namespace
 
 int main() {
-  auto &manager = taskflow::TaskManager::getInstance();
+  auto& manager = taskflow::TaskManager::getInstance();
   manager.start_processing(std::max<std::size_t>(2, std::thread::hardware_concurrency()));
 
-  const std::string path =
-      "/xproc_ipc_taskflow_pipe_" + std::to_string(xproc::platform::current_process_id());
+  const std::string path = "/xproc_ipc_taskflow_pipe_" + std::to_string(xproc::platform::current_process_id());
   xproc::shm::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
@@ -75,7 +74,7 @@ int main() {
     auto pool_executor = [&manager](auto task) {
       auto settled = std::make_shared<std::promise<void>>();
       std::future<void> fut = settled->get_future();
-      manager.submit_task([t = std::move(task), settled](taskflow::TaskCtx &ctx) mutable {
+      manager.submit_task([t = std::move(task), settled](taskflow::TaskCtx& ctx) mutable {
         t();
         ctx.success();
         settled->set_value();
@@ -83,7 +82,7 @@ int main() {
       fut.wait();
     };
 
-    runtime.run(pool_executor, [&](const std::uint8_t *data, std::size_t len) {
+    runtime.run(pool_executor, [&](const std::uint8_t* data, std::size_t len) {
       if (len != sizeof(std::uint32_t)) {
         std::cerr << "unexpected len: " << len << "\n";
         runtime.stop();
@@ -96,17 +95,17 @@ int main() {
       auto state = std::make_shared<PipelineState>();
       state->raw = v;
 
-      submit_and_wait(manager, [state](taskflow::TaskCtx &ctx) {
+      submit_and_wait(manager, [state](taskflow::TaskCtx& ctx) {
         ctx.update_progress(0.15f, "decode");
         state->decoded = static_cast<std::uint64_t>(state->raw) * 1001u + 7u;
       });
 
-      submit_and_wait(manager, [state](taskflow::TaskCtx &ctx) {
+      submit_and_wait(manager, [state](taskflow::TaskCtx& ctx) {
         ctx.update_progress(0.55f, "compute");
         state->computed = scramble(state->decoded);
       });
 
-      submit_and_wait(manager, [&](taskflow::TaskCtx &ctx) {
+      submit_and_wait(manager, [&](taskflow::TaskCtx& ctx) {
         ctx.update_progress(0.95f, "finalize");
         std::lock_guard<std::mutex> lock(results_mu);
         finalized.push_back(state->computed);

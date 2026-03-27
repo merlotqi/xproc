@@ -8,17 +8,16 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <thread>
-
 #include <taskflow/task_manager.hpp>
+#include <thread>
 #include <xproc/xproc.hpp>
 
+
 int main() {
-  auto &manager = taskflow::TaskManager::getInstance();
+  auto& manager = taskflow::TaskManager::getInstance();
   manager.start_processing(std::max<std::size_t>(1, std::thread::hardware_concurrency()));
 
-  const std::string path =
-      "/xproc_ipc_taskflow_demo_" + std::to_string(xproc::platform::current_process_id());
+  const std::string path = "/xproc_ipc_taskflow_demo_" + std::to_string(xproc::platform::current_process_id());
   xproc::shm::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
@@ -40,14 +39,14 @@ int main() {
     auto pool_executor = [&manager](auto task) {
       auto settled = std::make_shared<std::promise<void>>();
       std::future<void> fut = settled->get_future();
-      manager.submit_task([t = std::move(task), settled](taskflow::TaskCtx &ctx) mutable {
+      manager.submit_task([t = std::move(task), settled](taskflow::TaskCtx& ctx) mutable {
         t();
         ctx.success();
         settled->set_value();
       });
       fut.wait();
     };
-    runtime.run(pool_executor, [&](const std::uint8_t *data, std::size_t len) {
+    runtime.run(pool_executor, [&](const std::uint8_t* data, std::size_t len) {
       if (len != sizeof(std::uint32_t)) {
         std::cerr << "unexpected len: " << len << "\n";
         runtime.stop();

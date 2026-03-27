@@ -16,6 +16,7 @@ Windows
 * **Synchronization (vs Linux)**: ``WaitOnAddress`` / ``WakeByAddress*`` pair on **the same virtual address**. Each ``MapViewOfFile`` of a section uses a different VA, and different processes map different VAs, so those primitives **do not** reliably wake waiters across two channel attachments or across processes. xproc therefore implements ``atomic_wait`` on Windows as **spin / yield / sleep polling**; ``atomic_notify_*`` is a **no-op** (waiters observe sequence words via normal loads). Linux uses the futex, which coordinates correctly on shared mappings.
 * **Naming**: Logical paths map to ``<namespace>\xproc_<hash>_…`` (FNV-1a + sanitized suffix). Default ``transport_options::win32_object_namespace`` is ``Local``; set ``Global`` only when you need a session‑0 / cross‑session visible object (understand the security implications). Use **unique path strings** (PID, random salt, session id) in tests and services to avoid stale name collisions.
 * **``shm::unlink``**: No-op on Windows; do not rely on it to free a name before reuse.
+* **Socket transport**: TCP backend uses Winsock2; the xproc library links ``ws2_32``. Same synchronization caveats apply only to SHM rings; TCP does not use ``commit_seq`` in shared memory.
 
 Unsupported platforms
 ---------------------

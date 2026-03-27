@@ -5,8 +5,8 @@
 #include <iostream>
 #include <string>
 #include <thread>
-
 #include <xproc/xproc.hpp>
+
 
 int main() {
   const std::string path = "/xproc_example_fixed_inprocess";

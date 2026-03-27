@@ -2,8 +2,8 @@
 
 #include <atomic>
 #include <cstdint>
-
 #include <xproc/sync/atomic_backoff.hpp>
+
 
 namespace {
 

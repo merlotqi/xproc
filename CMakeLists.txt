@@ -67,6 +67,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     target_link_libraries(xproc PUBLIC Threads::Threads)
 endif()
 
+if(WIN32)
+    target_link_libraries(xproc PUBLIC ws2_32)
+endif()
 
 if(MSVC)
     target_compile_definitions(xproc PUBLIC _CRT_SECURE_NO_WARNINGS)

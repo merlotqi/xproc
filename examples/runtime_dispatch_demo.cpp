@@ -5,8 +5,8 @@
 #include <cstring>
 #include <iostream>
 #include <thread>
-
 #include <xproc/xproc.hpp>
+
 
 int main() {
   const std::string path = "/xproc_example_runtime_dispatch";

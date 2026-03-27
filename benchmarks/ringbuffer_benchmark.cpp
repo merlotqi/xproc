@@ -3,12 +3,12 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
-
-#include <xproc/shm/shm_layout_manager.hpp>
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
+#include <xproc/shm/shm_layout_manager.hpp>
+
 
 namespace {
 

@@ -37,6 +37,14 @@ Child process tests (Windows)
 
 ``win32_wait_shm_test`` spawns a child that waits on ``commit_seq`` and receives a message from the parent, exercising shared memory and polling wait behavior across processes.
 
+Transport backends (SHM vs TCP)
+--------------------------------
+
+``transport_options::backend`` selects how bytes move between producer and consumer:
+
+* **``shm`` (default)**: same-machine shared memory + in-band ring atomics (futex on Linux, polling wait on Windows). ``path`` and ``shm_size`` are required; this is the original xproc model.
+* **``socket``**: TCP (IPv4) framing over loopback or a network. The consumer binds with ``socket_listen=true`` and an optional ephemeral ``socket_port`` (``0`` chooses a free port); the producer connects with ``socket_listen=false`` to ``socket_host`` / ``socket_port``. Fixed channels send ``item_size`` bytes per message on the wire; variable channels send a little-endian ``uint32_t`` length plus payload. This path does **not** expose a real ``shm_control_block``; ``ipc_observer``-style attach counts are SHM-only. ``IProducerChannel`` / ``IConsumerChannel`` abstract the send/poll surface; ``create_producer_transport`` / ``create_consumer_transport`` build SHM or socket implementations. RDMA or other NIC offload would be additional backends with their own wire protocol, not a drop-in replacement for the ring’s atomics.
+
 Further reading
 ---------------
 
