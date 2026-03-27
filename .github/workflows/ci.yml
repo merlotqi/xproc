@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON
       - name: Build
@@ -29,6 +31,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON
       - name: Build
