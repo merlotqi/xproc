@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 3.14...3.24)
 project(xproc VERSION 0.2.0 LANGUAGES CXX)
 
+# Visual Studio generator: default to x64 when -A is omitted, avoiding winnt.h C1189 "No Target Architecture".
+if(WIN32 AND MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
+    if(NOT CMAKE_GENERATOR_PLATFORM)
+        set(CMAKE_GENERATOR_PLATFORM "x64" CACHE STRING "Visual Studio platform selection")
+    endif()
+endif()
+
 if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux")
     message(FATAL_ERROR "xproc supports Linux and Windows only (found ${CMAKE_SYSTEM_NAME}); see docs/design.md")
 endif()
 
 if(WIN32)
-    message(STATUS "xproc: Windows build uses WaitOnAddress / WakeByAddress (requires Windows 8+).")
+    message(STATUS "xproc: Windows build: atomic_wait uses polling (WaitOnAddress does not pair across separate MapViewOfFile views).")
 endif()
 
 include(GNUInstallDirs)
@@ -60,8 +67,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     target_link_libraries(xproc PUBLIC Threads::Threads)
 endif()
 
+
 if(MSVC)
     target_compile_definitions(xproc PUBLIC _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(xproc PRIVATE /utf-8)
 endif()
 
 option(XPROC_WITH_NLOHMANN_JSON "Enable nlohmann_json reference codec (find_package nlohmann_json)" OFF)

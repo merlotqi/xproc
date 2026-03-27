@@ -6,10 +6,14 @@
 #if defined(XPROC_PLATFORM_LINUX)
 #include <unistd.h>
 #elif defined(XPROC_PLATFORM_WINDOWS)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#include <processthreadsapi.h>
+// Include windows.h before subsystem headers so winnt.h sees MSVC target-architecture macros.
+#include <windows.h>
 #endif
 
 namespace xproc {

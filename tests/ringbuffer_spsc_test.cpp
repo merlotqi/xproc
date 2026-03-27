@@ -36,7 +36,10 @@ struct alignas(xproc::shm::shm_control_block) ring_arena {
 };
 
 TEST(RingbufferSpsc, FixedSpsc) {
-  constexpr std::uint64_t cap = 4096;
+  // Keep the ring large enough that the producer does not block in reserve() waiting for space.
+  // With a small capacity, a full ring can wedge: the producer waits on read_wake_seq while the
+  // consumer waits on commit_seq for progress that cannot happen until space is freed.
+  constexpr std::uint64_t cap = 65536;
   constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
   auto *hdr = reinterpret_cast<xproc::shm::shm_control_block *>(arena.bytes.data());

@@ -1,6 +1,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <future>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -96,35 +97,34 @@ TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
   opts.shm_size = sizeof(xproc::shm::shm_control_block) + 65536;
   opts.type = xproc::ipc::channel_type::variable;
 
-  std::atomic<bool> producer_ready{false};
+  std::promise<void> consumer_attached_promise;
+  std::future<void> consumer_attached = consumer_attached_promise.get_future();
   point_codec::message_type received{};
   std::atomic<bool> got_msg{false};
-
-  std::thread consumer([&] {
-    while (!producer_ready.load(std::memory_order_acquire)) {
-      std::this_thread::yield();
-    }
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
-    while (!got_msg.load(std::memory_order_acquire)) {
-      if (xproc::ipc::poll_decoded<point_codec>(ch, [&](const point_codec::message_type &m) {
-            received = m;
-            got_msg.store(true, std::memory_order_release);
-          })) {
-        continue;
-      }
-      std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
-    }
-  });
+  std::thread consumer_th;
 
   {
     xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
-    producer_ready.store(true, std::memory_order_release);
+    consumer_th = std::thread([&] {
+      xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+      consumer_attached_promise.set_value();
+      while (!got_msg.load(std::memory_order_acquire)) {
+        if (xproc::ipc::poll_decoded<point_codec>(ch, [&](const point_codec::message_type &m) {
+              received = m;
+              got_msg.store(true, std::memory_order_release);
+            })) {
+          continue;
+        }
+        std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+        xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+      }
+    });
+    consumer_attached.wait();
     point_codec::message_type m{0x11223344u, 0x55667788u};
     xproc::ipc::send_encoded<point_codec>(prod, m);
   }
 
-  consumer.join();
+  consumer_th.join();
   EXPECT_EQ(received.x, 0x11223344u);
   EXPECT_EQ(received.y, 0x55667788u);
 
@@ -140,36 +140,35 @@ TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
   opts.shm_size = sizeof(xproc::shm::shm_control_block) + 8192;
   opts.type = xproc::ipc::channel_type::variable;
 
-  std::atomic<bool> producer_ready{false};
+  std::promise<void> consumer_attached_promise;
+  std::future<void> consumer_attached = consumer_attached_promise.get_future();
   std::vector<std::byte> received;
-
-  std::thread consumer([&] {
-    while (!producer_ready.load(std::memory_order_acquire)) {
-      std::this_thread::yield();
-    }
-    xproc::ipc::consumer_channel ch(opts);
-    while (true) {
-      if (xproc::ipc::poll_decoded<xproc::protocol::span_codec<128>>(
-              ch, [&](const xproc::protocol::span_codec<128>::message_type &m) {
-                received.assign(m.data(), m.data() + static_cast<std::ptrdiff_t>(m.size()));
-              })) {
-        break;
-      }
-      std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
-    }
-  });
+  std::thread consumer_th;
 
   const std::byte blob[] = {std::byte{0xab}, std::byte{0xcd}, std::byte{0xef}};
   const auto view = std::basic_string_view<std::byte>(blob, sizeof(blob));
 
   {
     xproc::ipc::producer_channel prod(opts);
-    producer_ready.store(true, std::memory_order_release);
+    consumer_th = std::thread([&] {
+      xproc::ipc::consumer_channel ch(opts);
+      consumer_attached_promise.set_value();
+      while (true) {
+        if (xproc::ipc::poll_decoded<xproc::protocol::span_codec<128>>(
+                ch, [&](const xproc::protocol::span_codec<128>::message_type &m) {
+                  received.assign(m.data(), m.data() + static_cast<std::ptrdiff_t>(m.size()));
+                })) {
+          break;
+        }
+        std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+        xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+      }
+    });
+    consumer_attached.wait();
     xproc::ipc::send_encoded<xproc::protocol::span_codec<128>>(prod, view);
   }
 
-  consumer.join();
+  consumer_th.join();
   EXPECT_EQ(received.size(), sizeof(blob));
   EXPECT_EQ(std::memcmp(received.data(), blob, sizeof(blob)), 0);
 
@@ -184,30 +183,29 @@ TEST(ProtocolCodec, RawPodAndBoundedBytes) {
   opts.shm_size = sizeof(xproc::shm::shm_control_block) + 8192;
   opts.type = xproc::ipc::channel_type::variable;
 
-  std::atomic<bool> producer_ready{false};
+  std::promise<void> consumer_attached_promise;
+  std::future<void> consumer_attached = consumer_attached_promise.get_future();
   std::uint64_t got = 0;
-
-  std::thread th([&] {
-    while (!producer_ready.load(std::memory_order_acquire)) {
-      std::this_thread::yield();
-    }
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
-    while (true) {
-      if (xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(
-              ch, [&](const std::uint64_t &v) { got = v; })) {
-        break;
-      }
-      std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
-    }
-  });
+  std::thread consumer_th;
 
   {
     xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
-    producer_ready.store(true, std::memory_order_release);
+    consumer_th = std::thread([&] {
+      xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+      consumer_attached_promise.set_value();
+      while (true) {
+        if (xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(
+                ch, [&](const std::uint64_t &v) { got = v; })) {
+          break;
+        }
+        std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+        xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+      }
+    });
+    consumer_attached.wait();
     xproc::ipc::send_encoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(prod, std::uint64_t{0xc0dec0dec0deull});
   }
-  th.join();
+  consumer_th.join();
   EXPECT_EQ(got, 0xc0dec0dec0deull);
 
   xproc::shm::shm::unlink(path);
@@ -221,34 +219,33 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
   opts.shm_size = sizeof(xproc::shm::shm_control_block) + 4096;
   opts.type = xproc::ipc::channel_type::variable;
 
-  std::atomic<bool> producer_ready{false};
+  std::promise<void> consumer_attached_promise;
+  std::future<void> consumer_attached = consumer_attached_promise.get_future();
   std::vector<std::uint8_t> got;
-
-  std::thread th([&] {
-    while (!producer_ready.load(std::memory_order_acquire)) {
-      std::this_thread::yield();
-    }
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
-    while (got.empty()) {
-      if (ch.poll([&](void *p, std::uint32_t len) {
-            got.assign(static_cast<std::uint8_t *>(p), static_cast<std::uint8_t *>(p) + len);
-          })) {
-        continue;
-      }
-      std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
-    }
-  });
+  std::thread consumer_th;
 
   xproc::protocol::identity_byte_codec idc;
   const char *msg = "icodec";
   std::vector<std::byte> scratch;
   {
     xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
-    producer_ready.store(true, std::memory_order_release);
+    consumer_th = std::thread([&] {
+      xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+      consumer_attached_promise.set_value();
+      while (got.empty()) {
+        if (ch.poll([&](void *p, std::uint32_t len) {
+              got.assign(static_cast<std::uint8_t *>(p), static_cast<std::uint8_t *>(p) + len);
+            })) {
+          continue;
+        }
+        std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+        xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+      }
+    });
+    consumer_attached.wait();
     xproc::ipc::send_encoded(prod, idc, reinterpret_cast<const std::byte *>(msg), std::strlen(msg), scratch);
   }
-  th.join();
+  consumer_th.join();
   EXPECT_EQ(got.size(), std::strlen(msg));
   EXPECT_EQ(std::memcmp(got.data(), msg, got.size()), 0);
 

@@ -11,6 +11,7 @@ Linux
 Windows
 -------
 
+* **Build**: Use an x64 MSVC target (e.g. ``cmake -G "Visual Studio 17 2022" -A x64``). With Ninja + MSVC, open an **x64 Native Tools** command prompt so ``cl`` defines ``_M_X64``; otherwise SDK headers may error with ``C1189: No Target Architecture``.
 * **Shared memory**: ``CreateFileMapping`` + ``MapViewOfFile``. The mapped region must be at least ``opts.shm_size``; smaller sections fail ``open``.
 * **Synchronization**: ``WaitOnAddress`` / ``WakeByAddress*`` (Windows 8+)
 * **Naming**: Logical paths map to ``Local\xproc_<hash>_…`` (FNV-1a + sanitized suffix). Use **unique path strings** (PID, random salt, session id) in tests and services to avoid stale name collisions.

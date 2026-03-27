@@ -17,11 +17,18 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
+#include <mutex>
 #include <string>
+#include <unordered_map>
 
 namespace xproc {
 namespace shm {
 namespace {
+
+// Same-process second opens: OpenFileMapping can block or misbehave while the creator still holds the
+// section handle; DuplicateHandle from the creator's mapping object is reliable (see in-process IPC tests).
+std::mutex g_canonical_shm_mutex;
+std::unordered_map<std::string, HANDLE> g_canonical_shm_handle;
 
 std::uint64_t fnv1a64(const std::string &path) {
   constexpr std::uint64_t kOffset = 14695981039346656037ULL;
@@ -109,11 +116,28 @@ bool shm::open(const std::string &name, size_t size, shm_open_mode mode) {
   const DWORD map_access = (mode == shm_open_mode::read) ? FILE_MAP_READ : FILE_MAP_WRITE | FILE_MAP_READ;
 
   HANDLE h = nullptr;
+  bool register_canonical = false;
+
   if (mode == shm_open_mode::open || mode == shm_open_mode::read) {
-    h = ::OpenFileMappingA(map_access, FALSE, name_.c_str());
-    if (!h) {
-      last_os_error_ = static_cast<int>(::GetLastError());
-      return false;
+    HANDLE dup_src = nullptr;
+    {
+      std::lock_guard<std::mutex> lock(g_canonical_shm_mutex);
+      const auto it = g_canonical_shm_handle.find(name_);
+      if (it != g_canonical_shm_handle.end()) {
+        dup_src = it->second;
+      }
+    }
+    if (dup_src != nullptr) {
+      if (!::DuplicateHandle(GetCurrentProcess(), dup_src, GetCurrentProcess(), &h, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+        last_os_error_ = static_cast<int>(::GetLastError());
+        return false;
+      }
+    } else {
+      h = ::OpenFileMappingA(map_access, FALSE, name_.c_str());
+      if (!h) {
+        last_os_error_ = static_cast<int>(::GetLastError());
+        return false;
+      }
     }
   } else if (mode == shm_open_mode::open_create) {
     h = ::OpenFileMappingA(map_access, FALSE, name_.c_str());
@@ -126,6 +150,9 @@ bool shm::open(const std::string &name, size_t size, shm_open_mode mode) {
         return false;
       }
     }
+    // Always register for open_create so a same-process consumer can DuplicateHandle while this handle
+    // remains open (OpenFileMapping-only second opens can block or wedge against the first handle).
+    register_canonical = true;
   } else if (mode == shm_open_mode::create) {
     const DWORD hi = static_cast<DWORD>((size_ >> 32) & 0xffffffffu);
     const DWORD lo = static_cast<DWORD>(size_ & 0xffffffffu);
@@ -134,6 +161,7 @@ bool shm::open(const std::string &name, size_t size, shm_open_mode mode) {
       last_os_error_ = static_cast<int>(::GetLastError());
       return false;
     }
+    register_canonical = true;
   } else {
     return false;
   }
@@ -147,6 +175,14 @@ bool shm::open(const std::string &name, size_t size, shm_open_mode mode) {
 
   mapping_ = h;
   addr_ = p;
+  if (register_canonical) {
+    std::lock_guard<std::mutex> lock(g_canonical_shm_mutex);
+    // Keep the first handle for DuplicateHandle sources; do not overwrite with a second Open handle
+    // for the same mapping name (would strand waiters on a stale handle after the creator detaches).
+    if (g_canonical_shm_handle.find(name_) == g_canonical_shm_handle.end()) {
+      g_canonical_shm_handle[name_] = static_cast<HANDLE>(mapping_);
+    }
+  }
   return true;
 }
 
@@ -156,7 +192,15 @@ void shm::detach() {
     addr_ = nullptr;
   }
   if (mapping_) {
-    ::CloseHandle(mapping_);
+    HANDLE to_close = static_cast<HANDLE>(mapping_);
+    {
+      std::lock_guard<std::mutex> lock(g_canonical_shm_mutex);
+      const auto it = g_canonical_shm_handle.find(name_);
+      if (it != g_canonical_shm_handle.end() && it->second == to_close) {
+        g_canonical_shm_handle.erase(it);
+      }
+    }
+    ::CloseHandle(to_close);
     mapping_ = nullptr;
   }
   size_ = 0;

@@ -246,6 +246,7 @@ Key synchronization fields:
 - **Requirements**: POSIX shared memory support
 
 ### Windows
+- **Build**: With the Visual Studio generator, pass `-A x64` (or use the default set by this project’s CMake) so MSVC targets x64; otherwise SDK headers can fail with `C1189: No Target Architecture`. With Ninja + MSVC, use an **x64 Native Tools** developer prompt (or matching vcvars) so `cl` defines `_M_X64` / `_WIN64`.
 - **Shared Memory**: `CreateFileMapping` + `MapViewOfFile` (full section mapped; `VirtualQuery` must report `RegionSize >= opts.shm_size`; smaller sections fail `open`)
 - **Synchronization**: `WaitOnAddress` / `WakeByAddress*` (Windows 8+)
 - **Requirements**: Windows 8 or later

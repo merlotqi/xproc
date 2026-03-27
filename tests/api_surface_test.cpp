@@ -59,24 +59,27 @@ TEST(ApiSurface, AtomicBackoffPauseAndReset) {
 
 TEST(ApiSurface, ShmOpenModeCreateOpenReadAndErrors) {
   const std::string path = "/xproc_api_surface_shm_modes";
+  const std::size_t shm_bytes = sizeof(xproc::shm::shm_control_block) + 4096;
   xproc::shm::shm::unlink(path);
 
   xproc::shm::shm creator;
-  ASSERT_TRUE(creator.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::create));
-  creator.detach();
+  ASSERT_TRUE(creator.open(path, shm_bytes, xproc::shm::shm_open_mode::create));
+  // POSIX shm survives until unlink after all fds are closed; Windows named mappings are deleted
+  // when the last handle closes - keep creator mapped until other modes have opened.
 
   xproc::shm::shm opener;
-  ASSERT_TRUE(opener.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::open));
+  ASSERT_TRUE(opener.open(path, shm_bytes, xproc::shm::shm_open_mode::open));
   opener.detach();
 
   xproc::shm::shm reader;
-  ASSERT_TRUE(reader.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::read));
+  ASSERT_TRUE(reader.open(path, shm_bytes, xproc::shm::shm_open_mode::read));
   reader.detach();
 
   xproc::shm::shm open_create;
-  ASSERT_TRUE(
-      open_create.open(path, sizeof(xproc::shm::shm_control_block) + 4096, xproc::shm::shm_open_mode::open_create));
+  ASSERT_TRUE(open_create.open(path, shm_bytes, xproc::shm::shm_open_mode::open_create));
   open_create.detach();
+
+  creator.detach();
 
   xproc::shm::shm missing;
   EXPECT_FALSE(missing.open("/xproc_api_surface_missing", 4096, xproc::shm::shm_open_mode::open));

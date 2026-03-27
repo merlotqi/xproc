@@ -1,4 +1,6 @@
 // Two-process demo (Linux): parent creates shared memory and sends a counter; child receives and exits.
+#ifdef __linux__
+
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -13,8 +15,8 @@
 #include <xproc/shm/shm_layout.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
-int main(int argc, char **argv) {
-  const char *shm_path = "/xproc_ping_pong_demo";
+int main(int argc, char** argv) {
+  const char* shm_path = "/xproc_ping_pong_demo";
   if (argc > 1) {
     shm_path = argv[1];
   }
@@ -41,7 +43,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 100; ++i) {
       bool got = false;
       while (!got) {
-        got = ch.poll([&](void *p, std::uint32_t len) {
+        got = ch.poll([&](void* p, std::uint32_t len) {
           (void)len;
           std::uint32_t v = 0;
           std::memcpy(&v, p, sizeof(v));
@@ -81,3 +83,9 @@ int main(int argc, char **argv) {
   std::cout << "ping_pong ok\n";
   return 0;
 }
+
+#else
+
+int main() { return 0; }
+
+#endif
