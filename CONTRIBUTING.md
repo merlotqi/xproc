@@ -36,6 +36,14 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
+On **Windows**, parallel `ctest` (`-j` greater than 1) can run multiple executables that reuse similar shared-memory object names, or leave test binaries locked while another job links (LNK1168). Prefer a single job when debugging SHM-related failures:
+
+```powershell
+ctest --test-dir build -C Debug -j 1 --output-on-failure
+```
+
+See also **Shared Memory Path Guidance** below.
+
 ### Run Benchmarks
 
 ```bash

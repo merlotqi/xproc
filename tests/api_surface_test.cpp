@@ -88,6 +88,23 @@ TEST(ApiSurface, ShmOpenModeCreateOpenReadAndErrors) {
   xproc::shm::shm::unlink(path);
 }
 
+#if defined(_WIN32)
+TEST(ApiSurface, ShmOpenRejectsInvalidWin32Namespace) {
+  xproc::shm::shm sm;
+  EXPECT_FALSE(sm.open("/xproc_api_bad_ns", 4096, xproc::shm::shm_open_mode::create, "Session"));
+  EXPECT_NE(sm.last_os_error(), 0);
+}
+
+TEST(ApiSurface, TransportOptionsRejectsBadWin32Namespace) {
+  xproc::ipc::transport_options opts;
+  opts.path = "/xproc_api_bad_transport_ns";
+  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 4096;
+  opts.item_size = 4;
+  opts.win32_object_namespace = "Bad";
+  EXPECT_THROW(xproc::ipc::validate_transport_options(opts), std::invalid_argument);
+}
+#endif
+
 TEST(ApiSurface, IpcRuntimeRunAndStop) {
   const std::string path = "/xproc_api_surface_runtime";
   xproc::shm::shm::unlink(path);

@@ -65,7 +65,7 @@ Observer (read-only)
 Error handling (summary)
 ------------------------
 
-* ``validate_transport_options``: path, ``shm_size``, ``item_size`` (fixed), ``data_align``
+* ``validate_transport_options``: path, ``shm_size``, ``item_size`` (fixed), ``data_align``; on Windows, ``win32_object_namespace`` must be ``Local`` or ``Global``
 * Layout failures: ``layout_exception`` + ``layout_validate_error``
 * Codec failures: ``codec_exception`` + ``codec_error``
 * Role misuse on channels: ``std::logic_error``

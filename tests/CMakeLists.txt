@@ -17,22 +17,28 @@ function(xproc_gtest_executable name)
     gtest_discover_tests(${name})
 endfunction()
 
-# Define all test files
-set(TEST_FILES
+# Portable tests (all supported platforms).
+set(XPROC_GTEST_TEST_FILES_COMMON
     api_surface_test.cpp
     ringbuffer_spsc_test.cpp
     layout_validate_test.cpp
     ipc_observer_attach_test.cpp
-    ipc_integration_test.cpp
     protocol_codec_test.cpp
+)
+
+# Linux-only (fork, pipe, POSIX paths). Not built on Windows or other OSes.
+set(XPROC_GTEST_TEST_FILES_LINUX
+    ipc_integration_test.cpp
     ringbuffer_full_ring_test.cpp
 )
 
-# Create test executables using foreach
+set(TEST_FILES ${XPROC_GTEST_TEST_FILES_COMMON})
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND TEST_FILES ${XPROC_GTEST_TEST_FILES_LINUX})
+endif()
+
 foreach(TEST_FILE ${TEST_FILES})
-    # Extract test name from filename (remove .cpp extension)
     string(REPLACE ".cpp" "" TEST_NAME ${TEST_FILE})
-    string(REPLACE "_" "_" TEST_NAME ${TEST_NAME})
     xproc_gtest_executable(xproc_${TEST_NAME}_tests ${TEST_FILE})
 endforeach()
 
@@ -58,9 +64,18 @@ if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
     gtest_discover_tests(xproc_optional_serde_tests)
 endif()
 
-# Create custom target to run all tests
+# Multi-config generators (Visual Studio): ctest must get -C <Config> or tests show "Not Run".
+if(CMAKE_CONFIGURATION_TYPES)
+    set(_xproc_run_tests_ctest_cfg "-C" "$<CONFIG>")
+elseif(CMAKE_BUILD_TYPE)
+    set(_xproc_run_tests_ctest_cfg "-C" "${CMAKE_BUILD_TYPE}")
+else()
+    set(_xproc_run_tests_ctest_cfg "-C" "Debug")
+endif()
+
 add_custom_target(xproc_run_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
+    COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} --output-on-failure
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    USES_TERMINAL
     COMMENT "Running all xproc tests"
 )

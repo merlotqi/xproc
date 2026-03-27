@@ -2,7 +2,7 @@
 
 Authoritative design documentation is maintained as reStructuredText for Sphinx:
 
-- **[design.rst](design.rst)** — layout, Windows naming, validation spin limits, cross-process tests.
+- **[design.rst](design.rst)** — layout, Windows naming, **Windows vs Linux sync semantics**, ring capacity notes, validation spin limits, cross-process tests.
 
 To build HTML:
 

@@ -1,14 +1,6 @@
-// Windows: WaitOnAddress / WakeByAddress, named file mapping, and cross-process commit_seq (CMake: WIN32 only).
+// Windows only: named file mapping, polling atomic_wait, and cross-process commit_seq (see tests/CMakeLists.txt).
 
 #include <gtest/gtest.h>
-
-#if !defined(_WIN32)
-
-TEST(Win32WaitShm, RequiresWindows) {
-  GTEST_SKIP() << "Windows only";
-}
-
-#else
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -164,5 +156,3 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
-
-#endif

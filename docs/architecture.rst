@@ -52,7 +52,7 @@ Synchronization (conceptual)
 
 * **Lock-free SPSC**: atomics and kernel waits, no mutex in the hot path
 * **Two-phase commit**: reserve space, publish with ``commit`` / status fields
-* **Waiting**: Linux futex on ``commit_seq`` / ``read_wake_seq``; Windows ``WaitOnAddress`` / wake primitives
+* **Waiting**: Linux futex on ``commit_seq`` / ``read_wake_seq``; Windows polling backoff in ``atomic_wait`` on those fields (see :doc:`platforms`)
 
 Performance notes
 -----------------

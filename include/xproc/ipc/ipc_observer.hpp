@@ -23,7 +23,7 @@ class ipc_observer : public IIpcRingInspector, public IIpcAttachCountView {
  public:
   explicit ipc_observer(const transport_options &opts) : opts_(opts) {
     validate_transport_options(opts_);
-    if (!shm_.open(opts_.path, opts_.shm_size, shm::shm_open_mode::read)) {
+    if (!shm_.open(opts_.path, opts_.shm_size, shm::shm_open_mode::read, opts_.win32_object_namespace)) {
       std::string msg = "ipc_observer: failed to attach shm path: " + opts_.path;
       const int err = shm_.last_os_error();
       if (err != 0) {

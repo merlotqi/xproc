@@ -3,7 +3,7 @@
 High-performance **Single Producer Single Consumer (SPSC)** Inter-Process Communication (IPC) library using ring buffers. Supports both **fixed-length frames** and **variable-length messages**. 
 
 **Linux**: POSIX shared memory + futex  
-**Windows**: Named file mapping + `WaitOnAddress` (Windows 8+)
+**Windows**: Named file mapping (`CreateFileMapping` / `MapViewOfFile`). Waiting uses **polling with backoff** in `atomic_wait` (not `WaitOnAddress`): each `MapViewOfFile` gets a different virtual address, so address-based wake primitives do not pair across producer/consumer views or across processes. See **Platform Support** below and [docs/platforms.rst](docs/platforms.rst).
 
 ## Features
 
@@ -160,6 +160,14 @@ cd build
 ctest
 ```
 
+On **Windows**, prefer serial test runs when debugging shared-memory tests to avoid stray handles and name collisions:
+
+```bash
+ctest -C Debug -j 1 --output-on-failure
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
 ### Running Examples
 
 ```bash
@@ -236,7 +244,7 @@ Key synchronization fields:
 - **Lock-free design**: No mutexes, only atomic operations
 - **Cache-line alignment**: Prevents false sharing
 - **Two-phase commit**: Reserve space, then commit for atomicity
-- **Efficient waiting**: Uses futex (Linux) or WaitOnAddress (Windows)
+- **Efficient waiting**: Linux uses futex; Windows uses **spin / yield / sleep polling** in `atomic_wait` (see platform notes)
 
 ## Platform Support
 
@@ -248,9 +256,9 @@ Key synchronization fields:
 ### Windows
 - **Build**: With the Visual Studio generator, pass `-A x64` (or use the default set by this project’s CMake) so MSVC targets x64; otherwise SDK headers can fail with `C1189: No Target Architecture`. With Ninja + MSVC, use an **x64 Native Tools** developer prompt (or matching vcvars) so `cl` defines `_M_X64` / `_WIN64`.
 - **Shared Memory**: `CreateFileMapping` + `MapViewOfFile` (full section mapped; `VirtualQuery` must report `RegionSize >= opts.shm_size`; smaller sections fail `open`)
-- **Synchronization**: `WaitOnAddress` / `WakeByAddress*` (Windows 8+)
-- **Requirements**: Windows 8 or later
-- **Naming**: Logical paths map to `Local\xproc_<hash>_…` (FNV-1a + sanitized suffix). Use **unique path strings** (PID, random salt, session id) in tests and long-running services to avoid accidental name reuse; see [docs/design.md](docs/design.md).
+- **Synchronization**: `atomic_wait` / `atomic_notify_*` use **polling with backoff** on Windows; `atomic_notify_*` is a no-op (waiters observe `commit_seq` / `read_wake_seq` via loads). Linux uses futex with real wake.
+- **Requirements**: 64-bit MSVC (x64) recommended; see [docs/platforms.rst](docs/platforms.rst).
+- **Naming**: Logical paths map to `<namespace>\\xproc_<hash>_…` (default namespace `Local`, optional `Global` via `transport_options::win32_object_namespace`). Use **unique path strings** (PID, random salt, session id) in tests and long-running services to avoid accidental name reuse; see [docs/design.md](docs/design.md).
 - **`shm::unlink`**: No-op on Windows; do not rely on it to clear a name before reuse.
 
 **Note**: Only Linux and Windows are supported. Other platforms fail CMake configuration with a clear error.
@@ -321,7 +329,7 @@ rt.stop();
 
 ## Error Handling
 
-- **`validate_transport_options`**: Central checks on `path`, `shm_size`, `item_size` (fixed), and `data_align` (`ipc_options.hpp`); used by `ipc_endpoint` / `ipc_observer`.
+- **`validate_transport_options`**: Central checks on `path`, `shm_size`, `item_size` (fixed), and `data_align` (`ipc_options.hpp`); used by `ipc_endpoint` / `ipc_observer`. On Windows, `win32_object_namespace` must be `Local` (default) or `Global`.
 - **Layout**: `xproc::shm::layout_exception` derives from `std::runtime_error` and exposes `layout_validate_error code()` for programmatic handling.
 - **Codec / wire size**: `xproc::ipc::codec_exception` exposes `codec_error code()` for encode/decode failures and fixed-slot overflow in `send_encoded` / `poll_decoded` / `IByteCodec` overload.
 - **Role misuse**: `std::logic_error` when calling `send_*` or `poll` on the wrong role.

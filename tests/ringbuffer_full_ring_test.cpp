@@ -1,14 +1,6 @@
-// Deterministic full-ring test (Linux): pipe byte synchronizes producer entering third reserve.
+// Linux only: pipe byte synchronizes producer entering third reserve (see tests/CMakeLists.txt).
 
 #include <gtest/gtest.h>
-
-#if !defined(__linux__)
-
-TEST(RingbufferFullRing, RequiresLinux) {
-  GTEST_SKIP() << "Linux only";
-}
-
-#else
 
 #include <unistd.h>
 
@@ -100,5 +92,3 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   EXPECT_TRUE(r.try_read(item, [](void *p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
   EXPECT_TRUE(r.try_read(item, [](void *p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
 }
-
-#endif

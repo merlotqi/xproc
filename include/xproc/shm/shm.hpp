@@ -18,7 +18,9 @@ class shm {
   shm(shm&&) noexcept;
   shm& operator=(shm&&) noexcept;
 
-  bool open(const std::string& name, size_t size, shm_open_mode mode);
+  // win32_object_namespace: Windows only ("Local" or "Global"); ignored on POSIX.
+  bool open(const std::string& name, size_t size, shm_open_mode mode,
+            const std::string& win32_object_namespace = "Local");
   void detach();
 
   static void unlink(const std::string& name);
@@ -36,6 +38,7 @@ class shm {
   int last_os_error_{0};
 #if defined(_WIN32)
   void* mapping_{nullptr};
+  std::string win32_view_key_{};
 #else
   int fd_{-1};
 #endif

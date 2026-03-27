@@ -1,15 +1,6 @@
-// Linux: shared memory, fork, and futex cross-process behaviour.
-// Other platforms: tests register as skipped.
+// Linux only: shared memory, fork, and futex cross-process behaviour (see tests/CMakeLists.txt).
 
 #include <gtest/gtest.h>
-
-#if !defined(__linux__)
-
-TEST(IpcIntegration, RequiresLinux) {
-  GTEST_SKIP() << "Linux only";
-}
-
-#else
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -253,5 +244,3 @@ TEST(IpcIntegration, CrossProcessVarlen) {
   xproc::shm::shm::unlink(b.c_str());
   EXPECT_EQ(cross_process_varlen_main(b.c_str()), 0);
 }
-
-#endif

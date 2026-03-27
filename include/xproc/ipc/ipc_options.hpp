@@ -20,6 +20,8 @@ struct transport_options {
   uint32_t data_align = 0;
   bool create_if_missing = true;
   channel_type type = channel_type::fixed;
+  /// Windows only: object namespace prefix for the named section ("Local" or "Global"). Ignored on Linux.
+  std::string win32_object_namespace = "Local";
 };
 
 // Central validation for ipc_endpoint / ipc_channel / ipc_observer. Throws std::invalid_argument.
@@ -40,6 +42,12 @@ inline void validate_transport_options(const transport_options &opts) {
       throw std::invalid_argument("transport_options: data_align must be 0 (default 8) or a power of two >= 4");
     }
   }
+#if defined(_WIN32)
+  if (opts.win32_object_namespace != "Local" && opts.win32_object_namespace != "Global") {
+    throw std::invalid_argument(
+        "transport_options: win32_object_namespace must be \"Local\" (default) or \"Global\"");
+  }
+#endif
 }
 
 }  // namespace ipc

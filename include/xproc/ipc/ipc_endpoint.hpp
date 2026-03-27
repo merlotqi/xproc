@@ -65,7 +65,7 @@ class ipc_endpoint {
       mode = shm_open_mode::open_create;
     }
 
-    if (!shm_.open(opts_.path, opts_.shm_size, mode)) {
+    if (!shm_.open(opts_.path, opts_.shm_size, mode, opts_.win32_object_namespace)) {
       std::string msg = "ipc_endpoint: failed to attach shm path: " + opts_.path;
       const int err = shm_.last_os_error();
       if (err != 0) {

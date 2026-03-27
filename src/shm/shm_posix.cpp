@@ -33,7 +33,9 @@ shm &shm::operator=(shm &&other) noexcept {
   return *this;
 }
 
-bool shm::open(const std::string &name, size_t size, shm_open_mode mode) {
+bool shm::open(const std::string &name, size_t size, shm_open_mode mode,
+               const std::string &win32_object_namespace) {
+  (void)win32_object_namespace;
   last_os_error_ = 0;
   name_ = name;
   size_ = size;
