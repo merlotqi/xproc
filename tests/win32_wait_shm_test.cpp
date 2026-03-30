@@ -18,11 +18,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <xproc/ipc/channel.hpp>
-#include <xproc/ipc/ipc_observer.hpp>
-#include <xproc/platform/process.hpp>
-#include <xproc/shm/shm.hpp>
-#include <xproc/sync/atomic_wait.hpp>
+#include <xproc/xproc.hpp>
 
 namespace {
 
@@ -81,7 +77,7 @@ void test_shm_producer_observer_peek() {
 
   {
     xproc::ipc::producer prod(opts);
-    xproc::ipc::ipc_observer obs(opts);
+    xproc::ipc::observer obs(opts);
     prod.send_fixed<std::uint32_t>(0x11223344u);
     bool ok = false;
     for (int i = 0; i < 5000 && !ok; ++i) {

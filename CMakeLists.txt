@@ -40,6 +40,27 @@ else()
 endif()
 
 option(XPROC_BUILD_SHARED "Build libxproc as a shared library" OFF)
+
+# Windows + DLL: place xproc.dll next to test/example/benchmark executables so GoogleTest
+# discovery does not fail with 0xc0000135 (STATUS_DLL_NOT_FOUND).
+if(WIN32 AND XPROC_BUILD_SHARED)
+    if(CMAKE_CONFIGURATION_TYPES)
+        foreach(_cfg IN LISTS CMAKE_CONFIGURATION_TYPES)
+            string(TOUPPER "${_cfg}" _CFG_UPPER)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_CFG_UPPER} "${CMAKE_BINARY_DIR}/${_cfg}")
+            set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${_CFG_UPPER} "${CMAKE_BINARY_DIR}/${_cfg}")
+            set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${_CFG_UPPER} "${CMAKE_BINARY_DIR}/${_cfg}")
+        endforeach()
+    else()
+        if(NOT CMAKE_BUILD_TYPE)
+            set(CMAKE_BUILD_TYPE Release)
+        endif()
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+    endif()
+endif()
+
 if(XPROC_BUILD_SHARED)
     add_library(xproc SHARED ${XPROC_HEADERS} ${XPROC_SOURCES})
 else()

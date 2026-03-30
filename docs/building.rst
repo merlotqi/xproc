@@ -26,6 +26,12 @@ By default ``xproc`` is a **static** library. For a shared library:
    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_SHARED=ON
    cmake --build build
 
+On **Windows**, with ``XPROC_BUILD_SHARED=ON``, CMake puts ``xproc.dll`` and all in-tree
+executables (tests, examples, benchmarks) in the same per-configuration directory (e.g.
+``build/Debug`` or ``build/Release``). That avoids ``0xc0000135`` (STATUS_DLL_NOT_FOUND)
+during ``gtest_discover_tests`` at build time. If your ``build`` tree was configured before
+this layout existed, delete the build directory and re-run CMake configure.
+
 Install and pkg-config
 ----------------------
 
