@@ -10,16 +10,16 @@ namespace ipc {
 
 enum class channel_type {
   fixed,
-  variable
+  varlen
 };
 
 enum class transport_backend {
-  shm,
+  shared_memory,
   socket
 };
 
 struct transport_options {
-  transport_backend backend = transport_backend::shm;
+  transport_backend backend = transport_backend::shared_memory;
   std::string path;
   size_t shm_size = 0;
   uint32_t item_size = 0;
@@ -35,9 +35,9 @@ struct transport_options {
   bool socket_listen = false;
 };
 
-constexpr std::size_t shm_min_size_v = sizeof(shm::shm_control_block);
+constexpr std::size_t min_shm_size = sizeof(shm::control_block);
 
-// Central validation for ipc_endpoint / ipc_channel / ipc_observer / transports. Throws std::invalid_argument.
+// Central validation for endpoint / channel / ipc_observer / transports. Throws std::invalid_argument.
 inline void validate_transport_options(const transport_options& opts) {
   if (opts.type == channel_type::fixed && opts.item_size == 0) {
     throw std::invalid_argument("transport_options: fixed channel requires non-zero item_size");
@@ -54,12 +54,12 @@ inline void validate_transport_options(const transport_options& opts) {
   }
 #endif
 
-  if (opts.backend == transport_backend::shm) {
+  if (opts.backend == transport_backend::shared_memory) {
     if (opts.path.empty()) {
-      throw std::invalid_argument("transport_options: shm backend requires non-empty path");
+      throw std::invalid_argument("transport_options: shared_memory backend requires non-empty path");
     }
-    if (opts.shm_size < shm_min_size_v) {
-      throw std::invalid_argument("transport_options: shm_size is smaller than shm_control_block");
+    if (opts.shm_size < min_shm_size) {
+      throw std::invalid_argument("transport_options: shm_size is smaller than control_block");
     }
     return;
   }

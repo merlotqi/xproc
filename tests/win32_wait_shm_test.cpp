@@ -18,7 +18,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <xproc/ipc/ipc_channel.hpp>
+#include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/ipc_observer.hpp>
 #include <xproc/platform/process.hpp>
 #include <xproc/shm/shm.hpp>
@@ -26,7 +26,7 @@
 
 namespace {
 
-constexpr std::size_t kShmTotal = sizeof(xproc::shm::shm_control_block) + 8192;
+constexpr std::size_t kShmTotal = sizeof(xproc::shm::control_block) + 8192;
 
 int run_win_ipc_child(const char* shm_path) {
   ::Sleep(400);
@@ -36,7 +36,7 @@ int run_win_ipc_child(const char* shm_path) {
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = false;
-  xproc::ipc::consumer_channel ch(opts);
+  xproc::ipc::consumer ch(opts);
 
   xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, 0u);
 
@@ -80,7 +80,7 @@ void test_shm_producer_observer_peek() {
   opts.item_size = sizeof(std::uint32_t);
 
   {
-    xproc::ipc::producer_channel prod(opts);
+    xproc::ipc::producer prod(opts);
     xproc::ipc::ipc_observer obs(opts);
     prod.send_fixed<std::uint32_t>(0x11223344u);
     bool ok = false;
@@ -120,7 +120,7 @@ void test_cross_process_commit_seq() {
   PROCESS_INFORMATION pi{};
 
   {
-    xproc::ipc::producer_channel prod(po);
+    xproc::ipc::producer prod(po);
 
     std::string cmdline = std::string("\"") + exe_path + "\" --win-ipc-child \"" + path + "\"";
     std::vector<char> cmd_mut(cmdline.begin(), cmdline.end());

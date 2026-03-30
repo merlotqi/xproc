@@ -7,20 +7,19 @@
 #include <thread>
 #include <xproc/xproc.hpp>
 
-
 int main() {
   const std::string path = "/xproc_example_fixed_inprocess";
   xproc::shm::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 16384;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
 
   std::atomic<bool> done{false};
   std::thread t([&] {

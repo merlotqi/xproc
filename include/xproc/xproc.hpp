@@ -1,17 +1,17 @@
 #pragma once
 
 // ipc include files.
+#include <xproc/ipc/channel.hpp>
+#include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/codec_exception.hpp>
-#include <xproc/ipc/ipc_channel.hpp>
-#include <xproc/ipc/ipc_channel_interface.hpp>
-#include <xproc/ipc/ipc_endpoint.hpp>
-#include <xproc/ipc/ipc_inspector.hpp>
-#include <xproc/ipc/ipc_messaging.hpp>
-#include <xproc/ipc/ipc_observer.hpp>
-#include <xproc/ipc/ipc_options.hpp>
-#include <xproc/ipc/ipc_runtime.hpp>
-#include <xproc/ipc/ipc_transport_factory.hpp>
+#include <xproc/ipc/endpoint.hpp>
+#include <xproc/ipc/inspector.hpp>
+#include <xproc/ipc/messaging.hpp>
+#include <xproc/ipc/observer.hpp>
+#include <xproc/ipc/options.hpp>
+#include <xproc/ipc/runtime.hpp>
 #include <xproc/ipc/socket_channel.hpp>
+#include <xproc/ipc/transport_factory.hpp>
 
 // platform include files.
 #include <xproc/platform/platform.hpp>

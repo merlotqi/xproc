@@ -51,7 +51,7 @@ Observer (read-only)
 
 .. code-block:: cpp
 
-   xproc::ipc::consumer_channel consumer(opts);
+   xproc::ipc::consumer consumer(opts);
    xproc::ipc::ipc_runtime rt(consumer);
 
    auto pool = [](auto task) { task(); };  // replace with real thread pool
@@ -66,7 +66,7 @@ Error handling (summary)
 ------------------------
 
 * ``validate_transport_options``: path, ``shm_size``, ``item_size`` (fixed), ``data_align``; on Windows, ``win32_object_namespace`` must be ``Local`` or ``Global``
-* Layout failures: ``layout_exception`` + ``layout_validate_error``
+* Layout failures: ``layout_exception`` + ``validate_error``
 * Codec failures: ``codec_exception`` + ``codec_error``
 * Role misuse on channels: ``std::logic_error``
 * Failed SHM open: ``last_os_error()``

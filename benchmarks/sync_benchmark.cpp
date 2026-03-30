@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <xproc/sync/atomic_backoff.hpp>
 
-
 namespace {
 
 // Exercise the spin portion of atomic_backoff (CPU pause / yield) without blocking on atomic_wait.

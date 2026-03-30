@@ -14,7 +14,6 @@
 #include <vector>
 #include <xproc/xproc.hpp>
 
-
 namespace {
 
 struct PipelineState {
@@ -55,14 +54,14 @@ int main() {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 65536;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
-  xproc::ipc::ipc_runtime runtime(consumer);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
+  xproc::ipc::runtime runtime(consumer);
 
   constexpr int k_expected_msgs = 5;
   std::mutex results_mu;

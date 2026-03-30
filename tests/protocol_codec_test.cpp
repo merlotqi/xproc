@@ -10,7 +10,6 @@
 #include <vector>
 #include <xproc/xproc.hpp>
 
-
 namespace {
 
 struct always_fail_encode_codec {
@@ -25,12 +24,12 @@ TEST(ProtocolCodec, CodecExceptionOnEncodeFailure) {
   xproc::shm::shm::unlink(path);
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 4096;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 4096;
+  opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
   bool threw = false;
   try {
-    xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
+    xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     xproc::ipc::send_encoded<always_fail_encode_codec>(prod, always_fail_encode_codec::message_type{});
   } catch (const xproc::ipc::codec_exception& e) {
     threw = true;
@@ -94,8 +93,8 @@ TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 65536;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
+  opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
   std::future<void> consumer_attached = consumer_attached_promise.get_future();
@@ -104,9 +103,9 @@ TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
   std::thread consumer_th;
 
   {
-    xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
+    xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     consumer_th = std::thread([&] {
-      xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+      xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
       consumer_attached_promise.set_value();
       while (!got_msg.load(std::memory_order_acquire)) {
         if (xproc::ipc::poll_decoded<point_codec>(ch, [&](const point_codec::message_type& m) {
@@ -137,8 +136,8 @@ TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 8192;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+  opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
   std::future<void> consumer_attached = consumer_attached_promise.get_future();
@@ -149,9 +148,9 @@ TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
   const auto view = std::basic_string_view<std::byte>(blob, sizeof(blob));
 
   {
-    xproc::ipc::producer_channel prod(opts);
+    xproc::ipc::producer prod(opts);
     consumer_th = std::thread([&] {
-      xproc::ipc::consumer_channel ch(opts);
+      xproc::ipc::consumer ch(opts);
       consumer_attached_promise.set_value();
       while (true) {
         if (xproc::ipc::poll_decoded<xproc::protocol::span_codec<128>>(
@@ -180,8 +179,8 @@ TEST(ProtocolCodec, RawPodAndBoundedBytes) {
   xproc::shm::shm::unlink(path);
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 8192;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+  opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
   std::future<void> consumer_attached = consumer_attached_promise.get_future();
@@ -189,9 +188,9 @@ TEST(ProtocolCodec, RawPodAndBoundedBytes) {
   std::thread consumer_th;
 
   {
-    xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
+    xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     consumer_th = std::thread([&] {
-      xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+      xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
       consumer_attached_promise.set_value();
       while (true) {
         if (xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(
@@ -216,8 +215,8 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
   xproc::shm::shm::unlink(path);
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 4096;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 4096;
+  opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
   std::future<void> consumer_attached = consumer_attached_promise.get_future();
@@ -228,9 +227,9 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
   const char* msg = "icodec";
   std::vector<std::byte> scratch;
   {
-    xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
+    xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     consumer_th = std::thread([&] {
-      xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+      xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
       consumer_attached_promise.set_value();
       while (got.empty()) {
         if (ch.poll([&](void* p, std::uint32_t len) {

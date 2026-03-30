@@ -10,8 +10,8 @@
 #include <cstring>
 #include <iostream>
 #include <thread>
-#include <xproc/ipc/ipc_channel.hpp>
-#include <xproc/ipc/ipc_endpoint.hpp>
+#include <xproc/ipc/channel.hpp>
+#include <xproc/ipc/endpoint.hpp>
 #include <xproc/shm/shm_layout.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
   xproc::ipc::transport_options opts;
   opts.path = shm_path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 65536;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.data_align = 8;
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   if (pid == 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     opts.create_if_missing = false;
-    xproc::ipc::consumer_channel ch(opts);
+    xproc::ipc::consumer ch(opts);
     std::uint32_t last = 0;
     for (int i = 0; i < 100; ++i) {
       bool got = false;
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
   int st = 0;
   {
-    xproc::ipc::producer_channel ch(opts);
+    xproc::ipc::producer ch(opts);
     for (std::uint32_t i = 0; i < 100; ++i) {
       ch.send_fixed(i);
     }

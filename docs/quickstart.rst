@@ -15,8 +15,8 @@ Fixed-length channel
    opts.create_if_missing = true;
    opts.item_size = 256;
 
-   xproc::ipc::producer_channel producer(opts);
-   xproc::ipc::consumer_channel consumer(opts);
+   xproc::ipc::producer producer(opts);
+   xproc::ipc::consumer consumer(opts);
 
    std::string message = "Hello, IPC!";
    producer.send_fixed_bytes(
@@ -34,10 +34,10 @@ Variable-length channel
 
 .. code-block:: cpp
 
-   opts.type = xproc::ipc::channel_type::variable;
+   opts.type = xproc::ipc::channel_type::varlen;
 
-   xproc::ipc::producer_channel producer(opts);
-   xproc::ipc::consumer_channel consumer(opts);
+   xproc::ipc::producer producer(opts);
+   xproc::ipc::consumer consumer(opts);
 
    std::vector<std::byte> data(1024);
    producer.send_varlen(data.data(), static_cast<std::uint32_t>(data.size()));

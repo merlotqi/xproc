@@ -6,27 +6,26 @@
 #include <system_error>
 #include <xproc/xproc.hpp>
 
-
-using lm = xproc::shm::shm_layout_manager;
-using err = xproc::shm::layout_validate_error;
+using lm = xproc::shm::layout_manager;
+using err = xproc::shm::validate_error;
 
 TEST(LayoutValidate, BadMagic) {
-  xproc::shm::shm_control_block h{};
+  xproc::shm::control_block h{};
   EXPECT_EQ(lm::validate_detailed(&h, 100, 0u, 8u), err::bad_magic);
 }
 
 TEST(LayoutValidate, NotReadyTimesOut) {
-  xproc::shm::shm_control_block h{};
-  h.magic = lm::EXPECTED_MAGIC;
+  xproc::shm::control_block h{};
+  h.magic = lm::expected_magic;
   EXPECT_EQ(lm::validate_detailed(&h, 100, 0u, 8u), err::not_ready_timeout);
 }
 
 TEST(LayoutValidate, VersionMismatch) {
-  xproc::shm::shm_control_block h{};
-  h.magic = lm::EXPECTED_MAGIC;
-  h.version_major = lm::VERSION_MAJOR;
-  h.version_minor = lm::VERSION_MINOR + 999u;
-  h.header_size = sizeof(xproc::shm::shm_control_block);
+  xproc::shm::control_block h{};
+  h.magic = lm::expected_magic;
+  h.version_major = lm::version_major;
+  h.version_minor = lm::version_minor + 999u;
+  h.header_size = sizeof(xproc::shm::control_block);
   h.layout_type = 0;
   h.data_capacity = 4096;
   h.data_alignment = 8;
@@ -35,11 +34,11 @@ TEST(LayoutValidate, VersionMismatch) {
 }
 
 TEST(LayoutValidate, LayoutTypeMismatch) {
-  xproc::shm::shm_control_block h{};
-  h.magic = lm::EXPECTED_MAGIC;
-  h.version_major = lm::VERSION_MAJOR;
-  h.version_minor = lm::VERSION_MINOR;
-  h.header_size = sizeof(xproc::shm::shm_control_block);
+  xproc::shm::control_block h{};
+  h.magic = lm::expected_magic;
+  h.version_major = lm::version_major;
+  h.version_minor = lm::version_minor;
+  h.header_size = sizeof(xproc::shm::control_block);
   h.layout_type = 0;
   h.data_capacity = 4096;
   h.data_alignment = 8;
@@ -48,30 +47,30 @@ TEST(LayoutValidate, LayoutTypeMismatch) {
 }
 
 TEST(LayoutValidate, Ok) {
-  xproc::shm::shm_control_block h{};
-  h.magic = lm::EXPECTED_MAGIC;
-  h.version_major = lm::VERSION_MAJOR;
-  h.version_minor = lm::VERSION_MINOR;
-  h.header_size = sizeof(xproc::shm::shm_control_block);
+  xproc::shm::control_block h{};
+  h.magic = lm::expected_magic;
+  h.version_major = lm::version_major;
+  h.version_minor = lm::version_minor;
+  h.header_size = sizeof(xproc::shm::control_block);
   h.layout_type = 0;
   h.data_capacity = 4096;
   h.data_alignment = 8;
   h.is_ready.store(true, std::memory_order_release);
   EXPECT_EQ(lm::validate_detailed(&h, 100, 0u, 8u), err::ok);
-  EXPECT_STREQ(lm::layout_validate_cstr(err::ok), "ok");
+  EXPECT_STREQ(lm::validate_cstr(err::ok), "ok");
 }
 
 TEST(LayoutValidate, ValidateTransportOptionsRejectsEmptyPath) {
   xproc::ipc::transport_options bad{};
   bad.path = "";
-  bad.shm_size = sizeof(xproc::shm::shm_control_block) + 64;
+  bad.shm_size = sizeof(xproc::shm::control_block) + 64;
   EXPECT_THROW(xproc::ipc::validate_transport_options(bad), std::invalid_argument);
 }
 
 TEST(LayoutValidate, ValidateTransportOptionsRejectsInvalidAlignAndItemSize) {
   xproc::ipc::transport_options bad_align{};
   bad_align.path = "/xproc_bad_align";
-  bad_align.shm_size = sizeof(xproc::shm::shm_control_block) + 64;
+  bad_align.shm_size = sizeof(xproc::shm::control_block) + 64;
   bad_align.type = xproc::ipc::channel_type::fixed;
   bad_align.item_size = 4;
   bad_align.data_align = 3;  // not power-of-two >= 4
@@ -79,7 +78,7 @@ TEST(LayoutValidate, ValidateTransportOptionsRejectsInvalidAlignAndItemSize) {
 
   xproc::ipc::transport_options bad_item{};
   bad_item.path = "/xproc_bad_item";
-  bad_item.shm_size = sizeof(xproc::shm::shm_control_block) + 64;
+  bad_item.shm_size = sizeof(xproc::shm::control_block) + 64;
   bad_item.type = xproc::ipc::channel_type::fixed;
   bad_item.item_size = 0;
   EXPECT_THROW(xproc::ipc::validate_transport_options(bad_item), std::invalid_argument);
@@ -97,12 +96,12 @@ TEST(LayoutValidate, LayoutExceptionCarriesCodeAndErrorCode) {
 }
 
 TEST(LayoutValidate, ReadEmbeddedLayoutVersion) {
-  xproc::shm::shm_control_block h{};
-  h.version_major = lm::VERSION_MAJOR;
-  h.version_minor = lm::VERSION_MINOR;
-  const auto v = xproc::shm::read_embedded_layout_version(&h);
-  EXPECT_EQ(v.major, lm::VERSION_MAJOR);
-  EXPECT_EQ(v.minor, lm::VERSION_MINOR);
+  xproc::shm::control_block h{};
+  h.version_major = lm::version_major;
+  h.version_minor = lm::version_minor;
+  const auto v = xproc::shm::read_embedded_version(&h);
+  EXPECT_EQ(v.major, lm::version_major);
+  EXPECT_EQ(v.minor, lm::version_minor);
 }
 
 TEST(LayoutValidate, DefaultShmBackendStub) {
@@ -112,7 +111,7 @@ TEST(LayoutValidate, DefaultShmBackendStub) {
 }
 
 TEST(LayoutValidate, RingbufferFacadeAndErrorStrings) {
-  alignas(64) xproc::shm::shm_control_block h{};
+  alignas(64) xproc::shm::control_block h{};
   h.data_capacity = 1024;
   h.data_alignment = 8;
   xproc::ringbuffer::control_block_ring_facade view(&h);

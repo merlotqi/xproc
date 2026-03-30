@@ -27,7 +27,7 @@ IPC layer
 ---------
 
 * Endpoints attach to a shared segment and validate layout
-* ``producer_channel`` / ``consumer_channel``: typed send / poll API
+* ``producer`` / ``consumer``: typed send / poll API
 * ``ipc_observer``: read-only attach; ``peek`` without consuming
 * ``ipc_messaging``: higher-level encoded send/receive helpers
 * ``ipc_runtime``: poll loop that copies payloads and dispatches via an executor (see class comments in ``ipc_runtime.hpp``)

@@ -26,13 +26,13 @@ static void BM_FixedSendPoll(benchmark::State& state) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 1 * 1024 * 1024;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 1 * 1024 * 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = static_cast<std::uint32_t>(payload_len);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
   std::vector<std::byte> payload(payload_len, std::byte{0x5a});
 
   for (auto _ : state) {
@@ -63,12 +63,12 @@ static void BM_VarlenSendPoll(benchmark::State& state) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 1 * 1024 * 1024;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 1 * 1024 * 1024;
+  opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
   std::vector<std::byte> payload(payload_len, std::byte{0x42});
 
   for (auto _ : state) {
@@ -93,12 +93,12 @@ static void BM_SendEncodedRawPod(benchmark::State& state) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 512 * 1024;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 512 * 1024;
+  opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
   std::uint64_t value = 0;
 
   for (auto _ : state) {

@@ -1,13 +1,10 @@
 // Observer example: monitor traffic without advancing read_pos.
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <string>
-#include <thread>
 #include <xproc/xproc.hpp>
-
 
 int main() {
   const std::string path = "/xproc_example_observer";
@@ -15,14 +12,14 @@ int main() {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 16384;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
-  xproc::ipc::ipc_observer observer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
+  xproc::ipc::observer observer(opts);
 
   producer.send_fixed<std::uint32_t>(0x42u);
 
@@ -56,7 +53,7 @@ int main() {
     }
   }
 
-  const auto snap = observer.ring_snapshot();
+  const auto snap = observer.snapshot();
   std::cout << "snapshot write_pos=" << snap.write_pos << " read_pos=" << snap.read_pos
             << " attach_count=" << snap.attach_count << "\n";
 

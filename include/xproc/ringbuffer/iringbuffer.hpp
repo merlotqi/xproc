@@ -20,7 +20,7 @@ class IRingBuffer {
 
 class control_block_ring_facade final : public IRingBuffer {
  public:
-  explicit control_block_ring_facade(const shm::shm_control_block* header) noexcept : header_(header) {}
+  explicit control_block_ring_facade(const shm::control_block* header) noexcept : header_(header) {}
 
   std::size_t capacity_bytes() const noexcept override {
     return header_ ? static_cast<std::size_t>(header_->data_capacity) : 0;
@@ -28,10 +28,10 @@ class control_block_ring_facade final : public IRingBuffer {
 
   std::uint32_t data_alignment() const noexcept override { return header_ ? header_->data_alignment : 0; }
 
-  const shm::shm_control_block* control_block() const noexcept { return header_; }
+  const shm::control_block* control_block() const noexcept { return header_; }
 
  private:
-  const shm::shm_control_block* header_;
+  const shm::control_block* header_;
 };
 
 }  // namespace ringbuffer

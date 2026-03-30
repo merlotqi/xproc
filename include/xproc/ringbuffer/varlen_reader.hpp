@@ -15,7 +15,7 @@ class varlen_reader : public ringbuffer_view {
   using ringbuffer_view::ringbuffer_view;
 
   template <typename F>
-  bool try_read(F&& handler) {
+  bool read(F&& handler) {
     uint64_t curr_read = header_->rb_meta.read_pos.load(std::memory_order_acquire);
     uint64_t write_end = header_->rb_meta.write_pos.load(std::memory_order_acquire);
     if (write_end == curr_read) {
@@ -39,7 +39,7 @@ class varlen_reader : public ringbuffer_view {
       header_->rb_meta.read_pos.store(curr_read + to_end, std::memory_order_release);
       header_->rb_meta.read_wake_seq.fetch_add(1, std::memory_order_release);
       sync::atomic_notify_one(&header_->rb_meta.read_wake_seq);
-      return try_read(std::forward<F>(handler));
+      return read(std::forward<F>(handler));
     }
 
     return false;
@@ -47,7 +47,7 @@ class varlen_reader : public ringbuffer_view {
 
   // Observer: walk from current read_pos without mutating shared state (skips dummy slots locally).
   template <typename F>
-  bool try_peek(F&& handler) const {
+  bool peek(F&& handler) const {
     uint64_t r = header_->rb_meta.read_pos.load(std::memory_order_acquire);
     const uint64_t write_end = header_->rb_meta.write_pos.load(std::memory_order_acquire);
 

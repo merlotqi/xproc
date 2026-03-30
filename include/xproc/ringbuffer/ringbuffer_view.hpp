@@ -9,7 +9,7 @@ namespace ringbuffer {
 
 class ringbuffer_view {
  public:
-  explicit ringbuffer_view(shm::shm_control_block* header)
+  explicit ringbuffer_view(shm::control_block* header)
       : header_(header), data_(reinterpret_cast<uint8_t*>(header) + header->header_size) {}
 
   inline std::size_t capacity() const { return header_->data_capacity; }
@@ -29,7 +29,7 @@ class ringbuffer_view {
   }
 
  protected:
-  shm::shm_control_block* header_;
+  shm::control_block* header_;
   uint8_t* data_;
 };
 

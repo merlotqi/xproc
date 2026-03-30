@@ -7,7 +7,6 @@
 #include <vector>
 #include <xproc/xproc.hpp>
 
-
 namespace {
 
 std::string unique_path(const char* prefix, int arg) {
@@ -28,13 +27,13 @@ static void BM_ObserverPeekFixed(benchmark::State& state) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 256 * 1024;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 256 * 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = item;
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::ipc_observer observer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::observer observer(opts);
 
   std::vector<std::byte> payload(item, std::byte{0x3c});
   producer.send_fixed_bytes(payload.data(), item);

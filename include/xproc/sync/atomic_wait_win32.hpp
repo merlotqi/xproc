@@ -8,7 +8,6 @@
 #include <thread>
 #include <xproc/platform/platform.hpp>
 
-
 namespace xproc {
 namespace sync {
 

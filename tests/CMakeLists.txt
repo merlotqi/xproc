@@ -40,7 +40,7 @@ endif()
 
 foreach(TEST_FILE ${TEST_FILES})
     string(REPLACE ".cpp" "" TEST_NAME ${TEST_FILE})
-    xproc_gtest_executable(xproc_${TEST_NAME}_tests ${TEST_FILE})
+    xproc_gtest_executable(xproc_${TEST_NAME} ${TEST_FILE})
 endforeach()
 
 if(WIN32)

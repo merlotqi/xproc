@@ -7,16 +7,14 @@
 #include <thread>
 #include <xproc/xproc.hpp>
 
-
 namespace {
 
-void init_header(xproc::shm::shm_control_block& h, std::uint64_t cap, std::uint32_t layout_type,
-                 std::uint32_t data_align) {
-  using xproc::shm::shm_layout_manager;
-  h.magic = shm_layout_manager::EXPECTED_MAGIC;
-  h.version_major = shm_layout_manager::VERSION_MAJOR;
-  h.version_minor = shm_layout_manager::VERSION_MINOR;
-  h.header_size = sizeof(xproc::shm::shm_control_block);
+void init_header(xproc::shm::control_block& h, std::uint64_t cap, std::uint32_t layout_type, std::uint32_t data_align) {
+  using xproc::shm::layout_manager;
+  h.magic = layout_manager::expected_magic;
+  h.version_major = layout_manager::version_major;
+  h.version_minor = layout_manager::version_minor;
+  h.header_size = sizeof(xproc::shm::control_block);
   h.layout_type = layout_type;
   h.rb_meta.write_pos.store(0, std::memory_order_relaxed);
   h.rb_meta.read_pos.store(0, std::memory_order_relaxed);
@@ -32,7 +30,7 @@ void init_header(xproc::shm::shm_control_block& h, std::uint64_t cap, std::uint3
 }  // namespace
 
 template <std::size_t N>
-struct alignas(xproc::shm::shm_control_block) ring_arena {
+struct alignas(xproc::shm::control_block) ring_arena {
   std::array<std::uint8_t, N> bytes{};
 };
 
@@ -41,10 +39,10 @@ TEST(RingbufferSpsc, FixedSpsc) {
   // With a small capacity, a full ring can wedge: the producer waits on read_wake_seq while the
   // consumer waits on commit_seq for progress that cannot happen until space is freed.
   constexpr std::uint64_t cap = 65536;
-  constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
+  constexpr std::size_t total = sizeof(xproc::shm::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::shm::shm_control_block*>(arena.bytes.data());
-  new (hdr) xproc::shm::shm_control_block{};
+  auto* hdr = reinterpret_cast<xproc::shm::control_block*>(arena.bytes.data());
+  new (hdr) xproc::shm::control_block{};
   init_header(*hdr, cap, 0, 8);
 
   xproc::ringbuffer::fixed_writer w(hdr);
@@ -56,7 +54,7 @@ TEST(RingbufferSpsc, FixedSpsc) {
 
   std::thread consumer([&] {
     while (received.load(std::memory_order_relaxed) < n) {
-      if (r.try_read(item, [&](void* p) {
+      if (r.read(item, [&](void* p) {
             EXPECT_EQ(std::memcmp(p, "0123456789abcdef", item), 0);
             received.fetch_add(1, std::memory_order_relaxed);
           })) {
@@ -80,10 +78,10 @@ TEST(RingbufferSpsc, FixedSpsc) {
 
 TEST(RingbufferSpsc, VarlenSpscWrap) {
   constexpr std::uint64_t cap = 128;
-  constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + static_cast<std::size_t>(cap);
+  constexpr std::size_t total = sizeof(xproc::shm::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::shm::shm_control_block*>(arena.bytes.data());
-  new (hdr) xproc::shm::shm_control_block{};
+  auto* hdr = reinterpret_cast<xproc::shm::control_block*>(arena.bytes.data());
+  new (hdr) xproc::shm::control_block{};
   init_header(*hdr, cap, 1, 8);
 
   xproc::ringbuffer::varlen_writer w(hdr);
@@ -105,7 +103,7 @@ TEST(RingbufferSpsc, VarlenSpscWrap) {
 
   int msgs = 0;
   while (msgs < 2) {
-    if (rd.try_read([&](void* ptr, std::uint32_t len) {
+    if (rd.read([&](void* ptr, std::uint32_t len) {
           if (msgs == 0) {
             EXPECT_EQ(len, strlen_a);
             EXPECT_EQ(std::memcmp(ptr, a, len), 0);

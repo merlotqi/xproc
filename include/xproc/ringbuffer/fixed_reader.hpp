@@ -14,7 +14,7 @@ class fixed_reader : public ringbuffer_view {
   using ringbuffer_view::ringbuffer_view;
 
   template <typename F>
-  bool try_read(uint32_t item_size, F&& handler) {
+  bool read(uint32_t item_size, F&& handler) {
     uint64_t curr_read = header_->rb_meta.read_pos.load(std::memory_order_acquire);
     uint64_t write_end = header_->rb_meta.write_pos.load(std::memory_order_acquire);
     if (write_end == curr_read) {
@@ -37,7 +37,7 @@ class fixed_reader : public ringbuffer_view {
 
   // Observer / inspector: deliver committed payload without advancing read_pos or wake_seq.
   template <typename F>
-  bool try_peek(uint32_t item_size, F&& handler) const {
+  bool peek(uint32_t item_size, F&& handler) const {
     uint64_t curr_read = header_->rb_meta.read_pos.load(std::memory_order_acquire);
     uint64_t write_end = header_->rb_meta.write_pos.load(std::memory_order_acquire);
     if (write_end == curr_read) {

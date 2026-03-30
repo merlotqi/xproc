@@ -6,7 +6,6 @@
 #include <thread>
 #include <xproc/xproc.hpp>
 
-
 #if defined(XPROC_WITH_PROTOBUF)
 #include "test_point.pb.h"
 #endif
@@ -20,8 +19,8 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 65536;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
+  opts.type = xproc::ipc::channel_type::varlen;
 
   std::atomic<bool> producer_ready{false};
   nlohmann::json received;
@@ -31,7 +30,7 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
     while (!producer_ready.load(std::memory_order_acquire)) {
       std::this_thread::yield();
     }
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+    xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
       if (xproc::ipc::poll_decoded<xproc::protocol::nlohmann_json_codec<4096>>(ch, [&](const nlohmann::json& m) {
             received = m;
@@ -45,7 +44,7 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
   });
 
   {
-    xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
+    xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     producer_ready.store(true, std::memory_order_release);
     nlohmann::json msg;
     msg["x"] = 42;
@@ -68,8 +67,8 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 65536;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
+  opts.type = xproc::ipc::channel_type::varlen;
 
   std::atomic<bool> producer_ready{false};
   xproc::test::TestPoint received;
@@ -81,7 +80,7 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
     while (!producer_ready.load(std::memory_order_acquire)) {
       std::this_thread::yield();
     }
-    xproc::ipc::ipc_channel ch(opts, xproc::ipc::ipc_endpoint::role::consumer);
+    xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
       if (xproc::ipc::poll_decoded<codec>(ch, [&](const xproc::test::TestPoint& m) {
             received = m;
@@ -95,7 +94,7 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
   });
 
   {
-    xproc::ipc::ipc_channel prod(opts, xproc::ipc::ipc_endpoint::role::producer);
+    xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     producer_ready.store(true, std::memory_order_release);
     xproc::test::TestPoint msg;
     msg.set_x(7);

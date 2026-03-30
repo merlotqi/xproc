@@ -12,7 +12,6 @@
 #include <thread>
 #include <xproc/xproc.hpp>
 
-
 int main() {
   auto& manager = taskflow::TaskManager::getInstance();
   manager.start_processing(std::max<std::size_t>(1, std::thread::hardware_concurrency()));
@@ -22,14 +21,14 @@ int main() {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 16384;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
-  xproc::ipc::ipc_runtime runtime(consumer);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
+  xproc::ipc::runtime runtime(consumer);
 
   std::atomic<bool> done{false};
   std::thread rt([&] {

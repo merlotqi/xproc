@@ -5,9 +5,9 @@
 #include <cstdint>
 #include <utility>
 #include <vector>
+#include <xproc/ipc/channel.hpp>
+#include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/codec_exception.hpp>
-#include <xproc/ipc/ipc_channel.hpp>
-#include <xproc/ipc/ipc_channel_interface.hpp>
 #include <xproc/protocol/codec_traits.hpp>
 #include <xproc/protocol/protocol.hpp>
 
@@ -19,7 +19,7 @@ namespace detail {
 inline constexpr std::size_t send_encoded_stack_buf_max_v = 4096;
 
 template <typename Codec>
-void send_encoded_dispatch(ipc_channel& ch, const typename Codec::message_type& msg) {
+void send_encoded_dispatch(channel& ch, const typename Codec::message_type& msg) {
   constexpr std::size_t cap = Codec::max_encoded_size();
   std::size_t out_len = 0;
   if constexpr (cap <= send_encoded_stack_buf_max_v) {
@@ -27,7 +27,7 @@ void send_encoded_dispatch(ipc_channel& ch, const typename Codec::message_type& 
     if (!Codec::encode(buf.data(), buf.size(), msg, out_len)) {
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
-    if (ch.options().type == channel_type::variable) {
+    if (ch.options().type == channel_type::varlen) {
       ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
@@ -41,7 +41,7 @@ void send_encoded_dispatch(ipc_channel& ch, const typename Codec::message_type& 
     if (!Codec::encode(buf.data(), buf.size(), msg, out_len)) {
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
-    if (ch.options().type == channel_type::variable) {
+    if (ch.options().type == channel_type::varlen) {
       ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
@@ -54,7 +54,7 @@ void send_encoded_dispatch(ipc_channel& ch, const typename Codec::message_type& 
 }
 
 template <typename Codec>
-void send_encoded_dispatch(IProducerChannel& ch, const typename Codec::message_type& msg) {
+void send_encoded_dispatch(producer_channel_interface& ch, const typename Codec::message_type& msg) {
   constexpr std::size_t cap = Codec::max_encoded_size();
   std::size_t out_len = 0;
   if constexpr (cap <= send_encoded_stack_buf_max_v) {
@@ -62,7 +62,7 @@ void send_encoded_dispatch(IProducerChannel& ch, const typename Codec::message_t
     if (!Codec::encode(buf.data(), buf.size(), msg, out_len)) {
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
-    if (ch.options().type == channel_type::variable) {
+    if (ch.options().type == channel_type::varlen) {
       ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
@@ -76,7 +76,7 @@ void send_encoded_dispatch(IProducerChannel& ch, const typename Codec::message_t
     if (!Codec::encode(buf.data(), buf.size(), msg, out_len)) {
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
-    if (ch.options().type == channel_type::variable) {
+    if (ch.options().type == channel_type::varlen) {
       ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
@@ -91,19 +91,19 @@ void send_encoded_dispatch(IProducerChannel& ch, const typename Codec::message_t
 }  // namespace detail
 
 template <typename Codec>
-void send_encoded(ipc_channel& ch, const typename Codec::message_type& msg) {
+void send_encoded(channel& ch, const typename Codec::message_type& msg) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
                 "send_encoded requires a type satisfying xproc::protocol::is_codec");
   detail::send_encoded_dispatch<Codec>(ch, msg);
 }
 
 template <typename Codec>
-void send_encoded(producer_channel& ch, const typename Codec::message_type& msg) {
-  send_encoded<Codec>(ch.as_ipc_channel(), msg);
+void send_encoded(producer& ch, const typename Codec::message_type& msg) {
+  send_encoded<Codec>(ch.as_channel(), msg);
 }
 
 template <typename Codec>
-void send_encoded(IProducerChannel& ch, const typename Codec::message_type& msg) {
+void send_encoded(producer_channel_interface& ch, const typename Codec::message_type& msg) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
                 "send_encoded requires a type satisfying xproc::protocol::is_codec");
   detail::send_encoded_dispatch<Codec>(ch, msg);
@@ -113,7 +113,7 @@ void send_encoded(IProducerChannel& ch, const typename Codec::message_type& msg)
 // If decode uses a view into ring memory (e.g. span_codec / string_view), copy out inside the handler
 // before returning if you use msg async.
 template <typename Codec, typename F>
-bool poll_decoded(ipc_channel& ch, F&& handler) {
+bool poll_decoded(channel& ch, F&& handler) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
                 "poll_decoded requires a type satisfying xproc::protocol::is_codec");
   typename Codec::message_type msg{};
@@ -126,12 +126,12 @@ bool poll_decoded(ipc_channel& ch, F&& handler) {
 }
 
 template <typename Codec, typename F>
-bool poll_decoded(consumer_channel& ch, F&& handler) {
-  return poll_decoded<Codec>(ch.as_ipc_channel(), std::forward<F>(handler));
+bool poll_decoded(consumer& ch, F&& handler) {
+  return poll_decoded<Codec>(ch.as_channel(), std::forward<F>(handler));
 }
 
 template <typename Codec, typename F>
-bool poll_decoded(IConsumerChannel& ch, F&& handler) {
+bool poll_decoded(consumer_channel_interface& ch, F&& handler) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
                 "poll_decoded requires a type satisfying xproc::protocol::is_codec");
   typename Codec::message_type msg{};
@@ -144,14 +144,14 @@ bool poll_decoded(IConsumerChannel& ch, F&& handler) {
 }
 
 // Dynamic codec: grows scratch until wrap succeeds (identity needs wire_cap >= logical_len).
-inline void send_encoded(ipc_channel& ch, const protocol::IByteCodec& codec, const std::byte* logical,
+inline void send_encoded(channel& ch, const protocol::IByteCodec& codec, const std::byte* logical,
                          std::size_t logical_len, std::vector<std::byte>& scratch) {
   std::size_t cap = logical_len < 64 ? 64 : logical_len;
   while (true) {
     scratch.resize(cap);
     std::size_t wire_len = 0;
     if (codec.wrap(logical, logical_len, scratch.data(), scratch.size(), wire_len)) {
-      if (ch.options().type == channel_type::variable) {
+      if (ch.options().type == channel_type::varlen) {
         ch.send_varlen(scratch.data(), static_cast<std::uint32_t>(wire_len));
       } else {
         if (wire_len > static_cast<std::size_t>(ch.options().item_size)) {
@@ -170,19 +170,19 @@ inline void send_encoded(ipc_channel& ch, const protocol::IByteCodec& codec, con
   }
 }
 
-inline void send_encoded(producer_channel& ch, const protocol::IByteCodec& codec, const std::byte* logical,
+inline void send_encoded(producer& ch, const protocol::IByteCodec& codec, const std::byte* logical,
                          std::size_t logical_len, std::vector<std::byte>& scratch) {
-  send_encoded(ch.as_ipc_channel(), codec, logical, logical_len, scratch);
+  send_encoded(ch.as_channel(), codec, logical, logical_len, scratch);
 }
 
-inline void send_encoded(IProducerChannel& ch, const protocol::IByteCodec& codec, const std::byte* logical,
+inline void send_encoded(producer_channel_interface& ch, const protocol::IByteCodec& codec, const std::byte* logical,
                          std::size_t logical_len, std::vector<std::byte>& scratch) {
   std::size_t cap = logical_len < 64 ? 64 : logical_len;
   while (true) {
     scratch.resize(cap);
     std::size_t wire_len = 0;
     if (codec.wrap(logical, logical_len, scratch.data(), scratch.size(), wire_len)) {
-      if (ch.options().type == channel_type::variable) {
+      if (ch.options().type == channel_type::varlen) {
         ch.send_varlen(scratch.data(), static_cast<std::uint32_t>(wire_len));
       } else {
         if (wire_len > static_cast<std::size_t>(ch.options().item_size)) {

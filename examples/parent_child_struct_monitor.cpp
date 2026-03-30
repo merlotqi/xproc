@@ -56,7 +56,7 @@ struct telemetry_packet {
   int b;
 };
 
-constexpr std::size_t kShmSize = sizeof(xproc::shm::shm_control_block) + 32768;
+constexpr std::size_t kShmSize = sizeof(xproc::shm::control_block) + 32768;
 
 int run_child_writer(const std::string& shm_path) {
   xproc::ipc::transport_options opts;
@@ -66,7 +66,7 @@ int run_child_writer(const std::string& shm_path) {
   opts.item_size = sizeof(telemetry_packet);
   opts.create_if_missing = false;
 
-  xproc::ipc::producer_channel producer(opts);
+  xproc::ipc::producer producer(opts);
 
   std::thread writer([&] {
     for (int i = 0; i <= 100; ++i) {
@@ -102,9 +102,9 @@ int main(int argc, char** argv) {
   opts.item_size = sizeof(telemetry_packet);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel creator(opts);
+  xproc::ipc::producer creator(opts);
   opts.create_if_missing = false;
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::consumer consumer(opts);
 
   const pid_t pid = fork();
   if (pid < 0) {
@@ -159,8 +159,7 @@ int main(int argc, char** argv) {
     return run_child_writer(std::string(argv[2]));
   }
 
-  const std::string path =
-      std::string("/xproc_example_parent_child_struct_") + std::to_string(::GetCurrentProcessId());
+  const std::string path = std::string("/xproc_example_parent_child_struct_") + std::to_string(::GetCurrentProcessId());
 
   xproc::shm::shm::unlink(path);
 
@@ -171,9 +170,9 @@ int main(int argc, char** argv) {
   opts.item_size = sizeof(telemetry_packet);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel creator(opts);
+  xproc::ipc::producer creator(opts);
   opts.create_if_missing = false;
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::consumer consumer(opts);
 
   char exe_path[MAX_PATH];
   if (::GetModuleFileNameA(nullptr, exe_path, MAX_PATH) == 0u) {

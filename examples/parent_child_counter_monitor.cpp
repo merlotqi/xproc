@@ -51,7 +51,7 @@ int main() {
 
 namespace {
 
-constexpr std::size_t kShmSize = sizeof(xproc::shm::shm_control_block) + 16384;
+constexpr std::size_t kShmSize = sizeof(xproc::shm::control_block) + 16384;
 
 int run_child_writer(const std::string& shm_path) {
   xproc::ipc::transport_options child_opts;
@@ -61,7 +61,7 @@ int run_child_writer(const std::string& shm_path) {
   child_opts.item_size = sizeof(std::uint32_t);
   child_opts.create_if_missing = false;
 
-  xproc::ipc::producer_channel producer(child_opts);
+  xproc::ipc::producer producer(child_opts);
 
   std::thread writer([&] {
     for (std::uint32_t v = 0; v <= 100; ++v) {
@@ -93,9 +93,9 @@ int main(int argc, char** argv) {
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel creator(opts);
+  xproc::ipc::producer creator(opts);
   opts.create_if_missing = false;
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::consumer consumer(opts);
 
   const pid_t pid = fork();
   if (pid < 0) {
@@ -168,9 +168,9 @@ int main(int argc, char** argv) {
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel creator(opts);
+  xproc::ipc::producer creator(opts);
   opts.create_if_missing = false;
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::consumer consumer(opts);
 
   char exe_path[MAX_PATH];
   if (::GetModuleFileNameA(nullptr, exe_path, MAX_PATH) == 0u) {

@@ -1,12 +1,10 @@
 #include <chrono>
 #include <cstring>
-#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
-#include <xproc/ipc/ipc_options.hpp>
+#include <xproc/ipc/options.hpp>
 #include <xproc/ipc/socket_channel.hpp>
-
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -239,7 +237,7 @@ sock_handle tcp_accept(sock_handle listen_fd) {
 
 }  // namespace
 
-void socket_producer_transport::close_sock() noexcept {
+void socket_producer::close_sock() noexcept {
 #if defined(_WIN32)
   close_handle(static_cast<SOCKET>(sock_));
   sock_ = static_cast<std::uintptr_t>(INVALID_SOCKET);
@@ -249,10 +247,10 @@ void socket_producer_transport::close_sock() noexcept {
 #endif
 }
 
-socket_producer_transport::socket_producer_transport(const transport_options& opts) : opts_(opts) {
+socket_producer::socket_producer(const transport_options& opts) : opts_(opts) {
   validate_transport_options(opts_);
   if (opts_.backend != transport_backend::socket) {
-    throw std::logic_error("socket_producer_transport: backend must be socket");
+    throw std::logic_error("socket_producer: backend must be socket");
   }
   for (int attempt = 0; attempt < 200; ++attempt) {
     try {
@@ -271,9 +269,9 @@ socket_producer_transport::socket_producer_transport(const transport_options& op
   }
 }
 
-socket_producer_transport::~socket_producer_transport() { close_sock(); }
+socket_producer::~socket_producer() { close_sock(); }
 
-void socket_producer_transport::write_full(const void* data, std::size_t len) {
+void socket_producer::write_full(const void* data, std::size_t len) {
 #if defined(_WIN32)
   write_full_sock(static_cast<SOCKET>(sock_), data, len);
 #else
@@ -281,7 +279,7 @@ void socket_producer_transport::write_full(const void* data, std::size_t len) {
 #endif
 }
 
-void socket_producer_transport::send_fixed_bytes(const void* data, std::uint32_t payload_len) {
+void socket_producer::send_fixed_bytes(const void* data, std::uint32_t payload_len) {
   if (opts_.type != channel_type::fixed) {
     throw std::logic_error("socket_producer: fixed_bytes requires fixed channel");
   }
@@ -293,7 +291,7 @@ void socket_producer_transport::send_fixed_bytes(const void* data, std::uint32_t
   write_full(buf.data(), buf.size());
 }
 
-void socket_producer_transport::send_fixed_sized(const void* data, std::uint32_t byte_length) {
+void socket_producer::send_fixed_sized(const void* data, std::uint32_t byte_length) {
   if (opts_.type != channel_type::fixed) {
     throw std::logic_error("socket_producer: send_fixed_sized requires fixed channel");
   }
@@ -305,8 +303,8 @@ void socket_producer_transport::send_fixed_sized(const void* data, std::uint32_t
   write_full(buf.data(), buf.size());
 }
 
-void socket_producer_transport::send_varlen(const void* data, std::uint32_t len) {
-  if (opts_.type != channel_type::variable) {
+void socket_producer::send_varlen(const void* data, std::uint32_t len) {
+  if (opts_.type != channel_type::varlen) {
     throw std::logic_error("socket_producer: send_varlen requires variable channel");
   }
   if (len > k_max_varlen) {
@@ -320,7 +318,7 @@ void socket_producer_transport::send_varlen(const void* data, std::uint32_t len)
   }
 }
 
-void socket_consumer_transport::close_listen() noexcept {
+void socket_consumer::close_listen() noexcept {
 #if defined(_WIN32)
   close_handle(static_cast<SOCKET>(listen_));
   listen_ = static_cast<std::uintptr_t>(INVALID_SOCKET);
@@ -330,7 +328,7 @@ void socket_consumer_transport::close_listen() noexcept {
 #endif
 }
 
-void socket_consumer_transport::close_sock() noexcept {
+void socket_consumer::close_sock() noexcept {
 #if defined(_WIN32)
   close_handle(static_cast<SOCKET>(sock_));
   sock_ = static_cast<std::uintptr_t>(INVALID_SOCKET);
@@ -340,13 +338,13 @@ void socket_consumer_transport::close_sock() noexcept {
 #endif
 }
 
-socket_consumer_transport::socket_consumer_transport(const transport_options& opts) : opts_(opts) {
+socket_consumer::socket_consumer(const transport_options& opts) : opts_(opts) {
   validate_transport_options(opts_);
   if (opts_.backend != transport_backend::socket) {
-    throw std::logic_error("socket_consumer_transport: backend must be socket");
+    throw std::logic_error("socket_consumer: backend must be socket");
   }
   if (!opts_.socket_listen) {
-    throw std::invalid_argument("socket_consumer_transport: consumer requires socket_listen=true");
+    throw std::invalid_argument("socket_consumer: consumer requires socket_listen=true");
   }
   std::uint16_t bound = opts_.socket_port;
 #if defined(_WIN32)
@@ -359,12 +357,12 @@ socket_consumer_transport::socket_consumer_transport(const transport_options& op
   opts_.socket_port = bound;
 }
 
-socket_consumer_transport::~socket_consumer_transport() {
+socket_consumer::~socket_consumer() {
   close_sock();
   close_listen();
 }
 
-bool socket_consumer_transport::ensure_peer_connected() {
+bool socket_consumer::ensure_peer_connected() {
 #if defined(_WIN32)
   if (sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET)) {
     return true;
@@ -407,9 +405,9 @@ bool socket_consumer_transport::ensure_peer_connected() {
 #endif
 }
 
-void socket_consumer_transport::wait_when_empty() { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+void socket_consumer::wait() { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
 
-bool socket_consumer_transport::poll_impl(const std::function<void(void*, std::uint32_t)>& handler) {
+bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>& handler) {
   if (!ensure_peer_connected()) {
     return false;
   }

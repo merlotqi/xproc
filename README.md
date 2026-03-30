@@ -13,7 +13,7 @@ High-performance **Single Producer Single Consumer (SPSC)** Inter-Process Commun
 - **Variable-length payloads** can avoid extra copies in the ring (payload pointer is valid for the duration of `poll` / `peek` callbacks only)
 - **Observer** read-only attach (`ipc_observer`) for snapshots / `peek` without advancing `read_pos` (weak consistency if a consumer runs concurrently)
 - **Multiple serialization formats**: Built-in codecs, optional JSON (nlohmann/json), optional Protocol Buffers
-- **Errors**: `std::invalid_argument` / `std::logic_error` for misuse; `xproc::shm::layout_exception` (with `layout_validate_error code()`) for layout failures; `xproc::ipc::codec_exception` (with `codec_error code()`) for `send_encoded` / `poll_decoded` failures; `shm::last_os_error()` after failed `shm::open()`
+- **Errors**: `std::invalid_argument` / `std::logic_error` for misuse; `xproc::shm::layout_exception` (with `validate_error code()`) for layout failures; `xproc::ipc::codec_exception` (with `codec_error code()`) for `send_encoded` / `poll_decoded` failures; `shm::last_os_error()` after failed `shm::open()`
 - **Cache-line aligned** control block to reduce false sharing
 
 ## Quick Start
@@ -31,13 +31,13 @@ opts.type = xproc::ipc::channel_type::fixed;
 opts.create_if_missing = true;
 
 opts.item_size = 256; // fixed slot size in bytes
-xproc::ipc::producer_channel producer(opts);
+xproc::ipc::producer producer(opts);
 
 std::string message = "Hello, IPC!";
 producer.send_fixed_bytes(reinterpret_cast<const std::byte *>(message.data()),
                           static_cast<std::uint32_t>(message.size()));
 
-xproc::ipc::consumer_channel consumer(opts);
+xproc::ipc::consumer consumer(opts);
 consumer.poll([](void *data, std::uint32_t len) {
     std::string received(static_cast<const char *>(data), static_cast<std::size_t>(len));
     std::cout << "Received: " << received << std::endl;
@@ -48,10 +48,10 @@ consumer.poll([](void *data, std::uint32_t len) {
 
 ```cpp
 // Using variable-length channel
-opts.type = xproc::ipc::channel_type::variable;
+opts.type = xproc::ipc::channel_type::varlen;
 
-xproc::ipc::producer_channel producer(opts);
-xproc::ipc::consumer_channel consumer(opts);
+xproc::ipc::producer producer(opts);
+xproc::ipc::consumer consumer(opts);
 
 std::vector<std::byte> data(1024);
 producer.send_varlen(data.data(), static_cast<std::uint32_t>(data.size()));
@@ -67,8 +67,8 @@ consumer.poll([](void *ptr, std::uint32_t len) {
 #include <xproc/protocol/codecs.hpp>
 
 // Using built-in codecs
-xproc::ipc::producer_channel producer(opts);
-xproc::ipc::consumer_channel consumer(opts);
+xproc::ipc::producer producer(opts);
+xproc::ipc::consumer consumer(opts);
 
 // Send with codec
 xproc::ipc::send_encoded<xproc::protocol::raw_pod_codec<int>>(producer, 42);
@@ -219,8 +219,8 @@ include/xproc/
 - **`IRingBuffer`**: Polymorphic interface for testing
 
 #### IPC Layer
-- **`ipc_endpoint`**: Establishes shared memory connection
-- **`producer_channel`** / **`consumer_channel`**: Type-safe channel wrappers
+- **`endpoint`**: Establishes shared memory connection
+- **`producer`** / **`consumer`**: Type-safe channel wrappers
 - **`ipc_observer`**: Read-only monitoring without interfering
 - **`ipc_messaging`**: High-level send/receive operations
 
@@ -319,7 +319,7 @@ observer.peek([](const void *data, std::uint32_t len) {
 `ipc_runtime` polls the consumer channel, **copies** each message into a `std::vector<uint8_t>`, then calls `pool_executor(lambda)` where `lambda` should eventually invoke `handler(uint8_t*, size_t)` (e.g. post `lambda` to your thread pool). See class comments in [`ipc_runtime.hpp`](include/xproc/ipc/ipc_runtime.hpp) for `Executor` contract, `stop()`, and exception behavior.
 
 ```cpp
-xproc::ipc::consumer_channel consumer(opts);
+xproc::ipc::consumer consumer(opts);
 xproc::ipc::ipc_runtime rt(consumer);
 
 auto pool = [](auto task) { task(); }; // replace with real thread pool post
@@ -333,8 +333,8 @@ rt.stop();
 
 ## Error Handling
 
-- **`validate_transport_options`**: Central checks on `path`, `shm_size`, `item_size` (fixed), and `data_align` (`ipc_options.hpp`); used by `ipc_endpoint` / `ipc_observer`. On Windows, `win32_object_namespace` must be `Local` (default) or `Global`.
-- **Layout**: `xproc::shm::layout_exception` derives from `std::runtime_error` and exposes `layout_validate_error code()` for programmatic handling.
+- **`validate_transport_options`**: Central checks on `path`, `shm_size`, `item_size` (fixed), and `data_align` (`ipc_options.hpp`); used by `endpoint` / `ipc_observer`. On Windows, `win32_object_namespace` must be `Local` (default) or `Global`.
+- **Layout**: `xproc::shm::layout_exception` derives from `std::runtime_error` and exposes `validate_error code()` for programmatic handling.
 - **Codec / wire size**: `xproc::ipc::codec_exception` exposes `codec_error code()` for encode/decode failures and fixed-slot overflow in `send_encoded` / `poll_decoded` / `IByteCodec` overload.
 - **Role misuse**: `std::logic_error` when calling `send_*` or `poll` on the wrong role.
 - **SHM open failure**: `shm::last_os_error()` returns POSIX `errno` or Windows `GetLastError()` (as `int`) after a failed `open()`.

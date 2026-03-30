@@ -8,8 +8,8 @@
 namespace xproc {
 namespace shm {
 
-// Optional abstraction for tests or alternate backends; ipc_endpoint uses xproc::shm::shm directly.
-// Subclass and inject where you introduce a transport factory (not wired into ipc_channel by default).
+// Optional abstraction for tests or alternate backends; endpoint uses xproc::shm::shm directly.
+// Subclass and inject where you introduce a transport factory (not wired into channel by default).
 class IShmBackend {
  public:
   virtual ~IShmBackend() = default;

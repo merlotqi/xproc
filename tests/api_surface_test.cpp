@@ -6,9 +6,7 @@
 #include <cstring>
 #include <string>
 #include <thread>
-#include <vector>
 #include <xproc/xproc.hpp>
-
 
 TEST(ApiSurface, PlatformInfoAndProcessId) {
   EXPECT_NE(xproc::platform::platform_info::os, nullptr);
@@ -60,7 +58,7 @@ TEST(ApiSurface, AtomicBackoffPauseAndReset) {
 
 TEST(ApiSurface, ShmOpenModeCreateOpenReadAndErrors) {
   const std::string path = "/xproc_api_surface_shm_modes";
-  const std::size_t shm_bytes = sizeof(xproc::shm::shm_control_block) + 4096;
+  const std::size_t shm_bytes = sizeof(xproc::shm::control_block) + 4096;
   xproc::shm::shm::unlink(path);
 
   xproc::shm::shm creator;
@@ -99,7 +97,7 @@ TEST(ApiSurface, ShmOpenRejectsInvalidWin32Namespace) {
 TEST(ApiSurface, TransportOptionsRejectsBadWin32Namespace) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_api_bad_transport_ns";
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 4096;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 4096;
   opts.item_size = 4;
   opts.win32_object_namespace = "Bad";
   EXPECT_THROW(xproc::ipc::validate_transport_options(opts), std::invalid_argument);
@@ -112,13 +110,13 @@ TEST(ApiSurface, IpcRuntimeRunAndStop) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 16384;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 4;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
-  xproc::ipc::ipc_runtime runtime(consumer);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
+  xproc::ipc::runtime runtime(consumer);
 
   std::atomic<bool> got{false};
   std::thread rt([&] {
@@ -151,17 +149,17 @@ TEST(ApiSurface, IpcInspectorPolymorphism) {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 8192;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::ipc_observer observer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::observer observer(opts);
   producer.send_fixed<std::uint32_t>(1u);
 
-  const xproc::ipc::IIpcRingInspector& insp = observer;
-  const xproc::ipc::IIpcAttachCountView& attach = observer;
-  const auto snap = insp.ring_snapshot();
+  const xproc::ipc::ring_inspector_interface& insp = observer;
+  const xproc::ipc::attach_count_view_interface& attach = observer;
+  const auto snap = insp.snapshot();
   EXPECT_GE(snap.attach_count, attach.attach_count());
   EXPECT_GE(snap.commit_seq, 1u);
 

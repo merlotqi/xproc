@@ -3,22 +3,21 @@
 #include <cstring>
 #include <memory>
 #include <stdexcept>
-#include <xproc/ipc/ipc_endpoint.hpp>
-#include <xproc/ipc/ipc_options.hpp>
+#include <xproc/ipc/endpoint.hpp>
+#include <xproc/ipc/options.hpp>
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
 
-
 namespace xproc {
 namespace ipc {
 
-class ipc_channel : public ipc_endpoint {
+class channel : public endpoint {
  public:
-  explicit ipc_channel(const transport_options& opts, role r) : ipc_endpoint(opts, r) {
+  explicit channel(const transport_options& opts, role r) : endpoint(opts, r) {
     if (r != role::producer && r != role::consumer) {
-      throw std::logic_error("ipc_channel: only producer or consumer roles are supported");
+      throw std::logic_error("channel: only producer or consumer roles are supported");
     }
     init_views();
   }
@@ -42,14 +41,14 @@ class ipc_channel : public ipc_endpoint {
 
   // Fixed channel: reserve exactly byte_length bytes (same as sizeof(T) for send_fixed<T>).
   void send_fixed_sized(const void* data, std::uint32_t byte_length) {
-    if (user_role() != role::producer) {
-      throw std::logic_error("ipc_channel::send_fixed_sized requires producer role");
+    if (get_role() != role::producer) {
+      throw std::logic_error("channel::send_fixed_sized requires producer role");
     }
     if (opts_.type != channel_type::fixed) {
-      throw std::logic_error("ipc_channel::send_fixed_sized requires fixed channel");
+      throw std::logic_error("channel::send_fixed_sized requires fixed channel");
     }
     if (byte_length > opts_.item_size) {
-      throw std::invalid_argument("ipc_channel::send_fixed_sized: byte_length exceeds item_size");
+      throw std::invalid_argument("channel::send_fixed_sized: byte_length exceeds item_size");
     }
     auto* fw = static_cast<ringbuffer::fixed_writer*>(writer_.get());
     std::uint64_t pos = 0;
@@ -59,8 +58,8 @@ class ipc_channel : public ipc_endpoint {
   }
 
   void send_varlen(const void* data, uint32_t len) {
-    if (user_role() != role::producer) {
-      throw std::logic_error("ipc_channel::send_varlen requires producer role");
+    if (get_role() != role::producer) {
+      throw std::logic_error("channel::send_varlen requires producer role");
     }
     auto* vw = static_cast<ringbuffer::varlen_writer*>(writer_.get());
     uint64_t pos;
@@ -71,14 +70,14 @@ class ipc_channel : public ipc_endpoint {
 
   // Fixed channel: payload at most item_size bytes; remainder zero-padded in the slot.
   void send_fixed_bytes(const void* data, std::uint32_t payload_len) {
-    if (user_role() != role::producer) {
-      throw std::logic_error("ipc_channel::send_fixed_bytes requires producer role");
+    if (get_role() != role::producer) {
+      throw std::logic_error("channel::send_fixed_bytes requires producer role");
     }
     if (opts_.type != channel_type::fixed) {
-      throw std::logic_error("ipc_channel::send_fixed_bytes requires fixed channel");
+      throw std::logic_error("channel::send_fixed_bytes requires fixed channel");
     }
     if (payload_len > opts_.item_size) {
-      throw std::invalid_argument("ipc_channel::send_fixed_bytes: payload_len exceeds item_size");
+      throw std::invalid_argument("channel::send_fixed_bytes: payload_len exceeds item_size");
     }
     auto* fw = static_cast<ringbuffer::fixed_writer*>(writer_.get());
     std::uint64_t pos = 0;
@@ -93,17 +92,17 @@ class ipc_channel : public ipc_endpoint {
   // Handler receives (payload_ptr, length). For fixed channels, length is always opts_.item_size.
   template <typename F>
   bool poll(F&& handler) {
-    if (user_role() != role::consumer) {
-      throw std::logic_error("ipc_channel::poll requires consumer role");
+    if (get_role() != role::consumer) {
+      throw std::logic_error("channel::poll requires consumer role");
     }
     auto invoke = [&](void* p, std::uint32_t len) { std::forward<F>(handler)(p, len); };
     if (opts_.type == channel_type::fixed) {
       auto* fr = static_cast<ringbuffer::fixed_reader*>(reader_.get());
       const std::uint32_t item = opts_.item_size;
-      return fr->try_read(item, [&](void* p) { invoke(p, item); });
+      return fr->read(item, [&](void* p) { invoke(p, item); });
     }
     auto* vr = static_cast<ringbuffer::varlen_reader*>(reader_.get());
-    return vr->try_read(invoke);
+    return vr->read(invoke);
   }
 
  private:
@@ -112,36 +111,36 @@ class ipc_channel : public ipc_endpoint {
 };
 
 // Compile-time role split: only send APIs are visible (poll is private via private inheritance).
-class producer_channel : private ipc_channel {
+class producer : private channel {
  public:
-  explicit producer_channel(const transport_options& opts) : ipc_channel(opts, role::producer) {}
+  explicit producer(const transport_options& opts) : channel(opts, role::producer) {}
 
-  using ipc_channel::header;
-  using ipc_channel::is_connect;
-  using ipc_channel::options;
-  using ipc_channel::send_fixed;
-  using ipc_channel::send_fixed_bytes;
-  using ipc_channel::send_fixed_sized;
-  using ipc_channel::send_varlen;
-  using ipc_channel::user_role;
+  using channel::get_role;
+  using channel::header;
+  using channel::is_connected;
+  using channel::options;
+  using channel::send_fixed;
+  using channel::send_fixed_bytes;
+  using channel::send_fixed_sized;
+  using channel::send_varlen;
 
-  ipc_channel& as_ipc_channel() noexcept { return static_cast<ipc_channel&>(*this); }
-  const ipc_channel& as_ipc_channel() const noexcept { return static_cast<const ipc_channel&>(*this); }
+  channel& as_channel() noexcept { return static_cast<channel&>(*this); }
+  const channel& as_channel() const noexcept { return static_cast<const channel&>(*this); }
 };
 
 // Only poll (consume) is public; send APIs stay inaccessible.
-class consumer_channel : private ipc_channel {
+class consumer : private channel {
  public:
-  explicit consumer_channel(const transport_options& opts) : ipc_channel(opts, role::consumer) {}
+  explicit consumer(const transport_options& opts) : channel(opts, role::consumer) {}
 
-  using ipc_channel::header;
-  using ipc_channel::is_connect;
-  using ipc_channel::options;
-  using ipc_channel::poll;
-  using ipc_channel::user_role;
+  using channel::get_role;
+  using channel::header;
+  using channel::is_connected;
+  using channel::options;
+  using channel::poll;
 
-  ipc_channel& as_ipc_channel() noexcept { return static_cast<ipc_channel&>(*this); }
-  const ipc_channel& as_ipc_channel() const noexcept { return static_cast<const ipc_channel&>(*this); }
+  channel& as_channel() noexcept { return static_cast<channel&>(*this); }
+  const channel& as_channel() const noexcept { return static_cast<const channel&>(*this); }
 };
 
 }  // namespace ipc

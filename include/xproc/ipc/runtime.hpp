@@ -3,8 +3,8 @@
 #include <atomic>
 #include <type_traits>
 #include <vector>
-#include <xproc/ipc/ipc_channel.hpp>
-#include <xproc/ipc/ipc_channel_interface.hpp>
+#include <xproc/ipc/channel.hpp>
+#include <xproc/ipc/channel_interface.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
 namespace xproc {
@@ -18,7 +18,7 @@ namespace ipc {
 //   The callable may be destroyed after it returns; the embedded std::vector<uint8_t> must be
 //   moved into the async worker (as implemented below).
 //
-// Thread safety: run() must not be invoked concurrently on the same ipc_runtime instance.
+// Thread safety: run() must not be invoked concurrently on the same runtime instance.
 // pool_executor should be safe to call from the run() thread only (same as poll thread).
 //
 // stop(): sets running_ false and notifies commit_seq waiters; a few executor tasks may still
@@ -27,11 +27,11 @@ namespace ipc {
 // Exceptions: if handler throws from inside the executor's invocation of the task, behavior
 // depends on your executor (e.g. thread pool may log or terminate). The run() loop itself does
 // not catch handler exceptions.
-class ipc_runtime {
+class runtime {
  public:
-  explicit ipc_runtime(ipc_channel& channel) : shm_(&channel), iface_(nullptr) {}
-  explicit ipc_runtime(consumer_channel& channel) : shm_(&channel.as_ipc_channel()), iface_(nullptr) {}
-  explicit ipc_runtime(IConsumerChannel& channel) : shm_(nullptr), iface_(&channel) {}
+  explicit runtime(channel& ch) : shm_(&ch), iface_(nullptr) {}
+  explicit runtime(consumer& ch) : shm_(&ch.as_channel()), iface_(nullptr) {}
+  explicit runtime(consumer_channel_interface& ch) : shm_(nullptr), iface_(&ch) {}
 
   template <typename Executor, typename Handler>
   void run(Executor&& pool_executor, Handler&& handler) {
@@ -57,7 +57,7 @@ class ipc_runtime {
           const uint32_t last_commit = shm_->header()->rb_meta.commit_seq.load(std::memory_order_acquire);
           sync::atomic_wait(&shm_->header()->rb_meta.commit_seq, last_commit);
         } else if (iface_ != nullptr) {
-          iface_->wait_when_empty();
+          iface_->wait();
         }
       }
     }
@@ -71,8 +71,8 @@ class ipc_runtime {
   }
 
  private:
-  ipc_channel* shm_{nullptr};
-  IConsumerChannel* iface_{nullptr};
+  channel* shm_{nullptr};
+  consumer_channel_interface* iface_{nullptr};
   std::atomic_bool running_{false};
 };
 

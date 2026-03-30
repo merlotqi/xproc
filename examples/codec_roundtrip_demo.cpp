@@ -1,11 +1,9 @@
 // Codec helper example: send_encoded + poll_decoded.
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <thread>
 #include <xproc/xproc.hpp>
-
 
 int main() {
   const std::string path = "/xproc_example_codec_roundtrip";
@@ -13,12 +11,12 @@ int main() {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::shm_control_block) + 16384;
-  opts.type = xproc::ipc::channel_type::variable;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
+  opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel producer(opts);
-  xproc::ipc::consumer_channel consumer(opts);
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
 
   std::atomic<bool> done{false};
   std::thread t([&] {

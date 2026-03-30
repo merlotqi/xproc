@@ -5,12 +5,11 @@
 #include <string>
 #include <xproc/xproc.hpp>
 
-
 TEST(IpcObserverAttach, PeekThenConsumerDrains) {
   const std::string path = "/xproc_ipc_observer_attach_test";
   xproc::shm::shm::unlink(path);
 
-  constexpr std::size_t total = sizeof(xproc::shm::shm_control_block) + 512;
+  constexpr std::size_t total = sizeof(xproc::shm::control_block) + 512;
   xproc::ipc::transport_options opts;
   opts.path = path;
   opts.shm_size = total;
@@ -18,9 +17,9 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
   opts.item_size = sizeof(std::uint32_t);
 
   {
-    xproc::ipc::producer_channel prod(opts);
-    xproc::ipc::ipc_observer obs(opts);
-    xproc::ipc::consumer_channel cons(opts);
+    xproc::ipc::producer prod(opts);
+    xproc::ipc::observer obs(opts);
+    xproc::ipc::consumer cons(opts);
 
     EXPECT_GE(obs.attach_count(), 2u);
 
@@ -54,7 +53,7 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
       }
     }
 
-    const xproc::ipc::ipc_ring_snapshot snap = obs.ring_snapshot();
+    const xproc::ipc::ring_snapshot snap = obs.snapshot();
     EXPECT_GE(snap.write_pos, snap.read_pos);
   }
 

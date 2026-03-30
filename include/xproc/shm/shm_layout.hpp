@@ -8,7 +8,7 @@ namespace shm {
 
 // SPSC ring indices and futex wait words. write_pos/read_pos are monotonic logical
 // offsets; the data region index is pos % data_capacity.
-struct shm_meta {
+struct meta {
   XPROC_ALIGNAS_CACHE_LINE std::atomic<uint64_t> write_pos{0};
   uint8_t padding1[XPROC_CACHE_LINE_SIZE - sizeof(std::atomic<uint64_t>)];
 
@@ -24,7 +24,7 @@ struct shm_meta {
   uint8_t padding4[XPROC_CACHE_LINE_SIZE - sizeof(std::atomic<uint32_t>)];
 };
 
-struct XPROC_ALIGNAS_CACHE_LINE shm_control_block {
+struct XPROC_ALIGNAS_CACHE_LINE control_block {
   uint32_t magic;
   uint16_t version_major;
   uint32_t version_minor;
@@ -37,7 +37,7 @@ struct XPROC_ALIGNAS_CACHE_LINE shm_control_block {
 
   uint8_t padding_identity[XPROC_CACHE_LINE_SIZE - 28];
 
-  shm_meta rb_meta;
+  meta rb_meta;
 
   uint64_t data_capacity;
   uint32_t data_alignment;

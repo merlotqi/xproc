@@ -74,7 +74,7 @@ struct alignas(64) handshake_region {
 };
 
 constexpr std::size_t kHandshakeShmBytes = sizeof(handshake_region);
-constexpr std::size_t kIpcShmSize = sizeof(xproc::shm::shm_control_block) + 32768;
+constexpr std::size_t kIpcShmSize = sizeof(xproc::shm::control_block) + 32768;
 
 struct telemetry_packet {
   char message[256];
@@ -104,10 +104,8 @@ bool hex_to_token(const char* s, std::uint64_t& out) {
 
 std::uint64_t make_token() {
   std::random_device rd;
-  const std::uint64_t a =
-      (static_cast<std::uint64_t>(rd()) << 32) | static_cast<std::uint64_t>(rd());
-  const std::uint64_t b =
-      (static_cast<std::uint64_t>(rd()) << 32) | static_cast<std::uint64_t>(rd());
+  const std::uint64_t a = (static_cast<std::uint64_t>(rd()) << 32) | static_cast<std::uint64_t>(rd());
+  const std::uint64_t b = (static_cast<std::uint64_t>(rd()) << 32) | static_cast<std::uint64_t>(rd());
   return a ^ b;
 }
 
@@ -119,7 +117,7 @@ int run_child_data_writer(const std::string& ipc_path) {
   opts.item_size = sizeof(telemetry_packet);
   opts.create_if_missing = false;
 
-  xproc::ipc::producer_channel producer(opts);
+  xproc::ipc::producer producer(opts);
 
   std::thread writer([&] {
     for (int i = 0; i <= 100; ++i) {
@@ -178,7 +176,7 @@ int fused_child_main(int argc, char** argv) {
   return run_child_data_writer(ipc_path);
 }
 
-void parent_consume_until_child_done(xproc::ipc::consumer_channel& consumer,
+void parent_consume_until_child_done(xproc::ipc::consumer& consumer,
 #if defined(__linux__)
                                      pid_t child_pid, int& status_out
 #elif defined(_WIN32) || defined(_WIN64)
@@ -231,8 +229,8 @@ int main(int argc, char** argv) {
     return fused_child_main(argc, argv);
   }
 
-  const std::string base = std::string("/xproc_hfused_") + std::to_string(::getpid()) + "_" +
-                           std::to_string(make_token() & 0xffffffu);
+  const std::string base =
+      std::string("/xproc_hfused_") + std::to_string(::getpid()) + "_" + std::to_string(make_token() & 0xffffffu);
   const std::string handshake_path = base + "_h";
   const std::string ipc_path = base + "_ipc";
 
@@ -262,9 +260,9 @@ int main(int argc, char** argv) {
   ipc_opts.item_size = sizeof(telemetry_packet);
   ipc_opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel ipc_creator(ipc_opts);
+  xproc::ipc::producer ipc_creator(ipc_opts);
   ipc_opts.create_if_missing = false;
-  xproc::ipc::consumer_channel consumer(ipc_opts);
+  xproc::ipc::consumer consumer(ipc_opts);
 
   char exe[4096];
   const ssize_t n = ::readlink("/proc/self/exe", exe, sizeof(exe) - 1);
@@ -287,8 +285,7 @@ int main(int argc, char** argv) {
   }
 
   if (child == 0) {
-    ::execl(exe, exe, kChildFlag, handshake_path.c_str(), hex.c_str(), ipc_path.c_str(),
-            static_cast<char*>(nullptr));
+    ::execl(exe, exe, kChildFlag, handshake_path.c_str(), hex.c_str(), ipc_path.c_str(), static_cast<char*>(nullptr));
     std::perror("execl");
     _exit(127);
   }
@@ -379,9 +376,9 @@ int main(int argc, char** argv) {
   ipc_opts.item_size = sizeof(telemetry_packet);
   ipc_opts.create_if_missing = true;
 
-  xproc::ipc::producer_channel ipc_creator(ipc_opts);
+  xproc::ipc::producer ipc_creator(ipc_opts);
   ipc_opts.create_if_missing = false;
-  xproc::ipc::consumer_channel consumer(ipc_opts);
+  xproc::ipc::consumer consumer(ipc_opts);
 
   char exe_path[MAX_PATH];
   if (::GetModuleFileNameA(nullptr, exe_path, MAX_PATH) == 0u) {
@@ -396,8 +393,8 @@ int main(int argc, char** argv) {
   si.cb = sizeof(si);
   PROCESS_INFORMATION pi{};
 
-  std::string cmdline = std::string("\"") + exe_path + "\" " + kChildFlag + " \"" + handshake_path + "\" " +
-                        hex + " \"" + ipc_path + "\"";
+  std::string cmdline = std::string("\"") + exe_path + "\" " + kChildFlag + " \"" + handshake_path + "\" " + hex +
+                        " \"" + ipc_path + "\"";
   std::vector<char> cmd_mut(cmdline.begin(), cmdline.end());
   cmd_mut.push_back('\0');
 

@@ -6,7 +6,6 @@
 #include <cerrno>
 #include <xproc/shm/shm.hpp>
 
-
 #if defined(_WIN32)
 #error shm_posix.cpp must not be built on Windows
 #endif

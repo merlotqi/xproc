@@ -1,16 +1,13 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <future>
 #include <string>
 #include <thread>
 #include <vector>
-#include <xproc/ipc/ipc_transport_factory.hpp>
-#include <xproc/ipc/socket_channel.hpp>
-
+#include <xproc/xproc.hpp>
 
 TEST(SocketTransport, VarlenTcpLoopback) {
   std::promise<std::uint16_t> port_promise;
@@ -23,10 +20,10 @@ TEST(SocketTransport, VarlenTcpLoopback) {
     co.backend = xproc::ipc::transport_backend::socket;
     co.socket_listen = true;
     co.socket_port = 0;
-    co.type = xproc::ipc::channel_type::variable;
+    co.type = xproc::ipc::channel_type::varlen;
     co.socket_host = "127.0.0.1";
 
-    xproc::ipc::socket_consumer_transport cons(co);
+    xproc::ipc::socket_consumer cons(co);
     port_promise.set_value(cons.options().socket_port);
 
     while (received.load(std::memory_order_acquire) < 3) {
@@ -35,7 +32,7 @@ TEST(SocketTransport, VarlenTcpLoopback) {
         received.fetch_add(1, std::memory_order_acq_rel);
       });
       if (!got) {
-        cons.wait_when_empty();
+        cons.wait();
       }
     }
   });
@@ -47,9 +44,9 @@ TEST(SocketTransport, VarlenTcpLoopback) {
   po.socket_listen = false;
   po.socket_host = "127.0.0.1";
   po.socket_port = port;
-  po.type = xproc::ipc::channel_type::variable;
+  po.type = xproc::ipc::channel_type::varlen;
 
-  xproc::ipc::socket_producer_transport prod(po);
+  xproc::ipc::socket_producer prod(po);
   const char* a = "alpha";
   const char* b = "beta";
   prod.send_varlen(a, static_cast<std::uint32_t>(std::strlen(a)));
@@ -67,9 +64,9 @@ TEST(SocketTransport, VarlenTcpLoopback) {
 
 TEST(SocketTransport, FactoryCreatesShmAndSocket) {
   xproc::ipc::transport_options shm_o;
-  shm_o.backend = xproc::ipc::transport_backend::shm;
+  shm_o.backend = xproc::ipc::transport_backend::shared_memory;
   shm_o.path = "/xproc_socket_test_factory_shm";
-  shm_o.shm_size = sizeof(xproc::shm::shm_control_block) + 4096;
+  shm_o.shm_size = sizeof(xproc::shm::control_block) + 4096;
   shm_o.type = xproc::ipc::channel_type::fixed;
   shm_o.item_size = 4;
   xproc::shm::shm::unlink(shm_o.path);
@@ -85,6 +82,6 @@ TEST(SocketTransport, ValidateRejectsEmptySocketHost) {
   o.socket_host.clear();
   o.socket_listen = false;
   o.socket_port = 1;
-  o.type = xproc::ipc::channel_type::variable;
+  o.type = xproc::ipc::channel_type::varlen;
   EXPECT_THROW(xproc::ipc::validate_transport_options(o), std::invalid_argument);
 }
