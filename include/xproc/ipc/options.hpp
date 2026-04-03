@@ -33,6 +33,10 @@ struct transport_options {
   std::uint16_t socket_port = 0;
   /// true = consumer binds and accepts; false = producer connects to socket_host:socket_port.
   bool socket_listen = false;
+  /// Socket transport: max connection retry attempts for producer (0 = unlimited until connected).
+  int socket_connect_retries = 200;
+  /// Socket transport: milliseconds between connection retries.
+  int socket_connect_retry_ms = 10;
 };
 
 constexpr std::size_t min_shm_size = sizeof(shm::control_block);

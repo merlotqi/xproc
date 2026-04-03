@@ -252,7 +252,9 @@ socket_producer::socket_producer(const transport_options& opts) : opts_(opts) {
   if (opts_.backend != transport_backend::socket) {
     throw std::logic_error("socket_producer: backend must be socket");
   }
-  for (int attempt = 0; attempt < 200; ++attempt) {
+  const int max_retries = (opts_.socket_connect_retries > 0) ? opts_.socket_connect_retries : INT_MAX;
+  const int retry_ms = (opts_.socket_connect_retry_ms > 0) ? opts_.socket_connect_retry_ms : 10;
+  for (int attempt = 0; attempt < max_retries; ++attempt) {
     try {
 #if defined(_WIN32)
       sock_ = static_cast<std::uintptr_t>(tcp_connect(opts_.socket_host, opts_.socket_port));
@@ -261,10 +263,10 @@ socket_producer::socket_producer(const transport_options& opts) : opts_(opts) {
 #endif
       return;
     } catch (...) {
-      if (attempt + 1 >= 200) {
+      if (attempt + 1 >= max_retries) {
         throw;
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(retry_ms));
     }
   }
 }
@@ -367,6 +369,9 @@ bool socket_consumer::ensure_peer_connected() {
   if (sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET)) {
     return true;
   }
+  if (is_invalid(static_cast<SOCKET>(listen_))) {
+    return false;
+  }
   const SOCKET ls = static_cast<SOCKET>(listen_);
   fd_set readfds;
   FD_ZERO(&readfds);
@@ -381,12 +386,18 @@ bool socket_consumer::ensure_peer_connected() {
   if (c == INVALID_SOCKET) {
     return false;
   }
+  // Replace existing (closed/stale) sock; keep listen_ open for potential reconnections.
+  if (sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET)) {
+    close_handle(static_cast<SOCKET>(sock_));
+  }
   sock_ = static_cast<std::uintptr_t>(c);
-  close_listen();
   return true;
 #else
   if (sock_ >= 0) {
     return true;
+  }
+  if (listen_ < 0) {
+    return false;
   }
   fd_set readfds;
   FD_ZERO(&readfds);
@@ -399,13 +410,55 @@ bool socket_consumer::ensure_peer_connected() {
   if (c < 0) {
     return false;
   }
+  // Replace existing (closed/stale) sock; keep listen_ open for potential reconnections.
+  if (sock_ >= 0) {
+    close_handle(sock_);
+  }
   sock_ = c;
-  close_listen();
   return true;
 #endif
 }
 
-void socket_consumer::wait() { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+void socket_consumer::wait() {
+#if defined(_WIN32)
+  // If already connected, sleep briefly (no select on data socket needed).
+  if (sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET)) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    return;
+  }
+  if (is_invalid(static_cast<SOCKET>(listen_))) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    return;
+  }
+  // Wait on listen socket with select() timeout to avoid busy-spin.
+  const SOCKET ls = static_cast<SOCKET>(listen_);
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(ls, &readfds);
+  TIMEVAL tv{};
+  tv.tv_sec = 0;
+  tv.tv_usec = 5000;  // 5 ms timeout
+  ::select(0, &readfds, nullptr, nullptr, &tv);
+#else
+  // If already connected, sleep briefly (no select on data socket needed).
+  if (sock_ >= 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    return;
+  }
+  if (listen_ < 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    return;
+  }
+  // Wait on listen socket with select() timeout to avoid busy-spin.
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(listen_, &readfds);
+  timeval tv{};
+  tv.tv_sec = 0;
+  tv.tv_usec = 5000;  // 5 ms timeout
+  ::select(listen_ + 1, &readfds, nullptr, nullptr, &tv);
+#endif
+}
 
 bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>& handler) {
   if (!ensure_peer_connected()) {

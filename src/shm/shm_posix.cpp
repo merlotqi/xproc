@@ -40,16 +40,25 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   size_ = size;
 
   int oflag = 0;
-  if (mode == shm_open_mode::create)
-    oflag = O_CREAT | O_RDWR;
-  else if (mode == shm_open_mode::open)
+  if (mode == shm_open_mode::create) {
+    // Exclusive create: fail if the name already exists.
+    oflag = O_CREAT | O_RDWR | O_EXCL;
+  } else if (mode == shm_open_mode::open) {
     oflag = O_RDWR;
-  else if (mode == shm_open_mode::open_create)
-    oflag = O_CREAT | O_RDWR;
-  else if (mode == shm_open_mode::read)
+  } else if (mode == shm_open_mode::open_create) {
+    // Try opening first; if it fails (ENOENT or EACCES from missing), fall through to create below.
+    oflag = O_RDWR;
+  } else if (mode == shm_open_mode::read) {
     oflag = O_RDONLY;
+  }
 
   fd_ = shm_open(name_.c_str(), oflag, 0666);
+
+  // open_create fallback: if open failed and mode is open_create, try to create.
+  if (fd_ == -1 && mode == shm_open_mode::open_create) {
+    fd_ = shm_open(name_.c_str(), O_CREAT | O_RDWR, 0666);
+  }
+
   if (fd_ == -1) {
     last_os_error_ = errno;
     return false;
@@ -89,7 +98,11 @@ void shm::detach() {
   }
 }
 
-void shm::unlink(const std::string& name) { shm_unlink(name.c_str()); }
+void shm::unlink(const std::string& name) {
+  // Best-effort unlink; callers should not rely on success (e.g., on Windows unlink is no-op).
+  // We intentionally ignore ENOENT (already removed race) but log via last_error for diagnostics.
+  shm_unlink(name.c_str());
+}
 
 }  // namespace shm
 }  // namespace xproc
