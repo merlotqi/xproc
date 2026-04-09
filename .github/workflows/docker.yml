@@ -26,7 +26,7 @@ jobs:
             bash -lc '
               set -euo pipefail
               cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
-                -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON
+                -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=OFF
               cmake --build build --parallel
               ctest --test-dir build --output-on-failure
             '

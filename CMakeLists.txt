@@ -138,6 +138,8 @@ if(XPROC_BUILD_BENCHMARKS)
 endif()
 
 option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
+set(NODE_INCLUDE_DIR "" CACHE PATH
+    "Optional: override directory containing node_api.h. Empty = use node_modules/node-api-headers from npm ci in node/.")
 if(XPROC_BUILD_NODE)
     add_subdirectory(node)
 endif()

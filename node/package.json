@@ -6,7 +6,8 @@
   "gypfile": true,
   "scripts": {},
   "dependencies": {
-    "node-addon-api": "^8.7.0"
+    "node-addon-api": "^8.7.0",
+    "node-api-headers": "^1.8.0"
   },
   "devDependencies": {
     "node-gyp": "^12.2.0"
