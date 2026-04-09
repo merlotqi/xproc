@@ -13,6 +13,7 @@ High-performance **Single Producer Single Consumer (SPSC)** Inter-Process Commun
 - **Variable-length payloads** can avoid extra copies in the ring (payload pointer is valid for the duration of `poll` / `peek` callbacks only)
 - **Observer** read-only attach (`ipc_observer`) for snapshots / `peek` without advancing `read_pos` (weak consistency if a consumer runs concurrently)
 - **Multiple serialization formats**: Built-in codecs, optional JSON (nlohmann/json), optional Protocol Buffers
+- **Socket transport**: TCP backend with IPv4 / IPv6 connect support and dual-stack listening when available
 - **Errors**: `std::invalid_argument` / `std::logic_error` for misuse; `xproc::shm::layout_exception` (with `validate_error code()`) for layout failures; `xproc::ipc::codec_exception` (with `codec_error code()`) for `send_encoded` / `poll_decoded` failures; `shm::last_os_error()` after failed `shm::open()`
 - **Cache-line aligned** control block to reduce false sharing
 
@@ -60,6 +61,54 @@ consumer.poll([](void *ptr, std::uint32_t len) {
     process_data(static_cast<std::byte *>(ptr), len);
 });
 ```
+
+### C API
+
+For Node / Python bindings, a stable C-facing wrapper lives in [`capi/xproc_c.h`](capi/xproc_c.h).
+It exposes opaque producer / consumer / observer handles, byte-oriented send / receive helpers,
+borrowed option views, and thread-local error reporting.
+
+```c
+#include <stdint.h>
+#include <xproc_c.h>
+
+xproc_c_options opts;
+xproc_c_options_init(&opts);
+opts.path = "/xproc_capi_demo";
+opts.shm_size = 65536;
+opts.channel_type = XPROC_C_CHANNEL_FIXED;
+opts.item_size = sizeof(uint32_t);
+
+xproc_c_producer* producer = NULL;
+xproc_c_consumer* consumer = NULL;
+
+if (xproc_c_producer_open(&opts, &producer) != XPROC_C_STATUS_OK) {
+  /* inspect xproc_c_last_error_message() */
+}
+if (xproc_c_consumer_open(&opts, &consumer) != XPROC_C_STATUS_OK) {
+  /* inspect xproc_c_last_error_message() */
+}
+
+{
+  uint32_t value = 42;
+  xproc_c_producer_send_fixed_sized(producer, &value, sizeof(value));
+}
+
+{
+  uint32_t value = 0;
+  uint32_t out_len = 0;
+  if (xproc_c_consumer_poll_copy(consumer, &value, sizeof(value), &out_len) == XPROC_C_STATUS_OK) {
+    /* value == 42 */
+  }
+}
+
+xproc_c_consumer_close(consumer);
+xproc_c_producer_close(producer);
+xproc_c_shm_unlink(opts.path);
+```
+
+Error handling is status-code based. For richer diagnostics, use `xproc_c_last_error_message()`,
+`xproc_c_last_error_copy()`, and `xproc_c_last_layout_error()`.
 
 ### Using Codecs
 

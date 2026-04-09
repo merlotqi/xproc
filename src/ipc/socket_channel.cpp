@@ -28,6 +28,13 @@ namespace {
 
 constexpr std::uint32_t k_max_varlen = 16u * 1024u * 1024u;
 
+std::string normalize_socket_host(const std::string& host) {
+  if (host.size() >= 2 && host.front() == '[' && host.back() == ']') {
+    return host.substr(1, host.size() - 2);
+  }
+  return host;
+}
+
 inline std::uint32_t load_le32(const void* p) {
   auto b = static_cast<const std::uint8_t*>(p);
   return static_cast<std::uint32_t>(b[0]) | (static_cast<std::uint32_t>(b[1]) << 8) |
@@ -136,32 +143,66 @@ void read_exact_sock(sock_handle s, void* data, std::size_t len) {
 
 #endif
 
+template <typename Attempt>
+sock_handle try_resolved_stream_socket(addrinfo* res, Attempt&& attempt) {
+  for (int pass = 0; pass < 2; ++pass) {
+    for (addrinfo* it = res; it != nullptr; it = it->ai_next) {
+      const bool is_ipv6 = (it->ai_family == AF_INET6);
+      if ((pass == 0 && !is_ipv6) || (pass == 1 && is_ipv6)) {
+        continue;
+      }
+      sock_handle s = static_cast<sock_handle>(::socket(it->ai_family, it->ai_socktype, it->ai_protocol));
+      if (is_invalid(s)) {
+        continue;
+      }
+      if (attempt(s, it)) {
+        return s;
+      }
+      close_handle(s);
+    }
+  }
+  return invalid_sock();
+}
+
+void set_reuse_addr(sock_handle s) noexcept {
+  int yes = 1;
+#if defined(_WIN32)
+  (void)::setsockopt(s, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&yes), sizeof(yes));
+#else
+  (void)::setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+#endif
+}
+
+void try_enable_dual_stack(sock_handle s, int family) noexcept {
+  if (family != AF_INET6) {
+    return;
+  }
+  int off = 0;
+#if defined(_WIN32)
+  (void)::setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&off), sizeof(off));
+#else
+  (void)::setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off));
+#endif
+}
+
 sock_handle tcp_connect(const std::string& host, std::uint16_t port) {
 #if defined(_WIN32)
   winsock_init();
 #endif
+  const std::string normalized_host = normalize_socket_host(host);
   const std::string port_str = std::to_string(static_cast<int>(port));
   addrinfo hints{};
-  hints.ai_family = AF_INET;
+  hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = IPPROTO_TCP;
   addrinfo* res = nullptr;
-  const int gai = ::getaddrinfo(host.c_str(), port_str.c_str(), &hints, &res);
+  const int gai = ::getaddrinfo(normalized_host.c_str(), port_str.c_str(), &hints, &res);
   if (gai != 0 || res == nullptr) {
     throw std::runtime_error("getaddrinfo failed for socket transport");
   }
-  sock_handle s = invalid_sock();
-  for (addrinfo* it = res; it != nullptr; it = it->ai_next) {
-    s = static_cast<sock_handle>(::socket(it->ai_family, it->ai_socktype, it->ai_protocol));
-    if (is_invalid(s)) {
-      continue;
-    }
-    if (::connect(static_cast<sock_handle>(s), it->ai_addr, static_cast<int>(it->ai_addrlen)) == 0) {
-      break;
-    }
-    close_handle(s);
-    s = invalid_sock();
-  }
+  const sock_handle s = try_resolved_stream_socket(res, [](sock_handle sock, const addrinfo* ai) {
+    return ::connect(sock, ai->ai_addr, static_cast<int>(ai->ai_addrlen)) == 0;
+  });
   ::freeaddrinfo(res);
   if (is_invalid(s)) {
     throw std::runtime_error("socket connect failed");
@@ -175,7 +216,7 @@ sock_handle tcp_listen(std::uint16_t port, std::uint16_t* out_bound_port) {
 #endif
   const std::string port_str = std::to_string(static_cast<int>(port));
   addrinfo hints{};
-  hints.ai_family = AF_INET;
+  hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = IPPROTO_TCP;
   hints.ai_flags = AI_PASSIVE;
@@ -183,30 +224,14 @@ sock_handle tcp_listen(std::uint16_t port, std::uint16_t* out_bound_port) {
   if (::getaddrinfo(nullptr, port_str.c_str(), &hints, &res) != 0 || res == nullptr) {
     throw std::runtime_error("getaddrinfo(listen) failed");
   }
-  sock_handle listen_fd = invalid_sock();
-  for (addrinfo* it = res; it != nullptr; it = it->ai_next) {
-    listen_fd = static_cast<sock_handle>(::socket(it->ai_family, it->ai_socktype, it->ai_protocol));
-    if (is_invalid(listen_fd)) {
-      continue;
+  const sock_handle listen_fd = try_resolved_stream_socket(res, [](sock_handle sock, const addrinfo* ai) {
+    set_reuse_addr(sock);
+    try_enable_dual_stack(sock, ai->ai_family);
+    if (::bind(sock, ai->ai_addr, static_cast<int>(ai->ai_addrlen)) != 0) {
+      return false;
     }
-    int yes = 1;
-#if defined(_WIN32)
-    ::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&yes), sizeof(yes));
-#else
-    ::setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-#endif
-    if (::bind(listen_fd, it->ai_addr, static_cast<int>(it->ai_addrlen)) != 0) {
-      close_handle(listen_fd);
-      listen_fd = invalid_sock();
-      continue;
-    }
-    if (::listen(listen_fd, 1) != 0) {
-      close_handle(listen_fd);
-      listen_fd = invalid_sock();
-      continue;
-    }
-    break;
-  }
+    return ::listen(sock, 1) == 0;
+  });
   ::freeaddrinfo(res);
   if (is_invalid(listen_fd)) {
     throw std::runtime_error("socket bind/listen failed");
@@ -248,7 +273,7 @@ void socket_producer::close_sock() noexcept {
 }
 
 socket_producer::socket_producer(const transport_options& opts) : opts_(opts) {
-  validate_transport_options(opts_);
+  validate_producer_transport_options(opts_);
   if (opts_.backend != transport_backend::socket) {
     throw std::logic_error("socket_producer: backend must be socket");
   }
@@ -341,12 +366,9 @@ void socket_consumer::close_sock() noexcept {
 }
 
 socket_consumer::socket_consumer(const transport_options& opts) : opts_(opts) {
-  validate_transport_options(opts_);
+  validate_consumer_transport_options(opts_);
   if (opts_.backend != transport_backend::socket) {
     throw std::logic_error("socket_consumer: backend must be socket");
-  }
-  if (!opts_.socket_listen) {
-    throw std::invalid_argument("socket_consumer: consumer requires socket_listen=true");
   }
   std::uint16_t bound = opts_.socket_port;
 #if defined(_WIN32)

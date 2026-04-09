@@ -49,6 +49,12 @@ if(WIN32)
     gtest_discover_tests(xproc_win32_wait_shm_tests)
 endif()
 
+if(TARGET xproc_c)
+    add_executable(xproc_capi_smoke_tests capi_smoke_test.cpp)
+    target_link_libraries(xproc_capi_smoke_tests PRIVATE xproc_c GTest::gtest_main)
+    gtest_discover_tests(xproc_capi_smoke_tests)
+endif()
+
 if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
     set(_xproc_opt_serde_src optional_serde_test.cpp)
     set(_xproc_opt_serde_gen "")

@@ -7,7 +7,9 @@ namespace xproc {
 namespace ipc {
 
 // TCP framing: fixed channel sends exactly item_size bytes per message; variable sends uint32_t LE len + payload.
-// Consumer listens (socket_listen=true); producer connects (socket_listen=false).
+// Producer connect resolves IPv4 / IPv6 via getaddrinfo(AF_UNSPEC). Consumer listen prefers an IPv6 socket with
+// IPV6_V6ONLY disabled so one listener can accept both IPv6 and IPv4-mapped peers when the platform allows it,
+// falling back to IPv4 when dual-stack binding is unavailable.
 class socket_producer final : public producer_channel_interface {
  public:
   explicit socket_producer(const transport_options& opts);

@@ -69,10 +69,40 @@ inline void validate_transport_options(const transport_options& opts) {
   }
 
   if (opts.backend == transport_backend::socket) {
-    if (opts.socket_host.empty()) {
-      throw std::invalid_argument("transport_options: socket backend requires non-empty socket_host");
+    if (opts.socket_connect_retries < 0) {
+      throw std::invalid_argument("transport_options: socket_connect_retries must be >= 0 (0 = unlimited)");
+    }
+    if (opts.socket_connect_retry_ms < 0) {
+      throw std::invalid_argument("transport_options: socket_connect_retry_ms must be >= 0");
+    }
+    if (!opts.socket_listen && opts.socket_host.empty()) {
+      throw std::invalid_argument("transport_options: socket connect mode requires non-empty socket_host");
+    }
+    if (!opts.socket_listen && opts.socket_port == 0) {
+      throw std::invalid_argument("transport_options: socket connect mode requires non-zero socket_port");
     }
     return;
+  }
+}
+
+inline void validate_producer_transport_options(const transport_options& opts) {
+  validate_transport_options(opts);
+  if (opts.backend == transport_backend::socket && opts.socket_listen) {
+    throw std::invalid_argument("transport_options: socket producer requires socket_listen=false");
+  }
+}
+
+inline void validate_consumer_transport_options(const transport_options& opts) {
+  validate_transport_options(opts);
+  if (opts.backend == transport_backend::socket && !opts.socket_listen) {
+    throw std::invalid_argument("transport_options: socket consumer requires socket_listen=true");
+  }
+}
+
+inline void validate_observer_transport_options(const transport_options& opts) {
+  validate_transport_options(opts);
+  if (opts.backend != transport_backend::shared_memory) {
+    throw std::invalid_argument("transport_options: observer requires shared_memory backend");
   }
 }
 

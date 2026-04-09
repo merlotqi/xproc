@@ -22,7 +22,7 @@ namespace ipc {
 class observer : public ring_inspector_interface, public attach_count_view_interface {
  public:
   explicit observer(const transport_options& opts) : opts_(opts) {
-    validate_transport_options(opts_);
+    validate_observer_transport_options(opts_);
     if (!shm_.open(opts_.path, opts_.shm_size, shm::shm_open_mode::read, opts_.win32_object_namespace)) {
       std::string msg = "observer: failed to attach shm path: " + opts_.path;
       const int err = shm_.last_os_error();

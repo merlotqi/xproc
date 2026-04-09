@@ -15,10 +15,16 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 - Benchmark target split with `xproc_run_benchmarks`.
 - Sphinx-compatible RST documentation under `docs/`.
 - Project support files (`SECURITY.md`, `CONTRIBUTING.md`, `CODEOWNERS`).
+- Initial `capi/` C API wrapper with opaque handles, byte-copy send/receive APIs, structured layout
+  errors, option validation, and smoke tests.
 
 ### Changed
 
 - Benchmark layout and execution model for better suite-level control.
+- Transport validation now enforces socket connect-mode port requirements, retry bounds, and
+  role-specific producer / consumer / observer expectations more explicitly.
+- Socket transport now resolves IPv4 / IPv6 peers via `getaddrinfo(AF_UNSPEC)` and prefers a
+  dual-stack IPv6 listener with IPv4 fallback.
 
 ### Fixed
 
@@ -29,4 +35,3 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Core xproc IPC/ringbuffer APIs, tests, examples, and CI foundation.
-

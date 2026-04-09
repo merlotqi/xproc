@@ -116,6 +116,11 @@ if(XPROC_WITH_PROTOBUF)
     target_compile_definitions(xproc PUBLIC XPROC_WITH_PROTOBUF)
 endif()
 
+option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
+if(XPROC_BUILD_CAPI)
+    add_subdirectory(capi)
+endif()
+
 option(XPROC_BUILD_TESTS "Build unit tests" ON)
 if(XPROC_BUILD_TESTS)
     enable_testing()
@@ -130,6 +135,11 @@ endif()
 option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
 if(XPROC_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
+endif()
+
+option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
+if(XPROC_BUILD_NODE)
+    add_subdirectory(node)
 endif()
 
 set(XPROC_EXPORT_WITH_NLOHMANN_JSON 0)
