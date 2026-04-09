@@ -9,7 +9,7 @@ execute_process(
 if(NOT NODE_ADDON_API_RESULT EQUAL 0)
   message(FATAL_ERROR
     "Failed to resolve node-addon-api from ${CMAKE_CURRENT_SOURCE_DIR}. "
-    "Run `npm install` in the node/ directory or configure with -DXPROC_BUILD_NODE=OFF."
+    "Run `npm ci` in the node/ directory or configure with -DXPROC_BUILD_NODE=OFF."
   )
 endif()
 
