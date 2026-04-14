@@ -25,12 +25,27 @@ constexpr int kBridgeDrainers = 2;
 }  // namespace
 
 int main() {
-  const std::string path =
-      "/xproc_mpmc_bridge_" + std::to_string(static_cast<long long>(xproc::current_process_id()));
+  std::cout << "=== mpmc_inprocess_bridge_demo ===\n"
+            << "Part A — In-process MPMC: several threads push and several threads pop a mutex-backed\n"
+            << "         std::deque (classic multi-producer multi-consumer queue). No SHM yet.\n"
+            << "Part B — SPSC + fan-out: open a fixed xproc channel on a POSIX shm path; one thread\n"
+            << "         is the sole producer, one thread owns consumer.poll(), and multiple threads\n"
+            << "         drain a downstream queue. The ring stays strict SPSC.\n\n";
+
+  const std::string path = "/xproc_mpmc_bridge_" + std::to_string(static_cast<long long>(xproc::current_process_id()));
 
   xproc::shm::shm::unlink(path);
 
+  std::cout << "SHM path (opened in Part B only): " << path << "\n\n";
+
   // --- Part 1: MPMC on a shared deque ---
+  std::cout << "--- Part A: MPMC deque ---\n"
+            << "  push_threads:     " << kMpmcPushers << "\n"
+            << "  pop_threads:      " << kMpmcPoppers << "\n"
+            << "  items_per_pusher: " << kItemsPerPusher << "\n"
+            << "  total_values:     " << kMpmcTotal << " (integers 1.." << kMpmcTotal << ")\n"
+            << "  deque max size:   64 (pushers block when full)\n"
+            << "  sync: mutex + two condition_variables (backpressure + wait-for-data)\n\n";
   std::mutex dq_mu;
   std::condition_variable dq_cv_push;
   std::condition_variable dq_cv_pop;
@@ -95,6 +110,8 @@ int main() {
     th.join();
   }
 
+  std::cout << "  All pushers joined; all_pushes_done signaled; all poppers joined.\n";
+
   if (mpmc_popped.load(std::memory_order_relaxed) != kMpmcTotal) {
     std::cerr << "mpmc_inprocess_bridge_demo: MPMC phase expected " << kMpmcTotal << " pops\n";
     xproc::shm::shm::unlink(path);
@@ -112,13 +129,23 @@ int main() {
     }
   }
 
+  std::cout << "  Part A checksum OK (sum 1.." << kMpmcTotal << " verified).\n\n";
+
   // --- Part 2: SPSC bridge + fan-out drain ---
+  std::cout << "--- Part B: SPSC SHM bridge + fan-out ---\n"
+            << "  Opening fixed channel at path above (create_if_missing).\n"
+            << "  bridge_tx thread: sole ipc::producer, send_fixed(1.." << kBridgeMessages << ").\n"
+            << "  bridge_rx thread: sole consumer.poll(), pushes to downstream mutex queue.\n"
+            << "  drainers:         " << kBridgeDrainers << " threads pop downstream queue.\n\n";
+
   xproc::ipc::transport_options opts;
   opts.path = path;
   opts.shm_size = sizeof(xproc::shm::control_block) + 128 * 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
+
+  std::cout << "  shm_size (Part B): " << opts.shm_size << " bytes\n\n";
 
   xproc::ipc::producer producer(opts);
   xproc::ipc::consumer consumer(opts);
@@ -205,8 +232,11 @@ int main() {
     return 1;
   }
 
-  std::cout << "mpmc_inprocess_bridge_demo: ok (MPMC deque " << kMpmcTotal << " items, then SPSC bridge "
-            << kBridgeMessages << " msgs)\n";
+  std::cout << "Result:\n"
+            << "  Part A: popped " << kMpmcTotal << " items, checksum OK.\n"
+            << "  Part B: bridge_drained " << bridge_drained.load(std::memory_order_relaxed) << " / " << kBridgeMessages
+            << ", sum " << bridge_sum.load(std::memory_order_relaxed) << " (expected " << bridge_expected << ")\n"
+            << "mpmc_inprocess_bridge_demo: OK — shm unlinked.\n";
   xproc::shm::shm::unlink(path);
   return 0;
 }

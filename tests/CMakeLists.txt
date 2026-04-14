@@ -14,7 +14,12 @@ include(GoogleTest)
 function(xproc_gtest_executable name)
     add_executable(${name} ${ARGN})
     target_link_libraries(${name} PRIVATE xproc GTest::gtest_main)
-    gtest_discover_tests(${name})
+    gtest_discover_tests(${name}
+        PROPERTIES
+            FOLDER "Tests"
+            TIMEOUT 30
+    )
+    set_target_properties(${name} PROPERTIES FOLDER "Tests")
 endfunction()
 
 # Portable tests (all supported platforms).
@@ -46,13 +51,23 @@ endforeach()
 if(WIN32)
     add_executable(xproc_win32_wait_shm_tests win32_wait_shm_test.cpp)
     target_link_libraries(xproc_win32_wait_shm_tests PRIVATE xproc GTest::gtest)
-    gtest_discover_tests(xproc_win32_wait_shm_tests)
+    gtest_discover_tests(xproc_win32_wait_shm_tests
+        PROPERTIES
+            FOLDER "Tests"
+            TIMEOUT 30
+    )
+    set_target_properties(xproc_win32_wait_shm_tests PROPERTIES FOLDER "Tests")
 endif()
 
 if(TARGET xproc_c)
     add_executable(xproc_capi_smoke_tests capi_smoke_test.cpp)
     target_link_libraries(xproc_capi_smoke_tests PRIVATE xproc_c GTest::gtest_main)
-    gtest_discover_tests(xproc_capi_smoke_tests)
+    gtest_discover_tests(xproc_capi_smoke_tests
+        PROPERTIES
+            FOLDER "Tests"
+            TIMEOUT 30
+    )
+    set_target_properties(xproc_capi_smoke_tests PROPERTIES FOLDER "Tests")
 endif()
 
 if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
@@ -68,7 +83,12 @@ if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
     if(XPROC_WITH_PROTOBUF)
         target_include_directories(xproc_optional_serde_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     endif()
-    gtest_discover_tests(xproc_optional_serde_tests)
+    gtest_discover_tests(xproc_optional_serde_tests
+        PROPERTIES
+            FOLDER "Tests"
+            TIMEOUT 60
+    )
+    set_target_properties(xproc_optional_serde_tests PROPERTIES FOLDER "Tests")
 endif()
 
 # Multi-config generators (Visual Studio): ctest must get -C <Config> or tests show "Not Run".
@@ -86,3 +106,4 @@ add_custom_target(xproc_run_tests
     USES_TERMINAL
     COMMENT "Running all xproc tests"
 )
+set_target_properties(xproc_run_tests PROPERTIES FOLDER "Tests")

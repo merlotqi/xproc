@@ -18,8 +18,12 @@ constexpr int kMessages = 200;
 }  // namespace
 
 int main() {
-  const std::string path =
-      "/xproc_spmc_fan_out_" + std::to_string(static_cast<long long>(xproc::current_process_id()));
+  std::cout << "=== spmc_fan_out_demo ===\n"
+            << "Pattern: ONE xproc ipc::consumer::poll thread reads the ring; each message is copied\n"
+            << "into a mutex-backed work queue and processed by multiple worker threads (fan-out).\n"
+            << "Only the reader thread advances read_pos on the SPSC channel.\n\n";
+
+  const std::string path = "/xproc_spmc_fan_out_" + std::to_string(static_cast<long long>(xproc::current_process_id()));
 
   xproc::shm::shm::unlink(path);
 
@@ -29,6 +33,15 @@ int main() {
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
+
+  std::cout << "Transport (shared memory):\n"
+            << "  path:         " << opts.path << "\n"
+            << "  shm_size:     " << opts.shm_size << " bytes\n"
+            << "  channel_type: fixed\n"
+            << "  item_size:    " << opts.item_size << " bytes\n"
+            << "Workload:\n"
+            << "  messages:     " << kMessages << " (payloads 1.." << kMessages << ")\n"
+            << "  worker_pool:  " << kWorkerThreads << " threads dequeue from shared work queue\n\n";
 
   xproc::ipc::producer producer(opts);
   xproc::ipc::consumer consumer(opts);
@@ -66,6 +79,10 @@ int main() {
     });
   }
 
+  std::cout << "Phase 1 — start reader + workers:\n"
+            << "  - Reader thread: sole owner of consumer.poll().\n"
+            << "  - Workers: pop uint32_t from work queue and accumulate sum.\n\n";
+
   std::thread reader([&] {
     int n = 0;
     while (n < kMessages) {
@@ -90,9 +107,14 @@ int main() {
     work_cv.notify_all();
   });
 
+  std::cout << "Phase 2 — main thread sends all messages (sole ipc::producer):\n"
+            << "  Calling producer.send_fixed(1) .. send_fixed(" << kMessages << ").\n\n";
+
   for (int i = 1; i <= kMessages; ++i) {
     producer.send_fixed(static_cast<std::uint32_t>(i));
   }
+
+  std::cout << "  Sends complete; waiting for reader and workers to finish...\n\n";
 
   reader.join();
   for (auto& w : workers) {
@@ -106,14 +128,19 @@ int main() {
     return 1;
   }
 
-  const std::uint64_t expected_sum = static_cast<std::uint64_t>(kMessages) * static_cast<std::uint64_t>(kMessages + 1) / 2u;
+  const std::uint64_t expected_sum =
+      static_cast<std::uint64_t>(kMessages) * static_cast<std::uint64_t>(kMessages + 1) / 2u;
   if (processed_sum.load(std::memory_order_relaxed) != expected_sum) {
     std::cerr << "spmc_fan_out_demo: checksum mismatch\n";
     xproc::shm::shm::unlink(path);
     return 1;
   }
 
-  std::cout << "spmc_fan_out_demo: ok (" << kMessages << " messages, sole reader -> fan-out)\n";
+  std::cout << "Result:\n"
+            << "  processed_count: " << pc << " / " << kMessages << "\n"
+            << "  processed_sum:   " << processed_sum.load(std::memory_order_relaxed) << " (expected " << expected_sum
+            << ")\n"
+            << "spmc_fan_out_demo: OK — shm unlinked.\n";
   xproc::shm::shm::unlink(path);
   return 0;
 }

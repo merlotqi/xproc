@@ -17,8 +17,11 @@ constexpr int kTotalItems = kProducerThreads * kItemsPerProducer;
 }  // namespace
 
 int main() {
-  const std::string path =
-      "/xproc_mpsc_fan_in_" + std::to_string(static_cast<long long>(xproc::current_process_id()));
+  std::cout << "=== mpsc_fan_in_demo ===\n"
+            << "Pattern: multiple application threads enqueue values; ONE thread is the only\n"
+            << "xproc ipc::producer. The shared-memory ring stays strict SPSC (single writer).\n\n";
+
+  const std::string path = "/xproc_mpsc_fan_in_" + std::to_string(static_cast<long long>(xproc::current_process_id()));
 
   xproc::shm::shm::unlink(path);
 
@@ -29,8 +32,23 @@ int main() {
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
 
+  std::cout << "Transport (shared memory):\n"
+            << "  path:              " << opts.path << "\n"
+            << "  shm_size:          " << opts.shm_size << " bytes\n"
+            << "  channel_type:      fixed\n"
+            << "  item_size:         " << opts.item_size << " bytes (uint32_t payload)\n"
+            << "Workload:\n"
+            << "  producer_threads:  " << kProducerThreads << "\n"
+            << "  items_per_thread:  " << kItemsPerProducer << "\n"
+            << "  total_items:       " << kTotalItems << " (values 1.." << kTotalItems << ")\n\n";
+
   xproc::ipc::producer producer(opts);
   xproc::ipc::consumer consumer(opts);
+
+  std::cout << "Phase 1 — fan-in to the ring:\n"
+            << "  - Start one fan-in thread (sole ipc::producer).\n"
+            << "  - Start " << kProducerThreads << " threads pushing into a mutex-backed queue.\n"
+            << "  - Fan-in thread pops the queue and calls producer.send_fixed() for each value.\n\n";
 
   std::mutex q_mu;
   std::condition_variable q_cv;
@@ -76,13 +94,19 @@ int main() {
   for (auto& th : producers) {
     th.join();
   }
+  std::cout << "  All " << kProducerThreads << " enqueue threads finished; signaling fan-in to exit after draining.\n";
   producers_done.store(true, std::memory_order_release);
   q_cv.notify_one();
   fan_in.join();
+  std::cout << "  Fan-in thread finished; " << kTotalItems << " messages were sent on the SPSC channel.\n\n";
 
   std::atomic<int> received{0};
   std::uint64_t sum = 0;
   std::mutex sum_mu;
+
+  std::cout << "Phase 2 — drain the ring:\n"
+            << "  - One consumer thread polls until " << kTotalItems << " uint32_t messages are read.\n"
+            << "  - Verifies count and sum(1.." << kTotalItems << ").\n\n";
 
   std::thread drain([&] {
     int n = 0;
@@ -128,7 +152,10 @@ int main() {
     return 1;
   }
 
-  std::cout << "mpsc_fan_in_demo: ok (" << kTotalItems << " items, fan-in -> sole producer)\n";
+  std::cout << "Result:\n"
+            << "  received:     " << received.load(std::memory_order_relaxed) << " / " << kTotalItems << "\n"
+            << "  sum(values):  " << sum << " (expected " << expected_sum << ")\n"
+            << "mpsc_fan_in_demo: OK — shm unlinked.\n";
   xproc::shm::shm::unlink(path);
   return 0;
 }
