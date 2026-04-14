@@ -1,6 +1,9 @@
 add_subdirectory(extern/taskflow)
 
 set(XPROC_EXAMPLE_FILES
+    mpmc_inprocess_bridge_demo.cpp
+    mpsc_fan_in_demo.cpp
+    spmc_fan_out_demo.cpp
     ping_pong.cpp
     fixed_channel_inprocess.cpp
     varlen_channel_inprocess.cpp
