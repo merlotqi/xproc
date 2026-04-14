@@ -5,8 +5,7 @@
 #include <xproc/ringbuffer/ringbuffer_error.hpp>
 #include <xproc/shm/shm_layout.hpp>
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 // ringbuffer_error: status enum for wrappers/tests (see ringbuffer_error.hpp); not returned from fixed_* / varlen_* hot
 // paths. Optional polymorphic facade over a mapped control block (tests, observers). SPSC implementations remain
@@ -34,5 +33,4 @@ class control_block_ring_facade final : public IRingBuffer {
   const shm::control_block* header_;
 };
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

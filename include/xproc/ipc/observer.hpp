@@ -13,8 +13,7 @@
 #include <xproc/shm/shm.hpp>
 #include <xproc/shm/shm_layout_manager.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 // Read-only attach: does not advance read_pos. Uses readonly: does not bump attach_count; attach_count()
 // in the control block only reflects producer/consumer writable mappings. attach_count_view_interface here is a
@@ -98,5 +97,4 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
   std::unique_ptr<ringbuffer::varlen_reader> varlen_reader_;
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc

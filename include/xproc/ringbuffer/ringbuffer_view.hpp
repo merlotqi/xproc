@@ -4,8 +4,7 @@
 #include <cstdint>
 #include <xproc/shm/shm_layout.hpp>
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 class ringbuffer_view {
  public:
@@ -33,5 +32,4 @@ class ringbuffer_view {
   uint8_t* data_;
 };
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

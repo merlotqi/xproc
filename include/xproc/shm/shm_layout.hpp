@@ -3,8 +3,7 @@
 #include <atomic>
 #include <xproc/platform/platform.hpp>
 
-namespace xproc {
-namespace shm {
+namespace xproc::shm {
 
 // SPSC ring indices and futex wait words. write_pos/read_pos are monotonic logical
 // offsets; the data region index is pos % data_capacity.
@@ -45,5 +44,4 @@ struct XPROC_ALIGNAS_CACHE_LINE control_block {
   uint64_t reserved[4];
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::shm

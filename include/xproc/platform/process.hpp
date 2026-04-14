@@ -16,8 +16,7 @@
 #include <windows.h>
 #endif
 
-namespace xproc {
-namespace platform {
+namespace xproc::platform {
 
 inline std::int32_t current_process_id() noexcept {
 #if defined(XPROC_PLATFORM_LINUX)
@@ -29,5 +28,4 @@ inline std::int32_t current_process_id() noexcept {
 #endif
 }
 
-}  // namespace platform
-}  // namespace xproc
+}  // namespace xproc::platform

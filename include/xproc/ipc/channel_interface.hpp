@@ -8,8 +8,7 @@
 #include <xproc/ipc/options.hpp>
 #include <xproc/shm/shm_layout.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 // Abstract producer side: fixed / varlen sends (shared memory, TCP, RDMA backends).
 class producer_channel_interface {
@@ -98,5 +97,4 @@ class shm_consumer final : public consumer_channel_interface {
   consumer ch_;
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc

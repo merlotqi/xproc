@@ -13,8 +13,7 @@
 #include <xproc/shm/shm_layout_manager.hpp>
 #include <xproc/shm/shm_open_mode.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 class endpoint {
  public:
@@ -93,5 +92,4 @@ class endpoint {
   }
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc

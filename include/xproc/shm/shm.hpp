@@ -4,8 +4,7 @@
 #include <string>
 #include <xproc/shm/shm_open_mode.hpp>
 
-namespace xproc {
-namespace shm {
+namespace xproc::shm {
 
 class shm {
  public:
@@ -45,5 +44,4 @@ class shm {
   std::string name_;
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::shm

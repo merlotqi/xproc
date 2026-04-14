@@ -7,8 +7,7 @@
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 // Blocking consumer loop: polls the channel, copies each message, and submits work to Executor.
 //
@@ -76,5 +75,4 @@ class runtime {
   std::atomic_bool running_{false};
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc

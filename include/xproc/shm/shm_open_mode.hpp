@@ -1,7 +1,6 @@
 #pragma once
 
-namespace xproc {
-namespace shm {
+namespace xproc::shm {
 
 enum class shm_open_mode {
   create,
@@ -10,5 +9,4 @@ enum class shm_open_mode {
   read
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::shm

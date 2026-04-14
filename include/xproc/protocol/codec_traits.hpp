@@ -3,8 +3,7 @@
 #include <cstddef>
 #include <type_traits>
 
-namespace xproc {
-namespace protocol {
+namespace xproc::protocol {
 
 namespace codec_traits_detail {
 
@@ -64,5 +63,4 @@ constexpr void assert_codec() noexcept {
                 "Codec must provide message_type, max_encoded_size(), encode, decode per codec_traits.hpp");
 }
 
-}  // namespace protocol
-}  // namespace xproc
+}  // namespace xproc::protocol

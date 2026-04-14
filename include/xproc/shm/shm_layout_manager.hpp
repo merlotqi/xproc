@@ -5,8 +5,7 @@
 #include <xproc/shm/shm.hpp>
 #include <xproc/shm/shm_layout.hpp>
 
-namespace xproc {
-namespace shm {
+namespace xproc::shm {
 
 // Versions stored in a mapped control block (for logging / compatibility checks before full validate).
 struct embedded_version {
@@ -102,8 +101,7 @@ class layout_manager {
   static void _init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment);
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::shm
 
 namespace std {
 template <>

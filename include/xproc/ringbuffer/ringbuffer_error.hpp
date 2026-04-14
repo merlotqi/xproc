@@ -1,7 +1,6 @@
 #pragma once
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 // Lightweight status for tests and upper layers; hot-path writers/readers may ignore it.
 enum class ringbuffer_error {
@@ -29,5 +28,4 @@ inline const char* ringbuffer_error_cstr(ringbuffer_error e) noexcept {
   }
 }
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

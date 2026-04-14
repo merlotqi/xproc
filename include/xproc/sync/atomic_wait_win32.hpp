@@ -8,8 +8,7 @@
 #include <thread>
 #include <xproc/platform/platform.hpp>
 
-namespace xproc {
-namespace sync {
+namespace xproc::sync {
 
 // WaitOnAddress / WakeByAddress match on virtual addresses, not on shared file-mapping bytes. Each
 // MapViewOfFile of the same section maps a different VA in the process, so producer and consumer
@@ -43,7 +42,6 @@ inline void atomic_notify_one(const std::atomic<T>*) {
 template <typename T>
 inline void atomic_notify_all(const std::atomic<T>*) {}
 
-}  // namespace sync
-}  // namespace xproc
+}  // namespace xproc::sync
 
 #endif

@@ -5,8 +5,7 @@
 #include <xproc/shm/shm.hpp>
 #include <xproc/shm/shm_open_mode.hpp>
 
-namespace xproc {
-namespace shm {
+namespace xproc::shm {
 
 // Optional abstraction for tests or alternate backends; endpoint uses xproc::shm::shm directly.
 // Subclass and inject where you introduce a transport factory (not wired into channel by default).
@@ -36,5 +35,4 @@ class default_shm_backend final : public IShmBackend {
   shm impl_;
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::shm

@@ -2,8 +2,7 @@
 
 #include <cstdint>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 // Read-only snapshot of ring control fields (shared with producer/consumer).
 struct ring_snapshot {
@@ -31,5 +30,4 @@ class attach_count_view_interface {
   virtual std::uint32_t attach_count() const noexcept = 0;
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc

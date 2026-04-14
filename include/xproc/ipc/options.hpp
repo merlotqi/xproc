@@ -5,8 +5,7 @@
 #include <string>
 #include <xproc/shm/shm_layout.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 enum class channel_type {
   fixed,
@@ -106,5 +105,4 @@ inline void validate_observer_transport_options(const transport_options& opts) {
   }
 }
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc
