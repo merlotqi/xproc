@@ -28,30 +28,32 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     find_package(Threads REQUIRED)
 endif()
 
+option(XPROC_BUILD_SHARED "Build libxproc as a shared library" OFF)
+option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
+option(XPROC_BUILD_TESTS "Build unit tests" ON)
+option(XPROC_BUILD_EXAMPLES "Build examples" ON)
+option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
+option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
+
 add_subdirectory(src)
 
-option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
 if(XPROC_BUILD_CAPI)
     add_subdirectory(capi)
 endif()
 
-option(XPROC_BUILD_TESTS "Build unit tests" ON)
 if(XPROC_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-option(XPROC_BUILD_EXAMPLES "Build examples" ON)
 if(XPROC_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
 if(XPROC_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
-option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
 set(NODE_INCLUDE_DIR "" CACHE PATH
     "Optional: override directory containing node_api.h. Empty = use node_modules/node-api-headers from npm ci in node/.")
 if(XPROC_BUILD_NODE)

@@ -9,8 +9,6 @@ else()
     list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shm/shm_posix.cpp")
 endif()
 
-option(XPROC_BUILD_SHARED "Build libxproc as a shared library" OFF)
-
 # Windows + DLL: place xproc.dll next to test/example/benchmark executables so GoogleTest
 # discovery does not fail with 0xc0000135 (STATUS_DLL_NOT_FOUND).
 if(WIN32 AND XPROC_BUILD_SHARED)
