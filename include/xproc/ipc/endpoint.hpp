@@ -56,7 +56,13 @@ class endpoint {
           "endpoint: observer role is not supported here; use xproc::ipc::observer for read-only attach instead");
     }
 
-    validate_transport_options(opts_);
+    if (role_ == role::producer) {
+      validate_producer_transport_options(opts_);
+    } else if (role_ == role::consumer) {
+      validate_consumer_transport_options(opts_);
+    } else {
+      validate_transport_options(opts_);
+    }
 
     using namespace xproc::shm;
     shm_open_mode mode = shm_open_mode::open;
@@ -77,7 +83,7 @@ class endpoint {
 
     const bool is_creator = shm_.created_this_open();
 
-    size_t data_capacity = opts_.shm_size - sizeof(control_block);
+    const size_t data_capacity = shm_data_capacity_for_size(opts_.shm_size);
     const uint32_t layout_type = (opts_.type == channel_type::fixed) ? 0u : 1u;
     const uint32_t data_align = opts_.data_align ? opts_.data_align : 8u;
     header_ = layout_manager::format(shm_, data_capacity, is_creator, layout_type, data_align);

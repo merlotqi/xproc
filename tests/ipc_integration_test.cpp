@@ -115,6 +115,60 @@ TEST(IpcIntegration, RoleSendPoll) {
   xproc::shm::shm::unlink(o.path);
 }
 
+TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
+  const std::string path = "/xproc_attach_infer_size";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator_opts;
+  creator_opts.path = path;
+  creator_opts.shm_size = xproc::ipc::shm_size_for_data_capacity(8192);
+  creator_opts.type = xproc::ipc::channel_type::fixed;
+  creator_opts.item_size = sizeof(std::uint32_t);
+  creator_opts.create_if_missing = true;
+
+  xproc::ipc::producer producer(creator_opts);
+
+  xproc::ipc::transport_options attach_opts = creator_opts;
+  attach_opts.shm_size = xproc::ipc::infer_existing_shm_size;
+  attach_opts.create_if_missing = false;
+
+  xproc::ipc::consumer consumer(attach_opts);
+  xproc::ipc::observer observer(attach_opts);
+
+  producer.send_fixed<std::uint32_t>(0x2468ace0u);
+
+  bool peeked = false;
+  while (!peeked) {
+    peeked = observer.peek([&](const void* p, std::uint32_t len) {
+      EXPECT_EQ(len, sizeof(std::uint32_t));
+      std::uint32_t v = 0;
+      std::memcpy(&v, p, sizeof(v));
+      EXPECT_EQ(v, 0x2468ace0u);
+    });
+    if (!peeked) {
+      const std::uint32_t c = observer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&observer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  bool consumed = false;
+  while (!consumed) {
+    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+      EXPECT_EQ(len, sizeof(std::uint32_t));
+      std::uint32_t v = 0;
+      std::memcpy(&v, p, sizeof(v));
+      EXPECT_EQ(v, 0x2468ace0u);
+    });
+    if (!consumed) {
+      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  EXPECT_GE(observer.attach_count(), 2u);
+  xproc::shm::shm::unlink(path);
+}
+
 namespace {
 
 int cross_process_futex_block_main(const char* shm_path) {

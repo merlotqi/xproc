@@ -34,7 +34,7 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
       throw std::runtime_error(msg);
     }
 
-    const std::size_t data_capacity = opts_.shm_size - sizeof(shm::control_block);
+    const std::size_t data_capacity = shm_data_capacity_for_size(opts_.shm_size);
     const std::uint32_t layout_type = (opts_.type == channel_type::fixed) ? 0u : 1u;
     const std::uint32_t data_align = opts_.data_align ? opts_.data_align : 8u;
     header_ = shm::layout_manager::format(shm_, data_capacity, false, layout_type, data_align,

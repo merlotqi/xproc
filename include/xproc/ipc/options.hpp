@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -18,10 +19,24 @@ enum class transport_backend {
   socket
 };
 
+constexpr std::size_t infer_existing_shm_size = 0;
+constexpr std::size_t min_shm_size = sizeof(shm::control_block);
+
+constexpr std::size_t shm_size_for_data_capacity(std::size_t data_capacity) noexcept {
+  return min_shm_size + data_capacity;
+}
+
+constexpr std::size_t shm_data_capacity_for_size(std::size_t shm_size) noexcept {
+  return shm_size > min_shm_size ? (shm_size - min_shm_size) : 0;
+}
+
 struct transport_options {
   transport_backend backend = transport_backend::shared_memory;
   std::string path;
-  size_t shm_size = 0;
+  /// Shared-memory backend:
+  /// - creator / create_if_missing=true: total bytes including control_block
+  /// - attacher / existing segment: 0 means infer size from the created segment
+  size_t shm_size = infer_existing_shm_size;
   uint32_t item_size = 0;
   uint32_t data_align = 0;
   /// Shared-memory backend: allow the first producer or consumer opener to create the segment.
@@ -39,8 +54,6 @@ struct transport_options {
   /// Socket transport: milliseconds between connection retries.
   int socket_connect_retry_ms = 10;
 };
-
-constexpr std::size_t min_shm_size = sizeof(shm::control_block);
 
 // Central validation for endpoint / channel / ipc_observer / transports. Throws std::invalid_argument.
 inline void validate_transport_options(const transport_options& opts) {
@@ -63,7 +76,7 @@ inline void validate_transport_options(const transport_options& opts) {
     if (opts.path.empty()) {
       throw std::invalid_argument("transport_options: shared_memory backend requires non-empty path");
     }
-    if (opts.shm_size < min_shm_size) {
+    if (opts.shm_size != infer_existing_shm_size && opts.shm_size < min_shm_size) {
       throw std::invalid_argument("transport_options: shm_size is smaller than control_block");
     }
     return;
@@ -88,6 +101,12 @@ inline void validate_transport_options(const transport_options& opts) {
 
 inline void validate_producer_transport_options(const transport_options& opts) {
   validate_transport_options(opts);
+  if (opts.backend == transport_backend::shared_memory && opts.create_if_missing &&
+      opts.shm_size == infer_existing_shm_size) {
+    throw std::invalid_argument(
+        "transport_options: shared_memory producer with create_if_missing=true requires non-zero shm_size "
+        "(use shm_size_for_data_capacity(...))");
+  }
   if (opts.backend == transport_backend::socket && opts.socket_listen) {
     throw std::invalid_argument("transport_options: socket producer requires socket_listen=false");
   }
@@ -95,6 +114,12 @@ inline void validate_producer_transport_options(const transport_options& opts) {
 
 inline void validate_consumer_transport_options(const transport_options& opts) {
   validate_transport_options(opts);
+  if (opts.backend == transport_backend::shared_memory && opts.create_if_missing &&
+      opts.shm_size == infer_existing_shm_size) {
+    throw std::invalid_argument(
+        "transport_options: shared_memory consumer with create_if_missing=true requires non-zero shm_size "
+        "(use shm_size_for_data_capacity(...))");
+  }
   if (opts.backend == transport_backend::socket && !opts.socket_listen) {
     throw std::invalid_argument("transport_options: socket consumer requires socket_listen=true");
   }

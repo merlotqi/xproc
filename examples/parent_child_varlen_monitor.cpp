@@ -51,7 +51,8 @@ int main() {
 
 namespace {
 
-constexpr std::size_t kShmSize = sizeof(xproc::shm::control_block) + 32768;
+constexpr std::size_t kDataCapacity = 32768;
+constexpr std::size_t kShmSize = xproc::ipc::shm_size_for_data_capacity(kDataCapacity);
 
 std::string make_message(int i) {
   const std::size_t burst = 12u + static_cast<std::size_t>((i % 5) * 11);
@@ -62,7 +63,7 @@ std::string make_message(int i) {
 int run_child_writer(const std::string& shm_path) {
   xproc::ipc::transport_options opts;
   opts.path = shm_path;
-  opts.shm_size = kShmSize;
+  opts.shm_size = xproc::ipc::infer_existing_shm_size;
   opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = false;
 

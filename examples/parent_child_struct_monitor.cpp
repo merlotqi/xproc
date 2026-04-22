@@ -57,12 +57,13 @@ struct telemetry_packet {
   int b;
 };
 
-constexpr std::size_t kShmSize = sizeof(xproc::shm::control_block) + 32768;
+constexpr std::size_t kDataCapacity = 32768;
+constexpr std::size_t kShmSize = xproc::ipc::shm_size_for_data_capacity(kDataCapacity);
 
 int run_child_writer(const std::string& shm_path) {
   xproc::ipc::transport_options opts;
   opts.path = shm_path;
-  opts.shm_size = kShmSize;
+  opts.shm_size = xproc::ipc::infer_existing_shm_size;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(telemetry_packet);
   opts.create_if_missing = false;

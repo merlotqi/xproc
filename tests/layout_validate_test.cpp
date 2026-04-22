@@ -84,6 +84,29 @@ TEST(LayoutValidate, ValidateTransportOptionsRejectsInvalidAlignAndItemSize) {
   EXPECT_THROW(xproc::ipc::validate_transport_options(bad_item), std::invalid_argument);
 }
 
+TEST(LayoutValidate, SharedMemorySizeHelpersAndInferExistingSemantics) {
+  constexpr std::size_t data_capacity = 4096;
+  constexpr std::size_t shm_size = xproc::ipc::shm_size_for_data_capacity(data_capacity);
+  EXPECT_EQ(shm_size, sizeof(xproc::shm::control_block) + data_capacity);
+  EXPECT_EQ(xproc::ipc::shm_data_capacity_for_size(shm_size), data_capacity);
+  EXPECT_EQ(xproc::ipc::shm_data_capacity_for_size(xproc::ipc::infer_existing_shm_size), 0u);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = "/xproc_size_helper_creator";
+  creator.shm_size = xproc::ipc::infer_existing_shm_size;
+  creator.type = xproc::ipc::channel_type::fixed;
+  creator.item_size = 4;
+  creator.create_if_missing = true;
+  EXPECT_THROW(xproc::ipc::validate_producer_transport_options(creator), std::invalid_argument);
+  EXPECT_THROW(xproc::ipc::validate_consumer_transport_options(creator), std::invalid_argument);
+
+  xproc::ipc::transport_options attacher = creator;
+  attacher.create_if_missing = false;
+  EXPECT_NO_THROW(xproc::ipc::validate_producer_transport_options(attacher));
+  EXPECT_NO_THROW(xproc::ipc::validate_consumer_transport_options(attacher));
+  EXPECT_NO_THROW(xproc::ipc::validate_observer_transport_options(attacher));
+}
+
 TEST(LayoutValidate, LayoutExceptionCarriesCodeAndErrorCode) {
   try {
     throw xproc::shm::layout_exception("test: ", err::bad_magic);

@@ -82,9 +82,10 @@ std::string view_registry_key(const std::string& internal_name, DWORD map_access
          std::to_string(static_cast<unsigned long long>(size_bytes));
 }
 
-// Map the full section; require VirtualQuery RegionSize >= opts.shm_size (caller may have rounded
-// CreateFileMapping size up — extra tail bytes are unused; Linux mmap uses exact length).
-bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes, void** out_addr) {
+// Map the full section; require VirtualQuery RegionSize >= opts.shm_size when specified.
+// CreateFileMapping may round up; the extra tail bytes are unused but stay mapped for safe access/unmap.
+bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes, void** out_addr,
+                         std::size_t* out_region_bytes) {
   void* p = ::MapViewOfFile(h, map_access, 0, 0, 0);
   if (!p) {
     return false;
@@ -100,6 +101,7 @@ bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes,
     return false;
   }
   *out_addr = p;
+  *out_region_bytes = mbi.RegionSize;
   return true;
 }
 
@@ -140,7 +142,8 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   size_ = size;
 
   const DWORD map_access = (mode == shm_open_mode::read) ? FILE_MAP_READ : FILE_MAP_WRITE | FILE_MAP_READ;
-  const std::string vkey = view_registry_key(name_, map_access, size_);
+  const bool can_reuse_before_map = (size_ != 0);
+  const std::string requested_vkey = can_reuse_before_map ? view_registry_key(name_, map_access, size_) : std::string{};
 
   HANDLE h = nullptr;
   bool register_canonical = false;
@@ -169,6 +172,10 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   } else if (mode == shm_open_mode::open_create) {
     h = ::OpenFileMappingA(map_access, FALSE, name_.c_str());
     if (!h) {
+      if (size_ == 0) {
+        last_os_error_ = static_cast<int>(ERROR_INVALID_PARAMETER);
+        return false;
+      }
       const DWORD hi = static_cast<DWORD>((size_ >> 32) & 0xffffffffu);
       const DWORD lo = static_cast<DWORD>(size_ & 0xffffffffu);
       h = ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, hi, lo, name_.c_str());
@@ -180,6 +187,10 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
     }
     register_canonical = true;
   } else if (mode == shm_open_mode::create) {
+    if (size_ == 0) {
+      last_os_error_ = static_cast<int>(ERROR_INVALID_PARAMETER);
+      return false;
+    }
     const DWORD hi = static_cast<DWORD>((size_ >> 32) & 0xffffffffu);
     const DWORD lo = static_cast<DWORD>(size_ & 0xffffffffu);
     h = ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, hi, lo, name_.c_str());
@@ -193,14 +204,14 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
     return false;
   }
 
-  {
+  if (can_reuse_before_map) {
     std::lock_guard<std::mutex> lock(g_win32_shm_mutex);
-    const auto vit = g_process_views.find(vkey);
+    const auto vit = g_process_views.find(requested_vkey);
     if (vit != g_process_views.end()) {
       ::CloseHandle(h);
       addr_ = vit->second.addr;
       mapping_ = nullptr;
-      win32_view_key_ = vkey;
+      win32_view_key_ = requested_vkey;
       vit->second.refcount += 1;
       if (register_canonical && g_canonical_shm_handle.find(name_) == g_canonical_shm_handle.end()) {
         g_canonical_shm_handle[name_] = vit->second.section_handle;
@@ -210,21 +221,26 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   }
 
   void* p = nullptr;
-  if (!map_and_verify_size(h, map_access, size_, &p)) {
+  std::size_t mapped_bytes = 0;
+  if (!map_and_verify_size(h, map_access, size_, &p, &mapped_bytes)) {
     last_os_error_ = static_cast<int>(::GetLastError());
     ::CloseHandle(h);
     return false;
   }
+  if (size_ == 0) {
+    size_ = mapped_bytes;
+  }
+  const std::string actual_vkey = view_registry_key(name_, map_access, size_);
 
   {
     std::lock_guard<std::mutex> lock(g_win32_shm_mutex);
-    const auto vit2 = g_process_views.find(vkey);
+    const auto vit2 = g_process_views.find(actual_vkey);
     if (vit2 != g_process_views.end()) {
       ::UnmapViewOfFile(p);
       ::CloseHandle(h);
       addr_ = vit2->second.addr;
       mapping_ = nullptr;
-      win32_view_key_ = vkey;
+      win32_view_key_ = actual_vkey;
       vit2->second.refcount += 1;
       if (register_canonical && g_canonical_shm_handle.find(name_) == g_canonical_shm_handle.end()) {
         g_canonical_shm_handle[name_] = vit2->second.section_handle;
@@ -236,7 +252,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
     e.addr = p;
     e.section_handle = h;
     e.refcount = 1;
-    g_process_views.emplace(vkey, std::move(e));
+    g_process_views.emplace(actual_vkey, std::move(e));
 
     if (register_canonical && g_canonical_shm_handle.find(name_) == g_canonical_shm_handle.end()) {
       g_canonical_shm_handle[name_] = h;
@@ -245,7 +261,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
 
   addr_ = p;
   mapping_ = h;
-  win32_view_key_ = vkey;
+  win32_view_key_ = actual_vkey;
   return true;
 }
 

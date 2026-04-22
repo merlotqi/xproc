@@ -52,6 +52,10 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   };
 
   if (mode == shm_open_mode::create) {
+    if (size_ == 0) {
+      last_os_error_ = EINVAL;
+      return false;
+    }
     fd_ = shm_open(name_.c_str(), O_CREAT | O_RDWR | O_EXCL, 0666);
     if (fd_ != -1) {
       created_this_open_ = true;
@@ -61,6 +65,10 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   } else if (mode == shm_open_mode::open_create) {
     fd_ = shm_open(name_.c_str(), O_RDWR, 0666);
     if (fd_ == -1) {
+      if (size_ == 0) {
+        last_os_error_ = EINVAL;
+        return false;
+      }
       fd_ = shm_open(name_.c_str(), O_CREAT | O_RDWR | O_EXCL, 0666);
       if (fd_ != -1) {
         created_this_open_ = true;
@@ -86,9 +94,16 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
     if (fstat(fd_, &st) == -1) {
       return close_and_fail(errno);
     }
-    if (static_cast<size_t>(st.st_size) < size_) {
+    const size_t existing_size = static_cast<size_t>(st.st_size);
+    if (size_ == 0) {
+      size_ = existing_size;
+    } else if (existing_size < size_) {
       return close_and_fail(EINVAL);
     }
+  }
+
+  if (size_ == 0) {
+    return close_and_fail(EINVAL);
   }
 
   int port = PROT_READ | (mode == shm_open_mode::read ? 0 : PROT_WRITE);

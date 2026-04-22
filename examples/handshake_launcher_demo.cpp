@@ -75,7 +75,8 @@ struct alignas(64) handshake_region {
 };
 
 constexpr std::size_t kHandshakeShmBytes = sizeof(handshake_region);
-constexpr std::size_t kIpcShmSize = sizeof(xproc::shm::control_block) + 32768;
+constexpr std::size_t kIpcDataCapacity = 32768;
+constexpr std::size_t kIpcShmSize = xproc::ipc::shm_size_for_data_capacity(kIpcDataCapacity);
 
 struct telemetry_packet {
   char message[256];
@@ -113,7 +114,7 @@ std::uint64_t make_token() {
 int run_child_data_writer(const std::string& ipc_path) {
   xproc::ipc::transport_options opts;
   opts.path = ipc_path;
-  opts.shm_size = kIpcShmSize;
+  opts.shm_size = xproc::ipc::infer_existing_shm_size;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(telemetry_packet);
   opts.create_if_missing = false;

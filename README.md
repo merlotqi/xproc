@@ -27,7 +27,7 @@ High-performance **Single Producer Single Consumer (SPSC)** Inter-Process Commun
 // Producer side
 xproc::ipc::transport_options opts;
 opts.path = "/my_ipc_channel";
-opts.shm_size = 1024 * 1024;
+opts.shm_size = xproc::ipc::shm_size_for_data_capacity(1024 * 1024);
 opts.type = xproc::ipc::channel_type::fixed;
 opts.create_if_missing = true;
 // The first producer or consumer opener can create the shared-memory segment.
@@ -110,6 +110,10 @@ xproc_c_shm_unlink(opts.path);
 
 Error handling is status-code based. For richer diagnostics, use `xproc_c_last_error_message()`,
 `xproc_c_last_error_copy()`, and `xproc_c_last_layout_error()`.
+
+For C++ shared-memory endpoints, only the creator needs to choose a size. Use
+`xproc::ipc::shm_size_for_data_capacity(...)` when creating the segment, and let non-creators attach with
+`opts.shm_size = xproc::ipc::infer_existing_shm_size;`.
 
 ### Using Codecs
 

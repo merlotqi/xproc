@@ -51,12 +51,13 @@ int main() {
 
 namespace {
 
-constexpr std::size_t kShmSize = sizeof(xproc::shm::control_block) + 16384;
+constexpr std::size_t kDataCapacity = 16384;
+constexpr std::size_t kShmSize = xproc::ipc::shm_size_for_data_capacity(kDataCapacity);
 
 int run_child_writer(const std::string& shm_path) {
   xproc::ipc::transport_options child_opts;
   child_opts.path = shm_path;
-  child_opts.shm_size = kShmSize;
+  child_opts.shm_size = xproc::ipc::infer_existing_shm_size;
   child_opts.type = xproc::ipc::channel_type::fixed;
   child_opts.item_size = sizeof(std::uint32_t);
   child_opts.create_if_missing = false;
@@ -91,10 +92,8 @@ int main(int argc, char** argv) {
   opts.shm_size = kShmSize;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
+  // Demonstrates the parent consumer creating the segment before forking the producer child.
   opts.create_if_missing = true;
-
-  xproc::ipc::producer creator(opts);
-  opts.create_if_missing = false;
   xproc::ipc::consumer consumer(opts);
 
   const pid_t pid = fork();
@@ -166,10 +165,8 @@ int main(int argc, char** argv) {
   opts.shm_size = kShmSize;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
+  // Demonstrates the parent consumer creating the segment before launching the producer child.
   opts.create_if_missing = true;
-
-  xproc::ipc::producer creator(opts);
-  opts.create_if_missing = false;
   xproc::ipc::consumer consumer(opts);
 
   char exe_path[MAX_PATH];

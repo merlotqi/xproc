@@ -11,7 +11,7 @@ int main() {
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
+  opts.shm_size = xproc::ipc::shm_size_for_data_capacity(16384);
   opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
 

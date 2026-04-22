@@ -10,7 +10,7 @@ Fixed-length channel
 
    xproc::ipc::transport_options opts;
    opts.path = "/my_ipc_channel";
-   opts.shm_size = 1024 * 1024;
+   opts.shm_size = xproc::ipc::shm_size_for_data_capacity(1024 * 1024);
    opts.type = xproc::ipc::channel_type::fixed;
    opts.create_if_missing = true;
    // The first producer or consumer opener can create the segment.
