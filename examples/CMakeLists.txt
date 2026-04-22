@@ -9,6 +9,7 @@ set(XPROC_EXAMPLE_FILES
     runtime_dispatch_demo.cpp
     parent_child_counter_monitor.cpp
     parent_child_struct_monitor.cpp
+    parent_child_varlen_monitor.cpp
     handshake_launcher_demo.cpp
 )
 

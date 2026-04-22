@@ -23,12 +23,14 @@ shm& shm::operator=(shm&& other) noexcept {
     size_ = other.size_;
     fd_ = other.fd_;
     last_os_error_ = other.last_os_error_;
+    created_this_open_ = other.created_this_open_;
     name_ = std::move(other.name_);
 
     other.addr_ = nullptr;
     other.size_ = 0;
     other.fd_ = -1;
     other.last_os_error_ = 0;
+    other.created_this_open_ = false;
   }
   return *this;
 }
@@ -36,27 +38,38 @@ shm& shm::operator=(shm&& other) noexcept {
 bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const std::string& win32_object_namespace) {
   (void)win32_object_namespace;
   last_os_error_ = 0;
+  created_this_open_ = false;
   name_ = name;
   size_ = size;
 
-  int oflag = 0;
+  const auto close_and_fail = [&](int err) {
+    last_os_error_ = err;
+    if (fd_ != -1) {
+      ::close(fd_);
+      fd_ = -1;
+    }
+    return false;
+  };
+
   if (mode == shm_open_mode::create) {
-    // Exclusive create: fail if the name already exists.
-    oflag = O_CREAT | O_RDWR | O_EXCL;
+    fd_ = shm_open(name_.c_str(), O_CREAT | O_RDWR | O_EXCL, 0666);
+    if (fd_ != -1) {
+      created_this_open_ = true;
+    }
   } else if (mode == shm_open_mode::open) {
-    oflag = O_RDWR;
+    fd_ = shm_open(name_.c_str(), O_RDWR, 0666);
   } else if (mode == shm_open_mode::open_create) {
-    // Try opening first; if it fails (ENOENT or EACCES from missing), fall through to create below.
-    oflag = O_RDWR;
+    fd_ = shm_open(name_.c_str(), O_RDWR, 0666);
+    if (fd_ == -1) {
+      fd_ = shm_open(name_.c_str(), O_CREAT | O_RDWR | O_EXCL, 0666);
+      if (fd_ != -1) {
+        created_this_open_ = true;
+      } else if (errno == EEXIST) {
+        fd_ = shm_open(name_.c_str(), O_RDWR, 0666);
+      }
+    }
   } else if (mode == shm_open_mode::read) {
-    oflag = O_RDONLY;
-  }
-
-  fd_ = shm_open(name_.c_str(), oflag, 0666);
-
-  // open_create fallback: if open failed and mode is open_create, try to create.
-  if (fd_ == -1 && mode == shm_open_mode::open_create) {
-    fd_ = shm_open(name_.c_str(), O_CREAT | O_RDWR, 0666);
+    fd_ = shm_open(name_.c_str(), O_RDONLY, 0666);
   }
 
   if (fd_ == -1) {
@@ -64,12 +77,17 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
     return false;
   }
 
-  if (mode != shm_open_mode::read) {
+  if (created_this_open_) {
     if (ftruncate(fd_, size_) == -1) {
-      last_os_error_ = errno;
-      ::close(fd_);
-      fd_ = -1;
-      return false;
+      return close_and_fail(errno);
+    }
+  } else {
+    struct stat st {};
+    if (fstat(fd_, &st) == -1) {
+      return close_and_fail(errno);
+    }
+    if (static_cast<size_t>(st.st_size) < size_) {
+      return close_and_fail(EINVAL);
     }
   }
 
@@ -77,11 +95,8 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   addr_ = mmap(nullptr, size_, port, MAP_SHARED, fd_, 0);
 
   if (addr_ == MAP_FAILED) {
-    last_os_error_ = errno;
     addr_ = nullptr;
-    ::close(fd_);
-    fd_ = -1;
-    return false;
+    return close_and_fail(errno);
   }
   return true;
 }
@@ -96,6 +111,7 @@ void shm::detach() {
     ::close(fd_);
     fd_ = -1;
   }
+  created_this_open_ = false;
 }
 
 void shm::unlink(const std::string& name) {

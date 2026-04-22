@@ -115,6 +115,7 @@ shm& shm::operator=(shm&& other) noexcept {
     size_ = other.size_;
     mapping_ = other.mapping_;
     last_os_error_ = other.last_os_error_;
+    created_this_open_ = other.created_this_open_;
     name_ = std::move(other.name_);
     win32_view_key_ = std::move(other.win32_view_key_);
 
@@ -122,6 +123,7 @@ shm& shm::operator=(shm&& other) noexcept {
     other.size_ = 0;
     other.mapping_ = nullptr;
     other.last_os_error_ = 0;
+    other.created_this_open_ = false;
     other.win32_view_key_.clear();
   }
   return *this;
@@ -129,6 +131,7 @@ shm& shm::operator=(shm&& other) noexcept {
 
 bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const std::string& win32_object_namespace) {
   last_os_error_ = 0;
+  created_this_open_ = false;
   name_ = mapping_name_from_path(name, win32_object_namespace);
   if (name_.empty()) {
     last_os_error_ = static_cast<int>(ERROR_INVALID_PARAMETER);
@@ -173,6 +176,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
         last_os_error_ = static_cast<int>(::GetLastError());
         return false;
       }
+      created_this_open_ = (::GetLastError() != ERROR_ALREADY_EXISTS);
     }
     register_canonical = true;
   } else if (mode == shm_open_mode::create) {
@@ -183,6 +187,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
       last_os_error_ = static_cast<int>(::GetLastError());
       return false;
     }
+    created_this_open_ = (::GetLastError() != ERROR_ALREADY_EXISTS);
     register_canonical = true;
   } else {
     return false;
@@ -271,6 +276,7 @@ void shm::detach() {
     win32_view_key_.clear();
     name_.clear();
     size_ = 0;
+    created_this_open_ = false;
     return;
   }
 
@@ -292,6 +298,7 @@ void shm::detach() {
   }
   name_.clear();
   size_ = 0;
+  created_this_open_ = false;
 }
 
 void shm::unlink(const std::string& name) {

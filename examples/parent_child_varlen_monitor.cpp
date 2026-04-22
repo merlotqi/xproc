@@ -1,5 +1,5 @@
 // Parent starts as the consumer and creates the SHM segment up front.
-// Child writer thread later attaches as the producer and sends a fixed struct on an interval.
+// Child writer thread later attaches as the producer and sends variable-length text messages.
 // Parent polls and prints only when payload changes.
 //
 // Linux: fork + waitpid. Windows: CreateProcess + child re-invokes this exe with a flag and SHM path.
@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include <chrono>
-#include <cstdio>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -28,7 +28,7 @@
 #include <windows.h>
 
 #include <chrono>
-#include <cstdio>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -41,7 +41,7 @@
 #include <iostream>
 
 int main() {
-  std::cout << "parent_child_struct_monitor: unsupported platform\n";
+  std::cout << "parent_child_varlen_monitor: unsupported platform\n";
   return 0;
 }
 
@@ -51,31 +51,27 @@ int main() {
 
 namespace {
 
-struct telemetry_packet {
-  char message[256];
-  int a;
-  int b;
-};
-
 constexpr std::size_t kShmSize = sizeof(xproc::shm::control_block) + 32768;
+
+std::string make_message(int i) {
+  const std::size_t burst = 12u + static_cast<std::size_t>((i % 5) * 11);
+  return "tick-" + std::to_string(i) + " status=" + ((i % 2) == 0 ? "steady" : "busy") + " payload=" +
+         std::string(burst, static_cast<char>('a' + (i % 26)));
+}
 
 int run_child_writer(const std::string& shm_path) {
   xproc::ipc::transport_options opts;
   opts.path = shm_path;
   opts.shm_size = kShmSize;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(telemetry_packet);
+  opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = false;
 
   xproc::ipc::producer producer(opts);
 
   std::thread writer([&] {
-    for (int i = 0; i <= 100; ++i) {
-      telemetry_packet pkt{};
-      std::snprintf(pkt.message, sizeof(pkt.message), "tick-%d", i);
-      pkt.a = i;
-      pkt.b = i * 2;
-      producer.send_fixed(pkt);
+    for (int i = 0; i <= 20; ++i) {
+      const std::string msg = make_message(i);
+      producer.send_varlen(msg.data(), static_cast<std::uint32_t>(msg.size()));
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
   });
@@ -92,15 +88,14 @@ int main(int argc, char** argv) {
   (void)argc;
   (void)argv;
 
-  const std::string path = "/xproc_example_parent_child_struct";
+  const std::string path = "/xproc_example_parent_child_varlen";
 
   xproc::shm::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
   opts.shm_size = kShmSize;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(telemetry_packet);
+  opts.type = xproc::ipc::channel_type::varlen;
   // Demonstrates the parent consumer creating the segment before forking the producer child.
   opts.create_if_missing = true;
   xproc::ipc::consumer consumer(opts);
@@ -115,20 +110,15 @@ int main(int argc, char** argv) {
     _exit(run_child_writer(path));
   }
 
-  telemetry_packet last{};
+  std::string last;
   bool has_last = false;
   int status = 0;
 
   while (true) {
     consumer.poll([&](void* p, std::uint32_t len) {
-      if (len != sizeof(telemetry_packet)) {
-        return;
-      }
-      telemetry_packet cur{};
-      std::memcpy(&cur, p, sizeof(cur));
-      const bool changed = !has_last || std::memcmp(&cur, &last, sizeof(cur)) != 0;
-      if (changed) {
-        std::cout << "message=" << cur.message << ", a=" << cur.a << ", b=" << cur.b << "\n";
+      const std::string cur(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      if (!has_last || cur != last) {
+        std::cout << "message(" << len << " bytes)=" << cur << "\n";
         last = cur;
         has_last = true;
       }
@@ -151,22 +141,22 @@ int main(int argc, char** argv) {
 
 #elif defined(_WIN32) || defined(_WIN64)
 
-constexpr const char* kChildFlag = "--pc-struct-child";
+constexpr const char* kChildFlag = "--pc-varlen-child";
 
 int main(int argc, char** argv) {
   if (argc >= 3 && std::strcmp(argv[1], kChildFlag) == 0) {
     return run_child_writer(std::string(argv[2]));
   }
 
-  const std::string path = std::string("/xproc_example_parent_child_struct_") + std::to_string(::GetCurrentProcessId());
+  const std::string path = std::string("/xproc_example_parent_child_varlen_") +
+                           std::to_string(::GetCurrentProcessId());
 
   xproc::shm::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
   opts.shm_size = kShmSize;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(telemetry_packet);
+  opts.type = xproc::ipc::channel_type::varlen;
   // Demonstrates the parent consumer creating the segment before launching the producer child.
   opts.create_if_missing = true;
   xproc::ipc::consumer consumer(opts);
@@ -193,20 +183,15 @@ int main(int argc, char** argv) {
   }
   ::CloseHandle(pi.hThread);
 
-  telemetry_packet last{};
+  std::string last;
   bool has_last = false;
   DWORD exit_code = 1;
 
   for (;;) {
     consumer.poll([&](void* p, std::uint32_t len) {
-      if (len != sizeof(telemetry_packet)) {
-        return;
-      }
-      telemetry_packet cur{};
-      std::memcpy(&cur, p, sizeof(cur));
-      const bool changed = !has_last || std::memcmp(&cur, &last, sizeof(cur)) != 0;
-      if (changed) {
-        std::cout << "message=" << cur.message << ", a=" << cur.a << ", b=" << cur.b << "\n";
+      const std::string cur(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      if (!has_last || cur != last) {
+        std::cout << "message(" << len << " bytes)=" << cur << "\n";
         last = cur;
         has_last = true;
       }

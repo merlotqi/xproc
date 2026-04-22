@@ -225,6 +225,77 @@ int cross_process_varlen_main(const char* shm_path) {
   return 0;
 }
 
+int consumer_creates_then_forked_producer_main(const char* shm_path) {
+  xproc::ipc::transport_options opts;
+  opts.path = shm_path;
+  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+  opts.type = xproc::ipc::channel_type::fixed;
+  opts.item_size = sizeof(std::uint32_t);
+  opts.create_if_missing = true;
+
+  xproc::ipc::consumer consumer(opts);
+  if (consumer.header()->attach_count.load(std::memory_order_acquire) != 1u) {
+    return 2;
+  }
+  if (consumer.header()->producer_pid.load(std::memory_order_relaxed) != 0) {
+    return 3;
+  }
+
+  const pid_t pid = fork();
+  if (pid < 0) {
+    return 1;
+  }
+
+  if (pid == 0) {
+    xproc::ipc::transport_options child_opts = opts;
+    {
+      xproc::ipc::producer producer(child_opts);
+      producer.send_fixed<std::uint32_t>(0x13572468u);
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    _exit(0);
+  }
+
+  std::uint32_t value = 0;
+  bool got = false;
+  while (!got) {
+    got = consumer.poll([&](void* p, std::uint32_t len) {
+      if (len != sizeof(value)) {
+        value = 0;
+        return;
+      }
+      std::memcpy(&value, p, sizeof(value));
+    });
+    if (!got) {
+      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  if (value != 0x13572468u) {
+    waitpid(pid, nullptr, 0);
+    return 4;
+  }
+  if (consumer.header()->attach_count.load(std::memory_order_acquire) != 2u) {
+    waitpid(pid, nullptr, 0);
+    return 5;
+  }
+  if (consumer.header()->producer_pid.load(std::memory_order_relaxed) != pid) {
+    waitpid(pid, nullptr, 0);
+    return 6;
+  }
+
+  int st = 0;
+  waitpid(pid, &st, 0);
+  if (!WIFEXITED(st) || WEXITSTATUS(st) != 0) {
+    return 7;
+  }
+  if (consumer.header()->attach_count.load(std::memory_order_acquire) != 1u) {
+    return 8;
+  }
+  return 0;
+}
+
 }  // namespace
 
 TEST(IpcIntegration, CrossProcessFutexBlock) {
@@ -239,4 +310,11 @@ TEST(IpcIntegration, CrossProcessVarlen) {
   std::string b = base + "varlen";
   xproc::shm::shm::unlink(b.c_str());
   EXPECT_EQ(cross_process_varlen_main(b.c_str()), 0);
+}
+
+TEST(IpcIntegration, ConsumerCanCreateBeforeForkedProducer) {
+  std::string path = "/xproc_ipc_integration_consumer_creator";
+  xproc::shm::shm::unlink(path.c_str());
+  EXPECT_EQ(consumer_creates_then_forked_producer_main(path.c_str()), 0);
+  xproc::shm::shm::unlink(path.c_str());
 }

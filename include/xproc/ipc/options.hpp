@@ -24,6 +24,7 @@ struct transport_options {
   size_t shm_size = 0;
   uint32_t item_size = 0;
   uint32_t data_align = 0;
+  /// Shared-memory backend: allow the first producer or consumer opener to create the segment.
   bool create_if_missing = true;
   channel_type type = channel_type::fixed;
   /// Windows only: object namespace prefix for the named section ("Local" or "Global"). Ignored on Linux.

@@ -60,7 +60,7 @@ class endpoint {
 
     using namespace xproc::shm;
     shm_open_mode mode = shm_open_mode::open;
-    if (role_ == role::producer && opts_.create_if_missing) {
+    if (opts_.create_if_missing) {
       mode = shm_open_mode::open_create;
     }
 
@@ -75,18 +75,21 @@ class endpoint {
       throw std::runtime_error(msg);
     }
 
-    bool is_creater = (role_ == role::producer);
+    const bool is_creator = shm_.created_this_open();
 
     size_t data_capacity = opts_.shm_size - sizeof(control_block);
     const uint32_t layout_type = (opts_.type == channel_type::fixed) ? 0u : 1u;
     const uint32_t data_align = opts_.data_align ? opts_.data_align : 8u;
-    header_ = layout_manager::format(shm_, data_capacity, is_creater, layout_type, data_align);
+    header_ = layout_manager::format(shm_, data_capacity, is_creator, layout_type, data_align);
     if (!header_) {
       const auto* raw = static_cast<const control_block*>(shm_.addr());
       const auto err = layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align);
       throw layout_exception("endpoint: ", err);
     }
 
+    if (is_creator && role_ != role::producer) {
+      header_->producer_pid.store(0, std::memory_order_relaxed);
+    }
     if (role_ == role::producer) {
       header_->producer_pid.store(xproc::platform::current_process_id(), std::memory_order_relaxed);
     }

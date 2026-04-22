@@ -6,7 +6,7 @@ This document expands on behavior referenced from the codebase and CMake message
 Layout validation and ``is_ready``
 -----------------------------------
 
-The creator initializes the control block and sets ``is_ready`` when the segment is safe for attachers. Non-creators spin briefly waiting for ``is_ready`` during validation (see ``layout_manager::validate_detailed`` and ``is_ready_spin_limit_v`` in ``layout_manager.hpp``).
+The endpoint that actually creates the segment initializes the control block and sets ``is_ready`` when the segment is safe for attachers. Non-creators spin briefly waiting for ``is_ready`` during validation (see ``layout_manager::validate_detailed`` and ``is_ready_spin_limit_v`` in ``layout_manager.hpp``).
 
 Monotonic positions and the data ring
 ---------------------------------------

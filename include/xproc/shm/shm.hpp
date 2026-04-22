@@ -28,6 +28,7 @@ class shm {
   void* addr() const { return addr_; }
   size_t size() const { return size_; }
   bool is_attached() const { return addr_ != nullptr; }
+  bool created_this_open() const noexcept { return created_this_open_; }
 
   // After a failed open(): POSIX errno, or Windows GetLastError() as int; 0 if unset.
   int last_os_error() const noexcept { return last_os_error_; }
@@ -36,6 +37,7 @@ class shm {
   void* addr_{nullptr};
   size_t size_{0};
   int last_os_error_{0};
+  bool created_this_open_{false};
 #if defined(_WIN32)
   void* mapping_{nullptr};
   std::string win32_view_key_{};

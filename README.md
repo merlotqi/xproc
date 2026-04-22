@@ -30,6 +30,7 @@ opts.path = "/my_ipc_channel";
 opts.shm_size = 1024 * 1024;
 opts.type = xproc::ipc::channel_type::fixed;
 opts.create_if_missing = true;
+// The first producer or consumer opener can create the shared-memory segment.
 
 opts.item_size = 256; // fixed slot size in bytes
 xproc::ipc::producer producer(opts);

@@ -1,5 +1,6 @@
 // Fused demo: (1) Token handshake in a small SHM block (example.md) then (2) fixed-slot IPC
-// telemetry stream (same layout as parent_child_struct_monitor.cpp).
+// telemetry stream where the parent consumer creates the IPC ring before launching the producer child
+// (same layout as parent_child_struct_monitor.cpp).
 //
 // Child argv: --handshake-child "<handshake_shm_path>" <16-hex-token> "<ipc_ring_path>"
 // Linux: fork + exec self. Windows: CreateProcess.
@@ -258,10 +259,8 @@ int main(int argc, char** argv) {
   ipc_opts.shm_size = kIpcShmSize;
   ipc_opts.type = xproc::ipc::channel_type::fixed;
   ipc_opts.item_size = sizeof(telemetry_packet);
+  // Parent consumer creates the IPC ring; child later attaches as producer after the handshake.
   ipc_opts.create_if_missing = true;
-
-  xproc::ipc::producer ipc_creator(ipc_opts);
-  ipc_opts.create_if_missing = false;
   xproc::ipc::consumer consumer(ipc_opts);
 
   char exe[4096];
@@ -374,10 +373,8 @@ int main(int argc, char** argv) {
   ipc_opts.shm_size = kIpcShmSize;
   ipc_opts.type = xproc::ipc::channel_type::fixed;
   ipc_opts.item_size = sizeof(telemetry_packet);
+  // Parent consumer creates the IPC ring; child later attaches as producer after the handshake.
   ipc_opts.create_if_missing = true;
-
-  xproc::ipc::producer ipc_creator(ipc_opts);
-  ipc_opts.create_if_missing = false;
   xproc::ipc::consumer consumer(ipc_opts);
 
   char exe_path[MAX_PATH];

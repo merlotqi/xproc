@@ -22,6 +22,7 @@ From repository root:
 ./build/examples/xproc_runtime_dispatch_demo
 ./build/examples/xproc_parent_child_counter_monitor
 ./build/examples/xproc_parent_child_struct_monitor
+./build/examples/xproc_parent_child_varlen_monitor
 ```
 
 ## What each example shows
@@ -49,6 +50,9 @@ From repository root:
 
 - `xproc_parent_child_struct_monitor`  
   Same parent/child monitor flow as above, but `send_fixed` transmits a struct payload: `char message[256]` + two `int` fields.
+
+- `xproc_parent_child_varlen_monitor`  
+  Same parent/child monitor flow as above, but `send_varlen` transmits variable-length text messages and the parent prints the payload size plus content when it changes.
 
 ## Notes
 
