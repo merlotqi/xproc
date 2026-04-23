@@ -19,6 +19,12 @@ cd build
 ctest -L python
 ```
 
+## IDE Support
+
+The package ships a [PEP 561](https://peps.python.org/pep-0561/) style stub file
+at `xproc/__init__.pyi` plus `xproc/py.typed`, so IDEs and type checkers can
+pick up signatures for the pybind11 module.
+
 ## Examples
 
 From the repository root:
