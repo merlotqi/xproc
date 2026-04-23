@@ -3,10 +3,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const timers = require("node:timers/promises");
 
-type XprocModule = typeof import("../index");
-type TransportOptions = import("../index").TransportOptions;
-type Consumer = import("../index").Consumer;
-
 const xproc = require("../index.js") as XprocModule;
 
 type TelemetryPacket = {

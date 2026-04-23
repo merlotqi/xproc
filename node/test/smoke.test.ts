@@ -1,9 +1,6 @@
 const assert = require("node:assert/strict") as typeof import("node:assert/strict");
 const test = require("node:test") as typeof import("node:test");
 
-type XprocModule = typeof import("../index");
-type TransportOptions = import("../index").TransportOptions;
-
 const xproc = require("../index.js") as XprocModule;
 
 let shmSequence = 0;

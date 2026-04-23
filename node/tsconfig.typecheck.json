@@ -13,6 +13,7 @@
   "include": [
     "globals.d.ts",
     "index.d.ts",
+    "xproc-types.d.ts",
     "test/**/*.ts",
     "examples/**/*.ts"
   ]

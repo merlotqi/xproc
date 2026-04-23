@@ -1,8 +1,5 @@
 const timers = require("node:timers/promises");
 
-type XprocModule = typeof import("../index");
-type TransportOptions = import("../index").TransportOptions;
-
 const xproc = require("../index.js") as XprocModule;
 
 const delay = timers.setTimeout as (ms: number) => Promise<void>;

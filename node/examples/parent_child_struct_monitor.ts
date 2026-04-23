@@ -1,10 +1,6 @@
 const childProcess = require("node:child_process");
 const timers = require("node:timers/promises");
 
-type XprocModule = typeof import("../index");
-type TransportOptions = import("../index").TransportOptions;
-type Consumer = import("../index").Consumer;
-
 const xproc = require("../index.js") as XprocModule;
 
 type TelemetryPacket = {
