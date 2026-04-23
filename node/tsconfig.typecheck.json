@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "moduleDetection": "force",
+    "lib": ["ES2020"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": [
+    "globals.d.ts",
+    "index.d.ts",
+    "test/**/*.ts",
+    "examples/**/*.ts"
+  ]
+}

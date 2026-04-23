@@ -10,6 +10,7 @@ set(XPROC_EXAMPLE_FILES
     parent_child_counter_monitor.cpp
     parent_child_struct_monitor.cpp
     parent_child_varlen_monitor.cpp
+    node_cpp_child_struct_writer.cpp
     handshake_launcher_demo.cpp
 )
 

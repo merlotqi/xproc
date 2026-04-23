@@ -23,6 +23,7 @@ From repository root:
 ./build/examples/xproc_parent_child_counter_monitor
 ./build/examples/xproc_parent_child_struct_monitor
 ./build/examples/xproc_parent_child_varlen_monitor
+./build/examples/xproc_node_cpp_child_struct_writer --shm-path /xproc_demo_from_node
 ```
 
 ## What each example shows
@@ -53,6 +54,9 @@ From repository root:
 
 - `xproc_parent_child_varlen_monitor`  
   Same parent/child monitor flow as above, but `send_varlen` transmits variable-length text messages and the parent prints the payload size plus content when it changes.
+
+- `xproc_node_cpp_child_struct_writer`
+  Cross-language child writer intended to be launched by the Node demo in `node/examples/node_parent_cpp_child_struct_monitor.ts`; attaches as a fixed-channel producer and publishes struct payloads into an existing SHM segment.
 
 ## Notes
 

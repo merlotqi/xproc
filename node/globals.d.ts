@@ -1,4 +1,5 @@
 declare function require(id: string): any;
+declare const __dirname: string;
 
 declare const process: {
   pid: number;
@@ -43,4 +44,36 @@ declare module "node:test" {
 
   const test: TestFunction;
   export = test;
+}
+
+declare module "node:child_process" {
+  interface SpawnOptions {
+    stdio?: string;
+  }
+
+  interface ChildProcess {
+    on(event: "exit", listener: (code: number | null) => void): this;
+  }
+
+  function spawn(command: string, args?: readonly string[], options?: SpawnOptions): ChildProcess;
+
+  export { spawn };
+}
+
+declare module "node:fs" {
+  function existsSync(path: string): boolean;
+
+  export { existsSync };
+}
+
+declare module "node:path" {
+  function resolve(...paths: string[]): string;
+
+  export { resolve };
+}
+
+declare module "node:timers/promises" {
+  function setTimeout(delay: number): Promise<void>;
+
+  export { setTimeout };
 }
