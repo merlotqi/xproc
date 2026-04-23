@@ -12,6 +12,7 @@ set(XPROC_EXAMPLE_FILES
     parent_child_varlen_monitor.cpp
     node_cpp_child_struct_writer.cpp
     handshake_launcher_demo.cpp
+    cpp_python_handshake_progress.cpp
 )
 
 foreach(example_file ${XPROC_EXAMPLE_FILES})
@@ -20,6 +21,11 @@ foreach(example_file ${XPROC_EXAMPLE_FILES})
     set_target_properties(xproc_${example_name} PROPERTIES FOLDER "Examples")
     target_link_libraries(xproc_${example_name} PRIVATE xproc)
 endforeach()
+
+target_compile_definitions(xproc_cpp_python_handshake_progress PRIVATE
+    XPROC_SOURCE_ROOT="${CMAKE_SOURCE_DIR}"
+    XPROC_BINARY_ROOT="${CMAKE_BINARY_DIR}"
+)
 
 add_executable(xproc_ipc_taskflow_runtime_demo ipc_taskflow_runtime_demo.cpp)
 set_target_properties(xproc_ipc_taskflow_runtime_demo PROPERTIES FOLDER "Examples")

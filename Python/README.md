@@ -43,6 +43,13 @@ cmake --build build --target xproc_node_cpp_child_struct_writer xproc_python_pac
 python3 Python/examples/python_parent_cpp_child_struct_monitor.py
 ```
 
+Python worker launched by the C++ parent handshake demo:
+
+```bash
+cmake --build build --target xproc_cpp_python_handshake_progress_demo xproc_python_package
+./build/examples/xproc_cpp_python_handshake_progress_demo --python python3
+```
+
 If you build into a non-default directory, pass `--module-dir /path/to/Python/stage`
 or set `XPROC_PYTHON_MODULE_DIR=/path/to/Python/stage`.
 
@@ -68,3 +75,7 @@ or set `XPROC_PYTHON_MODULE_DIR=/path/to/Python/stage`.
   Python parent creates the consumer and spawns the C++ executable
   `xproc_node_cpp_child_struct_writer`, which attaches as producer and publishes
   struct payloads into the same SHM segment.
+
+- `examples/cpp_python_handshake_worker.py`
+  Worker script for the C++ launcher demo. It waits for a parent `ack` over
+  xproc, then only demonstrates identity validation and progress reporting.
