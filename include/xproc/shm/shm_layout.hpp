@@ -41,8 +41,10 @@ struct XPROC_ALIGNAS_CACHE_LINE control_block {
 
   uint64_t data_capacity;
   uint32_t data_alignment;
+  uint32_t fixed_item_size{0};  // Fixed channel manifest field; 0 for varlen channels.
+  uint64_t schema_id{0};        // Optional user-supplied protocol/schema identifier.
 
-  uint64_t reserved[4];
+  uint64_t reserved[3];
 };
 
 }  // namespace shm

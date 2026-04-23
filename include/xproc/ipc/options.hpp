@@ -39,6 +39,8 @@ struct transport_options {
   size_t shm_size = infer_existing_shm_size;
   uint32_t item_size = 0;
   uint32_t data_align = 0;
+  /// Optional shared-memory manifest field for application-level protocol / schema compatibility checks.
+  std::uint64_t schema_id = 0;
   /// Shared-memory backend: allow the first producer or consumer opener to create the segment.
   bool create_if_missing = true;
   channel_type type = channel_type::fixed;

@@ -37,6 +37,8 @@ enum class validate_error {
   version_mismatch,
   header_size_mismatch,
   layout_type_mismatch,
+  fixed_item_size_mismatch,
+  schema_id_mismatch,
   alignment_invalid,
   capacity_insufficient,
 };
@@ -61,6 +63,10 @@ inline const std::error_category& layout_error_category() noexcept {
           return "header_size does not match this build";
         case validate_error::layout_type_mismatch:
           return "layout_type mismatch (fixed vs variable)";
+        case validate_error::fixed_item_size_mismatch:
+          return "fixed_item_size mismatch";
+        case validate_error::schema_id_mismatch:
+          return "schema_id mismatch";
         case validate_error::alignment_invalid:
           return "data_alignment invalid or does not match expected value";
         case validate_error::capacity_insufficient:
@@ -85,21 +91,26 @@ class layout_manager {
 
   static constexpr uint32_t expected_magic = 0x58505243;
   static constexpr uint16_t version_major = 0;
-  static constexpr uint32_t version_minor = 2;
+  static constexpr uint32_t version_minor = 3;
 
   static control_block* format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type, uint32_t data_alignment,
+                               uint32_t fixed_item_size = 0u, std::uint64_t expected_schema_id = 0u,
                                attach_behavior behavior = attach_behavior::ref_count);
 
   static bool validate(control_block* header, size_t expected_capacity, uint32_t expected_layout_type,
-                       uint32_t expected_data_alignment);
+                       uint32_t expected_data_alignment, uint32_t expected_fixed_item_size = 0u,
+                       std::uint64_t expected_schema_id = 0u);
 
   static validate_error validate_detailed(const control_block* header, size_t expected_capacity,
-                                          uint32_t expected_layout_type, uint32_t expected_data_alignment);
+                                          uint32_t expected_layout_type, uint32_t expected_data_alignment,
+                                          uint32_t expected_fixed_item_size = 0u,
+                                          std::uint64_t expected_schema_id = 0u);
 
   static const char* validate_cstr(validate_error e) noexcept;
 
  private:
-  static void _init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment);
+  static void _init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
+                           uint32_t fixed_item_size, std::uint64_t schema_id);
 };
 
 }  // namespace shm
