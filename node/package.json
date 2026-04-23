@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "description": "xproc: High-performance Single Producer Single Consumer (SPSC) Inter-Process Communication (IPC) library using ring buffers. Supports both fixed-length frames and variable-length messages.",
   "main": "index.js",
+  "types": "index.d.ts",
   "gypfile": true,
-  "scripts": {},
+  "scripts": {
+    "test": "node --test --experimental-strip-types test/**/*.test.ts"
+  },
   "dependencies": {
     "node-addon-api": "^8.7.0",
     "node-api-headers": "^1.8.0"
