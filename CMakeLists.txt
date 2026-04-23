@@ -144,6 +144,11 @@ if(XPROC_BUILD_NODE)
     add_subdirectory(node)
 endif()
 
+option(XPROC_BUILD_PYTHON "Stage Python binding package" ON)
+if(XPROC_BUILD_PYTHON)
+    add_subdirectory(Python)
+endif()
+
 set(XPROC_EXPORT_WITH_NLOHMANN_JSON 0)
 if(XPROC_WITH_NLOHMANN_JSON)
     set(XPROC_EXPORT_WITH_NLOHMANN_JSON 1)
