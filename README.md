@@ -76,9 +76,14 @@ borrowed option views, and thread-local error reporting.
 xproc_c_options opts;
 xproc_c_options_init(&opts);
 opts.path = "/xproc_capi_demo";
-opts.shm_size = 65536;
+opts.shm_size = xproc_c_shm_size_for_data_capacity(65536);
 opts.channel_type = XPROC_C_CHANNEL_FIXED;
 opts.item_size = sizeof(uint32_t);
+opts.schema_id = 0x20260423u;
+
+xproc_c_options attach_opts = opts;
+attach_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+attach_opts.create_if_missing = 0;
 
 xproc_c_producer* producer = NULL;
 xproc_c_consumer* consumer = NULL;
@@ -86,7 +91,7 @@ xproc_c_consumer* consumer = NULL;
 if (xproc_c_producer_open(&opts, &producer) != XPROC_C_STATUS_OK) {
   /* inspect xproc_c_last_error_message() */
 }
-if (xproc_c_consumer_open(&opts, &consumer) != XPROC_C_STATUS_OK) {
+if (xproc_c_consumer_open(&attach_opts, &consumer) != XPROC_C_STATUS_OK) {
   /* inspect xproc_c_last_error_message() */
 }
 
@@ -111,9 +116,9 @@ xproc_c_shm_unlink(opts.path);
 Error handling is status-code based. For richer diagnostics, use `xproc_c_last_error_message()`,
 `xproc_c_last_error_copy()`, and `xproc_c_last_layout_error()`.
 
-For C++ shared-memory endpoints, only the creator needs to choose a size. Use
-`xproc::ipc::shm_size_for_data_capacity(...)` when creating the segment, and let non-creators attach with
-`opts.shm_size = xproc::ipc::infer_existing_shm_size;`.
+For shared-memory endpoints, only the creator needs to choose a size. Use
+`xproc_c_shm_size_for_data_capacity(...)` when creating the segment, and let non-creators attach with
+`opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;`.
 
 ### Using Codecs
 

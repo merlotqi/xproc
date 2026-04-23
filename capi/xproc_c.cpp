@@ -10,6 +10,7 @@
 #include <vector>
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/observer.hpp>
+#include <xproc/ipc/options.hpp>
 #include <xproc/ipc/transport_factory.hpp>
 #include <xproc/platform/process.hpp>
 #include <xproc/shm/layout_exception.hpp>
@@ -94,6 +95,7 @@ xproc::ipc::transport_options to_cpp_options(const xproc_c_options& options) {
   out.shm_size = options.shm_size;
   out.item_size = options.item_size;
   out.data_align = options.data_align;
+  out.schema_id = options.schema_id;
   out.create_if_missing = (options.create_if_missing != 0);
   out.type = (options.channel_type == XPROC_C_CHANNEL_VARLEN) ? xproc::ipc::channel_type::varlen
                                                               : xproc::ipc::channel_type::fixed;
@@ -113,6 +115,7 @@ void fill_borrowed_options(const xproc::ipc::transport_options& options, xproc_c
   out->shm_size = options.shm_size;
   out->item_size = options.item_size;
   out->data_align = options.data_align;
+  out->schema_id = options.schema_id;
   out->create_if_missing = options.create_if_missing ? 1 : 0;
   out->channel_type =
       (options.type == xproc::ipc::channel_type::varlen) ? XPROC_C_CHANNEL_VARLEN : XPROC_C_CHANNEL_FIXED;
@@ -277,6 +280,7 @@ void xproc_c_options_init(xproc_c_options* options) {
   options->shm_size = 0;
   options->item_size = 0;
   options->data_align = 0;
+  options->schema_id = 0;
   options->create_if_missing = 1;
   options->channel_type = XPROC_C_CHANNEL_FIXED;
   options->win32_object_namespace = "Local";
@@ -285,6 +289,14 @@ void xproc_c_options_init(xproc_c_options* options) {
   options->socket_listen = 0;
   options->socket_connect_retries = 200;
   options->socket_connect_retry_ms = 10;
+}
+
+std::size_t xproc_c_shm_size_for_data_capacity(std::size_t data_capacity) {
+  return xproc::ipc::shm_size_for_data_capacity(data_capacity);
+}
+
+std::size_t xproc_c_shm_data_capacity_for_size(std::size_t shm_size) {
+  return xproc::ipc::shm_data_capacity_for_size(shm_size);
 }
 
 const char* xproc_c_status_string(xproc_c_status status) {

@@ -24,6 +24,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
 
   exports.Set("XPROC_C_CHANNEL_FIXED", Napi::Number::New(env, XPROC_C_CHANNEL_FIXED));
   exports.Set("XPROC_C_CHANNEL_VARLEN", Napi::Number::New(env, XPROC_C_CHANNEL_VARLEN));
+  exports.Set("XPROC_C_INFER_EXISTING_SHM_SIZE", Napi::Number::New(env, XPROC_C_INFER_EXISTING_SHM_SIZE));
 
   exports.Set("XPROC_C_LAYOUT_ERROR_NONE", Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_NONE));
   exports.Set("XPROC_C_LAYOUT_ERROR_NOT_ATTACHED", Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_NOT_ATTACHED));
@@ -34,6 +35,10 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
               Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_HEADER_SIZE_MISMATCH));
   exports.Set("XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH",
               Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH));
+  exports.Set("XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH",
+              Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH));
+  exports.Set("XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH",
+              Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH));
   exports.Set("XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID", Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID));
   exports.Set("XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT",
               Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT));
