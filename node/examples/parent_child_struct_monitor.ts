@@ -1,7 +1,11 @@
 const childProcess = require("node:child_process");
 const timers = require("node:timers/promises");
 
-const xproc = require("../index.js") as typeof import("../index");
+type XprocModule = typeof import("../index");
+type TransportOptions = import("../index").TransportOptions;
+type Consumer = import("../index").Consumer;
+
+const xproc = require("../index.js") as XprocModule;
 
 type TelemetryPacket = {
   message: string;
@@ -60,7 +64,7 @@ function parseIntegerFlag(raw: string, name: string): number {
   return value;
 }
 
-function createProducerOptions(path: string): import("../index").TransportOptions {
+function createProducerOptions(path: string): TransportOptions {
   return {
     path,
     shmSize: xproc.XPROC_C_INFER_EXISTING_SHM_SIZE,
@@ -70,7 +74,7 @@ function createProducerOptions(path: string): import("../index").TransportOption
   };
 }
 
-function createConsumerOptions(path: string): import("../index").TransportOptions {
+function createConsumerOptions(path: string): TransportOptions {
   return {
     path,
     shmSize: xproc.shmSizeForDataCapacity(DATA_CAPACITY),
@@ -128,7 +132,7 @@ async function runChildWriter(path: string, ticks: number, intervalMs: number): 
   }
 }
 
-function drainConsumer(consumer: import("../index").Consumer, onPacket: (payload: Uint8Array) => void): boolean {
+function drainConsumer(consumer: Consumer, onPacket: (payload: Uint8Array) => void): boolean {
   let consumedAny = false;
   while (true) {
     const payload = consumer.pollCopy();

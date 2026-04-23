@@ -1,7 +1,10 @@
 const assert = require("node:assert/strict") as typeof import("node:assert/strict");
 const test = require("node:test") as typeof import("node:test");
 
-const xproc = require("../index.js") as typeof import("../index");
+type XprocModule = typeof import("../index");
+type TransportOptions = import("../index").TransportOptions;
+
+const xproc = require("../index.js") as XprocModule;
 
 let shmSequence = 0;
 
@@ -22,7 +25,7 @@ test("node ts smoke: fixed channel roundtrip with observer and inferred attach s
   const path = uniqueShmPath("roundtrip");
   cleanupShm(path);
 
-  const createOptions: import("../index").TransportOptions = {
+  const createOptions: TransportOptions = {
     path,
     shmSize: xproc.shmSizeForDataCapacity(4096n),
     channelType: xproc.CHANNEL_TYPE.fixed,
@@ -30,7 +33,7 @@ test("node ts smoke: fixed channel roundtrip with observer and inferred attach s
     schemaId: 0x1234n,
   };
 
-  const attachOptions: import("../index").TransportOptions = {
+  const attachOptions: TransportOptions = {
     ...createOptions,
     shmSize: xproc.XPROC_C_INFER_EXISTING_SHM_SIZE,
     createIfMissing: false,
@@ -83,7 +86,7 @@ test("node ts smoke: schema mismatch surfaces layout metadata on the thrown erro
   const path = uniqueShmPath("schema_mismatch");
   cleanupShm(path);
 
-  const createOptions: import("../index").TransportOptions = {
+  const createOptions: TransportOptions = {
     path,
     shmSize: xproc.shmSizeForDataCapacity(4096n),
     channelType: "fixed",

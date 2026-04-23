@@ -3,7 +3,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const timers = require("node:timers/promises");
 
-const xproc = require("../index.js") as typeof import("../index");
+type XprocModule = typeof import("../index");
+type TransportOptions = import("../index").TransportOptions;
+type Consumer = import("../index").Consumer;
+
+const xproc = require("../index.js") as XprocModule;
 
 type TelemetryPacket = {
   message: string;
@@ -80,7 +84,7 @@ function findChildBinary(explicitPath: string | null): string {
   throw new Error(`unable to locate C++ child binary. Tried: ${candidates.join(", ")}`);
 }
 
-function createConsumerOptions(shmPath: string): import("../index").TransportOptions {
+function createConsumerOptions(shmPath: string): TransportOptions {
   return {
     path: shmPath,
     shmSize: xproc.shmSizeForDataCapacity(DATA_CAPACITY),
@@ -113,7 +117,7 @@ function cleanupShm(pathValue: string): void {
   }
 }
 
-function drainConsumer(consumer: import("../index").Consumer, onPacket: (payload: Uint8Array) => void): void {
+function drainConsumer(consumer: Consumer, onPacket: (payload: Uint8Array) => void): void {
   while (true) {
     const payload = consumer.pollCopy();
     if (payload === null) {
