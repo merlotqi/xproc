@@ -65,6 +65,10 @@ xproc_c_layout_error to_c_layout_error(xproc::shm::validate_error error) {
       return XPROC_C_LAYOUT_ERROR_HEADER_SIZE_MISMATCH;
     case xproc::shm::validate_error::layout_type_mismatch:
       return XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH;
+    case xproc::shm::validate_error::fixed_item_size_mismatch:
+      return XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH;
+    case xproc::shm::validate_error::schema_id_mismatch:
+      return XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH;
     case xproc::shm::validate_error::alignment_invalid:
       return XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID;
     case xproc::shm::validate_error::capacity_insufficient:
@@ -323,6 +327,10 @@ const char* xproc_c_layout_error_string(xproc_c_layout_error error) {
       return "header_size_mismatch";
     case XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH:
       return "layout_type_mismatch";
+    case XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH:
+      return "fixed_item_size_mismatch";
+    case XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH:
+      return "schema_id_mismatch";
     case XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID:
       return "alignment_invalid";
     case XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT:
