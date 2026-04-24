@@ -37,9 +37,15 @@ Checklist source: `docs/todo.md`
 | Done gate | A targeted Phase 1 regression suite is easy to run locally and in CI | Completed | `tests/CMakeLists.txt` defines the `xproc_run_phase1_tests` target and its regex; `README.md` and `docs/building.rst` document the command; `.github/workflows/ci.yml` runs that target on Linux and Windows | The dedicated Phase 1 suite is named, documented, and wired into CI as a first-class target. |
 | Done gate | Phase 2 work does not rely on low-level attach details that Phase 1 was supposed to hide | Partially completed | The C++ happy path is builder-based in `README.md`, `docs/quickstart.rst`, and the in-process examples, but the public C / Node / Python surfaces in `capi/xproc_c.h`, `node/index.js`, and `Python/src/python_binding.cpp` still center on low-level option structs and manual attach details | The repository no longer requires low-level SHM wiring for common C++ use, but it has not eliminated those details from the broader public surface enough to close this done-gate item. |
 
+## Verification Notes
+
+- Command: `cmake --build build --target xproc_run_phase1_tests`
+- Result: Passed. The build completed successfully, printed `Running the targeted xproc Phase 1 regression suite`, and the targeted suite reported `100% tests passed, 0 tests failed out of 16`.
+- Relevance: This verification supports the checklist rows that treat the named Phase 1 gate as present and runnable, and it adds fresh runtime evidence for the implemented C++ builder, attach-validation, integration, and C API smoke coverage. It does not resolve the separate open decisions or the binding follow-up work that remains outside this targeted gate.
+
 ## Summary
 
-The branch completes the implemented Phase 1 core for the C++ shared-memory workflow: the manifest metadata is embedded in the control block, attach-time validation fails with typed layout errors, the builder API and examples are in place, the docs describe the builder-first contract, and the targeted `xproc_run_phase1_tests` gate is documented and wired into CI.
+The branch completes the implemented Phase 1 core for the C++ shared-memory workflow: the manifest metadata is embedded in the control block, attach-time validation fails with typed layout errors, the builder API and examples are in place, the docs describe the builder-first contract, and the targeted `xproc_run_phase1_tests` gate is documented, wired into CI, and now confirmed to pass from the existing build tree.
 
 Within the checklist itself, the remaining non-decision work is still the repository-level done gate about Phase 2 callers depending on low-level SHM attach details. The C++ happy path now hides those details, but the public C, Node, and Python surfaces still rely on low-level option wiring rather than builder-style attach abstractions.
 
