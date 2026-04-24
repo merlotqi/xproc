@@ -10,6 +10,7 @@ Checklist source: `docs/todo.md`
 ## Assessment Rules
 
 - Status values are limited to `Completed`, `Partially completed`, `Not completed`, and `Requires decision`.
+- `Partially completed` is reserved for items where implementation exists but docs, tests, or public contract coverage are incomplete.
 - Each row must cite repository evidence from code, tests, docs, or commits.
 - Open product or architecture choices are tracked as `Requires decision`, not as implementation defects.
 
@@ -40,8 +41,10 @@ Checklist source: `docs/todo.md`
 
 The branch completes the implemented Phase 1 core for the C++ shared-memory workflow: the manifest metadata is embedded in the control block, attach-time validation fails with typed layout errors, the builder API and examples are in place, the docs describe the builder-first contract, and the targeted `xproc_run_phase1_tests` gate is documented and wired into CI.
 
-Items still open because they need more code or coverage are limited to the repository-level done gate about Phase 2 callers depending on low-level SHM attach details. The C++ happy path now hides those details, but the public C, Node, and Python surfaces still rely on low-level option wiring rather than builder-style attach abstractions.
+Within the checklist itself, the remaining non-decision work is still the repository-level done gate about Phase 2 callers depending on low-level SHM attach details. The C++ happy path now hides those details, but the public C, Node, and Python surfaces still rely on low-level option wiring rather than builder-style attach abstractions.
+
+The current audit also leaves binding verification follow-up around the shipped Phase 1 surfaces: Node mismatch coverage exists in source but is not wired into the repository's automated test flows, and Python still lacks mismatch-path smoke coverage plus a fully settled exception-surface story for manifest failures. Those follow-ups are coverage and public-contract hardening work around the existing bindings, not a reclassification of the separate checklist decision about whether full binding parity belongs in the Phase 1 exit criteria.
 
 Items still open because the repository still needs a product or architecture decision are the creator timestamp / flags question, the binding-parity-as-Phase-1-exit question, and the future manifest-version contract question about reusing layout version fields versus adding a separate manifest version field.
 
-Phase 1 is functionally complete and documentation-complete for the implemented C++ core, but it is still materially open at the repository level until the remaining scope decisions and low-level-surface follow-up are closed.
+Phase 1 is functionally complete and documentation-complete for the implemented C++ core, but it is still materially open at the repository level until the remaining low-level-surface and binding-verification follow-up plus the outstanding scope decisions are closed.
