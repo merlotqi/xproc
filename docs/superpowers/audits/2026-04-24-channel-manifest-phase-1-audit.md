@@ -39,12 +39,17 @@ This audit reviews the `channel-manifest-phase-1` branch for:
 - `tests/api_surface_test.cpp`
 - `tests/layout_validate_test.cpp`
 - `tests/capi_smoke_test.cpp`
+- `capi/xproc_c.h`
 - `capi/xproc_c.cpp`
 - `.github/workflows/ci.yml`
 - `node/CMakeLists.txt`
+- `node/index.js`
+- `node/index.d.ts`
 - `node/package.json`
 - `node/test/smoke.test.ts`
 - `Python/CMakeLists.txt`
+- `Python/src/python_binding.cpp`
+- `Python/tests/smoke_test.py`
 - `Python/xproc/__init__.pyi`
 
 ## Findings
@@ -60,9 +65,9 @@ This audit reviews the `channel-manifest-phase-1` branch for:
 
 ### Observations and Recommendations
 
-- The C++ Phase 1 core appears internally consistent: `include/xproc/shm/shm_layout.hpp`, `src/shm/shm_layout_manager.cpp`, and `include/xproc/ipc/shm_builders.hpp` line up on manifest fields, attach-time validation, inferred shared-memory sizing, and creator versus readonly attach behavior.
-- The public C++ workflow is consistently documented and exemplified: `README.md`, `docs/quickstart.rst`, `examples/README.md`, `examples/fixed_channel_inprocess.cpp`, and `examples/varlen_channel_inprocess.cpp` all use `make_*_channel(...).create(...)` for creators and `attach_*_channel(...)` for non-creators.
-- The remaining unchecked items in `docs/todo.md` read more like explicit Phase 1 scope and contract decisions, such as builder parity expectations and future manifest-version semantics, than like missing C++ implementation work.
+- Decide whether JavaScript smoke coverage should be surfaced through CTest or through a separate CI `npm test` step so the ownership of binding verification is explicit.
+- Decide whether Python should expose structured fields on `XprocError` or officially treat `last_layout_error()` as the supported compatibility-check API for manifest failures.
+- During the later runtime verification task, double-check whether the intended Phase 1 gate is C++/C-only or whether Node and Python smoke checks should also be part of that release signal.
 
 ## Verification Notes
 
