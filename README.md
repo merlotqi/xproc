@@ -24,22 +24,16 @@ High-performance **Single Producer Single Consumer (SPSC)** Inter-Process Commun
 ```cpp
 #include <xproc/xproc.hpp>
 
-// Producer side
-xproc::ipc::transport_options opts;
-opts.path = "/my_ipc_channel";
-opts.shm_size = xproc::ipc::shm_size_for_data_capacity(1024 * 1024);
-opts.type = xproc::ipc::channel_type::fixed;
-opts.create_if_missing = true;
-// The first producer or consumer opener can create the shared-memory segment.
+const std::string path = "/my_ipc_channel";
+auto channel = xproc::ipc::make_fixed_channel(path, 256).create(1024 * 1024);
 
-opts.item_size = 256; // fixed slot size in bytes
-xproc::ipc::producer producer(opts);
+xproc::ipc::producer producer = channel.open_producer();
+// Non-creators can attach without repeating shm_size / item_size.
+xproc::ipc::consumer consumer = xproc::ipc::attach_fixed_channel(path).open_consumer();
 
 std::string message = "Hello, IPC!";
 producer.send_fixed_bytes(reinterpret_cast<const std::byte *>(message.data()),
                           static_cast<std::uint32_t>(message.size()));
-
-xproc::ipc::consumer consumer(opts);
 consumer.poll([](void *data, std::uint32_t len) {
     std::string received(static_cast<const char *>(data), static_cast<std::size_t>(len));
     std::cout << "Received: " << received << std::endl;
@@ -49,11 +43,11 @@ consumer.poll([](void *data, std::uint32_t len) {
 ### Variable-Length Messages
 
 ```cpp
-// Using variable-length channel
-opts.type = xproc::ipc::channel_type::varlen;
+const std::string path = "/my_varlen_channel";
+auto channel = xproc::ipc::make_varlen_channel(path).create(1024 * 1024);
 
-xproc::ipc::producer producer(opts);
-xproc::ipc::consumer consumer(opts);
+xproc::ipc::producer producer = channel.open_producer();
+xproc::ipc::consumer consumer = xproc::ipc::attach_varlen_channel(path).open_consumer();
 
 std::vector<std::byte> data(1024);
 producer.send_varlen(data.data(), static_cast<std::uint32_t>(data.size()));
@@ -62,6 +56,9 @@ consumer.poll([](void *ptr, std::uint32_t len) {
     process_data(static_cast<std::byte *>(ptr), len);
 });
 ```
+
+For advanced flows, `transport_options` is still available when you want to set the layout explicitly or override the
+schema / namespace checks yourself.
 
 ### C API
 

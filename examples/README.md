@@ -33,10 +33,12 @@ From repository root:
   Linux two-process demo (`fork`): parent sends a fixed counter stream, child validates sequence.
 
 - `xproc_fixed_channel_inprocess`  
-  Two threads in one process, fixed-size messages (`producer` + `consumer`).
+  Two threads in one process, fixed-size messages, using `make_fixed_channel(...).create(...)` plus
+  `attach_fixed_channel(...)`.
 
 - `xproc_varlen_channel_inprocess`  
-  Two threads in one process, variable-length payloads (`send_varlen` + `poll`).
+  Two threads in one process, variable-length payloads, using `make_varlen_channel(...).create(...)` plus
+  `attach_varlen_channel(...)`.
 
 - `xproc_observer_peek_demo`  
   Read-only observer (`ipc_observer::peek`) plus normal consumer drain, with ring snapshot print.

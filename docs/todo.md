@@ -54,6 +54,59 @@ The project should add dedicated tests for attach-time mismatches:
 - Future schema / manifest version mismatch
 - Observer attach behavior against mismatched layouts
 
+### Phase 1 exit checklist
+
+For planning purposes, **Phase 1** means the first three items above:
+
+1. Channel manifest + attach validation
+2. Higher-level SHM builders
+3. Mismatch coverage
+
+Phase 1 should only be marked done when every remaining unchecked item below is closed.
+
+#### Manifest / attach validation
+
+- [x] The shared control block stores enough manifest metadata to distinguish fixed vs varlen layout, capacity,
+      alignment, fixed-item sizing, and an application-level schema identifier.
+- [x] Producer / consumer / observer attach paths fail with typed layout errors instead of silently accepting a
+      mismatched SHM layout.
+- [x] Default attach flows no longer require non-creators to duplicate channel shape manually in the common case.
+- [ ] Decide whether creator timestamp / flags are part of the supported v1 manifest contract or explicitly defer
+      them to a later phase.
+- [x] Refresh docs so the public attach contract is described in terms of manifest-backed validation rather than only
+      low-level `transport_options` wiring.
+
+#### Builder ergonomics
+
+- [x] Add C++ builders for the happy-path SHM flows:
+      `make_fixed_channel(path, item_size).create(data_capacity)`,
+      `attach_fixed_channel(path)`,
+      `make_varlen_channel(path).create(data_capacity)`,
+      and `attach_varlen_channel(path)`.
+- [x] Make the builder layer cover producer, consumer, and observer attach scenarios without requiring callers to
+      hand-wire `shm_size`, `create_if_missing`, `channel_type`, and `item_size`.
+- [x] Update at least one fixed-channel example and one varlen example to use the builder API.
+- [ ] Decide whether builder parity for C / Node / Python is a Phase 1 exit criterion or is intentionally deferred to
+      the bindings-parity phase.
+
+#### Validation / mismatch coverage
+
+- [x] There is regression coverage for basic layout validation failures such as version mismatch and
+      `channel_type` mismatch.
+- [x] There is binding-level mismatch coverage for at least some manifest failures (`layout_type`,
+      `fixed_item_size`, `schema_id`) so cross-language attach failures are observable.
+- [x] Add a dedicated C++ attach-time test for fixed-channel `item_size` mismatch.
+- [x] Add a dedicated C++ attach-time test for `data_align` mismatch.
+- [x] Add dedicated C++ observer mismatch tests for wrong layout type and schema / manifest-version mismatch.
+- [ ] Decide whether a future manifest-version incompatibility should be represented by the existing layout version
+      fields or by a separate manifest version field, then test that exact contract.
+
+#### Done gate
+
+- [x] README, examples, and user-facing docs reflect the final Phase 1 attach / builder workflow.
+- [ ] A targeted Phase 1 regression suite is easy to run locally and in CI.
+- [ ] Phase 2 work does not depend on callers using low-level SHM attach details that Phase 1 was supposed to hide.
+
 ## Medium priority
 
 ### 4. Improve `ipc::runtime` allocation behavior

@@ -8,16 +8,11 @@ Fixed-length channel
 
    #include <xproc/xproc.hpp>
 
-   xproc::ipc::transport_options opts;
-   opts.path = "/my_ipc_channel";
-   opts.shm_size = xproc::ipc::shm_size_for_data_capacity(1024 * 1024);
-   opts.type = xproc::ipc::channel_type::fixed;
-   opts.create_if_missing = true;
-   // The first producer or consumer opener can create the segment.
-   opts.item_size = 256;
+   const std::string path = "/my_ipc_channel";
+   auto channel = xproc::ipc::make_fixed_channel(path, 256).create(1024 * 1024);
 
-   xproc::ipc::producer producer(opts);
-   xproc::ipc::consumer consumer(opts);
+   xproc::ipc::producer producer = channel.open_producer();
+   xproc::ipc::consumer consumer = xproc::ipc::attach_fixed_channel(path).open_consumer();
 
    std::string message = "Hello, IPC!";
    producer.send_fixed_bytes(
@@ -35,10 +30,11 @@ Variable-length channel
 
 .. code-block:: cpp
 
-   opts.type = xproc::ipc::channel_type::varlen;
+   const std::string path = "/my_varlen_channel";
+   auto channel = xproc::ipc::make_varlen_channel(path).create(1024 * 1024);
 
-   xproc::ipc::producer producer(opts);
-   xproc::ipc::consumer consumer(opts);
+   xproc::ipc::producer producer = channel.open_producer();
+   xproc::ipc::consumer consumer = xproc::ipc::attach_varlen_channel(path).open_consumer();
 
    std::vector<std::byte> data(1024);
    producer.send_varlen(data.data(), static_cast<std::uint32_t>(data.size()));
@@ -47,6 +43,9 @@ Variable-length channel
      (void)ptr;
      (void)len;
    });
+
+For advanced flows, ``transport_options`` remains available when you want to set the layout explicitly or override
+schema / namespace checks yourself.
 
 Codecs
 ------

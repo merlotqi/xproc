@@ -177,3 +177,105 @@ TEST(ApiSurface, IpcInspectorPolymorphism) {
 
   xproc::shm::shm::unlink(path);
 }
+
+TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
+  const std::string path = "/xproc_api_surface_builder_fixed";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
+                           .with_data_align(16u)
+                           .with_schema_id(0x1234u)
+                           .create(8192);
+
+  const auto creator_opts = created.options();
+  EXPECT_EQ(creator_opts.path, path);
+  EXPECT_EQ(creator_opts.shm_size, xproc::ipc::shm_size_for_data_capacity(8192));
+  EXPECT_EQ(creator_opts.type, xproc::ipc::channel_type::fixed);
+  EXPECT_EQ(creator_opts.item_size, sizeof(std::uint32_t));
+  EXPECT_EQ(creator_opts.data_align, 16u);
+  EXPECT_EQ(creator_opts.schema_id, 0x1234u);
+  EXPECT_TRUE(creator_opts.create_if_missing);
+
+  xproc::ipc::producer producer = created.open_producer();
+
+  const auto attacher = xproc::ipc::attach_fixed_channel(path);
+  const auto attach_opts = attacher.options();
+  EXPECT_EQ(attach_opts.path, path);
+  EXPECT_EQ(attach_opts.shm_size, creator_opts.shm_size);
+  EXPECT_EQ(attach_opts.type, xproc::ipc::channel_type::fixed);
+  EXPECT_EQ(attach_opts.item_size, sizeof(std::uint32_t));
+  EXPECT_EQ(attach_opts.data_align, 16u);
+  EXPECT_EQ(attach_opts.schema_id, 0x1234u);
+  EXPECT_FALSE(attach_opts.create_if_missing);
+
+  xproc::ipc::consumer consumer = attacher.open_consumer();
+  xproc::ipc::observer observer = attacher.open_observer();
+
+  producer.send_fixed<std::uint32_t>(0xA1B2C3D4u);
+
+  bool peeked = false;
+  while (!peeked) {
+    peeked = observer.peek([&](const void* p, std::uint32_t len) {
+      EXPECT_EQ(len, sizeof(std::uint32_t));
+      std::uint32_t value = 0;
+      std::memcpy(&value, p, sizeof(value));
+      EXPECT_EQ(value, 0xA1B2C3D4u);
+    });
+    if (!peeked) {
+      const std::uint32_t c = observer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&observer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  bool consumed = false;
+  while (!consumed) {
+    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+      EXPECT_EQ(len, sizeof(std::uint32_t));
+      std::uint32_t value = 0;
+      std::memcpy(&value, p, sizeof(value));
+      EXPECT_EQ(value, 0xA1B2C3D4u);
+    });
+    if (!consumed) {
+      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
+  const std::string path = "/xproc_api_surface_builder_varlen";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_varlen_channel(path).with_schema_id(0xBEEFu).create(16384);
+  xproc::ipc::consumer consumer = created.open_consumer();
+
+  const auto attacher = xproc::ipc::attach_varlen_channel(path).with_schema_id(0xBEEFu);
+  const auto attach_opts = attacher.options();
+  EXPECT_EQ(attach_opts.path, path);
+  EXPECT_EQ(attach_opts.shm_size, xproc::ipc::shm_size_for_data_capacity(16384));
+  EXPECT_EQ(attach_opts.type, xproc::ipc::channel_type::varlen);
+  EXPECT_EQ(attach_opts.item_size, 0u);
+  EXPECT_EQ(attach_opts.schema_id, 0xBEEFu);
+  EXPECT_FALSE(attach_opts.create_if_missing);
+
+  xproc::ipc::producer producer = attacher.open_producer();
+
+  const std::string expected = "builder-varlen-roundtrip";
+  producer.send_varlen(expected.data(), static_cast<std::uint32_t>(expected.size()));
+
+  bool consumed = false;
+  while (!consumed) {
+    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+      std::string actual(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      EXPECT_EQ(actual, expected);
+    });
+    if (!consumed) {
+      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
