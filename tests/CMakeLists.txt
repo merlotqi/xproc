@@ -16,6 +16,7 @@ function(xproc_gtest_executable name)
     target_link_libraries(${name} PRIVATE xproc GTest::gtest_main)
     set_target_properties(${name} PROPERTIES FOLDER "Tests")
     gtest_discover_tests(${name})
+    set_property(GLOBAL APPEND PROPERTY XPROC_ALL_TEST_TARGETS ${name})
 endfunction()
 
 # Portable tests (all supported platforms).
@@ -49,6 +50,7 @@ if(WIN32)
     target_link_libraries(xproc_win32_wait_shm_tests PRIVATE xproc GTest::gtest)
     set_target_properties(xproc_win32_wait_shm_tests PROPERTIES FOLDER "Tests")
     gtest_discover_tests(xproc_win32_wait_shm_tests)
+    set_property(GLOBAL APPEND PROPERTY XPROC_ALL_TEST_TARGETS xproc_win32_wait_shm_tests)
 endif()
 
 if(TARGET xproc_c)
@@ -56,6 +58,7 @@ if(TARGET xproc_c)
     target_link_libraries(xproc_capi_smoke_tests PRIVATE xproc_c GTest::gtest_main)
     set_target_properties(xproc_capi_smoke_tests PROPERTIES FOLDER "Tests")
     gtest_discover_tests(xproc_capi_smoke_tests)
+    set_property(GLOBAL APPEND PROPERTY XPROC_ALL_TEST_TARGETS xproc_capi_smoke_tests)
 endif()
 
 if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
@@ -73,7 +76,48 @@ if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
         target_include_directories(xproc_optional_serde_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     endif()
     gtest_discover_tests(xproc_optional_serde_tests)
+    set_property(GLOBAL APPEND PROPERTY XPROC_ALL_TEST_TARGETS xproc_optional_serde_tests)
 endif()
+
+set(XPROC_PHASE1_TEST_PATTERNS
+    "ApiSurface[.]FixedChannelBuildersInferManifestAndRoundTrip"
+    "ApiSurface[.]VarlenChannelBuildersInferManifestAndRoundTrip"
+    "LayoutValidate[.]VersionMismatch"
+    "LayoutValidate[.]LayoutTypeMismatch"
+    "LayoutValidate[.]ValidateTransportOptionsRejectsInvalidAlignAndItemSize"
+    "LayoutValidate[.]SharedMemorySizeHelpersAndInferExistingSemantics"
+    "LayoutValidate[.]FixedItemSizeMismatchOnAttach"
+    "LayoutValidate[.]AlignmentMismatchOnAttach"
+    "LayoutValidate[.]ObserverRejectsLayoutTypeMismatchOnAttach"
+    "LayoutValidate[.]ObserverRejectsSchemaMismatchOnAttach"
+    "LayoutValidate[.]VersionMismatchOnAttach"
+    "LayoutValidate[.]ObserverRejectsVersionMismatchOnAttach"
+    "IpcObserverAttach[.]PeekThenConsumerDrains"
+)
+
+set(XPROC_PHASE1_TEST_TARGETS
+    xproc_api_surface_test
+    xproc_layout_validate_test
+    xproc_ipc_observer_attach_test
+)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND XPROC_PHASE1_TEST_PATTERNS "IpcIntegration[.]AttachersCanInferExistingShmSize")
+    list(APPEND XPROC_PHASE1_TEST_TARGETS xproc_ipc_integration_test)
+endif()
+
+if(TARGET xproc_c)
+    list(APPEND XPROC_PHASE1_TEST_PATTERNS
+        "CApiSmoke[.]ObserverRejectsSocketAndReportsLayoutError"
+        "CApiSmoke[.]FixedItemSizeAndSchemaIdMismatchReportLayoutErrors"
+    )
+    list(APPEND XPROC_PHASE1_TEST_TARGETS xproc_capi_smoke_tests)
+endif()
+
+string(JOIN "|" XPROC_PHASE1_TEST_REGEX_BODY ${XPROC_PHASE1_TEST_PATTERNS})
+set(XPROC_PHASE1_TEST_REGEX "^(${XPROC_PHASE1_TEST_REGEX_BODY})$")
+
+get_property(XPROC_ALL_TEST_TARGETS GLOBAL PROPERTY XPROC_ALL_TEST_TARGETS)
 
 # Multi-config generators (Visual Studio): ctest must get -C <Config> or tests show "Not Run".
 if(CMAKE_CONFIGURATION_TYPES)
@@ -88,5 +132,22 @@ add_custom_target(xproc_run_tests
     COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} --output-on-failure
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     USES_TERMINAL
+    VERBATIM
     COMMENT "Running all xproc tests"
 )
+
+if(XPROC_ALL_TEST_TARGETS)
+    add_dependencies(xproc_run_tests ${XPROC_ALL_TEST_TARGETS})
+endif()
+
+add_custom_target(xproc_run_phase1_tests
+    COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} --output-on-failure -R "${XPROC_PHASE1_TEST_REGEX}"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    USES_TERMINAL
+    VERBATIM
+    COMMENT "Running the targeted xproc Phase 1 regression suite"
+)
+
+if(XPROC_PHASE1_TEST_TARGETS)
+    add_dependencies(xproc_run_phase1_tests ${XPROC_PHASE1_TEST_TARGETS})
+endif()

@@ -104,7 +104,7 @@ Phase 1 should only be marked done when every remaining unchecked item below is 
 #### Done gate
 
 - [x] README, examples, and user-facing docs reflect the final Phase 1 attach / builder workflow.
-- [ ] A targeted Phase 1 regression suite is easy to run locally and in CI.
+- [x] A targeted Phase 1 regression suite is easy to run locally and in CI.
 - [ ] Phase 2 work does not depend on callers using low-level SHM attach details that Phase 1 was supposed to hide.
 
 ## Medium priority

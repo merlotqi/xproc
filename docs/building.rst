@@ -84,6 +84,15 @@ Benchmarks are split into separate executables (``xproc_bench_*``). To run all l
 
    cmake --build build --target xproc_run_benchmarks
 
+Phase 1 regression suite
+------------------------
+
+For the focused shared-memory builder / manifest / mismatch regression gate:
+
+.. code-block:: bash
+
+   cmake --build build --target xproc_run_phase1_tests
+
 Sphinx documentation (this tree)
 --------------------------------
 

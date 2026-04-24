@@ -25,6 +25,8 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON
       - name: Build
         run: cmake --build build --parallel
+      - name: Phase 1 Regression Suite
+        run: cmake --build build --target xproc_run_phase1_tests
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
@@ -46,5 +48,7 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON
       - name: Build
         run: cmake --build build --config Release --parallel
+      - name: Phase 1 Regression Suite
+        run: cmake --build build --config Release --target xproc_run_phase1_tests
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure

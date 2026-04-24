@@ -216,6 +216,12 @@ cd build
 ctest
 ```
 
+For the focused shared-memory builder / manifest / mismatch gate used by Phase 1 work:
+
+```bash
+cmake --build build --target xproc_run_phase1_tests
+```
+
 On **Windows**, prefer serial test runs when debugging shared-memory tests to avoid stray handles and name collisions:
 
 ```bash
