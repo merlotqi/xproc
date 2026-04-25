@@ -165,6 +165,92 @@ TEST(CApiSmoke, ObserverSnapshotAndPeek) {
   EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
 }
 
+TEST(CApiSmoke, CreatorMetadataDefaultsAndAttachReturnsPersistedValues) {
+  xproc_c_options defaults{};
+  xproc_c_options_init(&defaults);
+  EXPECT_EQ(defaults.creator_timestamp_ns, 0u);
+  EXPECT_EQ(defaults.creator_flags, 0u);
+
+  const std::string path = "/xproc_capi_creator_metadata_roundtrip";
+  ASSERT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+
+  constexpr std::uint64_t persisted_timestamp = 0x1122334455667788ull;
+  constexpr std::uint64_t persisted_flags = 0x8877665544332211ull;
+
+  xproc_c_options producer_opts;
+  xproc_c_options_init(&producer_opts);
+  producer_opts.path = path.c_str();
+  producer_opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  producer_opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  producer_opts.item_size = sizeof(std::uint32_t);
+  producer_opts.creator_timestamp_ns = persisted_timestamp;
+  producer_opts.creator_flags = persisted_flags;
+
+  ASSERT_EQ(xproc_c_validate_options_for(XPROC_C_ENDPOINT_PRODUCER, &producer_opts), XPROC_C_STATUS_OK);
+
+  xproc_c_producer* producer = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&producer_opts, &producer), XPROC_C_STATUS_OK);
+
+  xproc_c_options borrowed_producer{};
+  ASSERT_EQ(xproc_c_producer_options(producer, &borrowed_producer), XPROC_C_STATUS_OK);
+  EXPECT_EQ(borrowed_producer.creator_timestamp_ns, persisted_timestamp);
+  EXPECT_EQ(borrowed_producer.creator_flags, persisted_flags);
+
+  xproc_c_options consumer_opts = producer_opts;
+  consumer_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  consumer_opts.create_if_missing = 0;
+  consumer_opts.creator_timestamp_ns = 0xA1A2A3A4A5A6A7A8ull;
+  consumer_opts.creator_flags = 0xB1B2B3B4B5B6B7B8ull;
+
+  xproc_c_options observer_opts = producer_opts;
+  observer_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  observer_opts.create_if_missing = 0;
+  observer_opts.creator_timestamp_ns = 0x0102030405060708ull;
+  observer_opts.creator_flags = 0x1112131415161718ull;
+
+  xproc_c_consumer* consumer = nullptr;
+  xproc_c_observer* observer = nullptr;
+  ASSERT_EQ(xproc_c_consumer_open(&consumer_opts, &consumer), XPROC_C_STATUS_OK);
+  ASSERT_EQ(xproc_c_observer_open(&observer_opts, &observer), XPROC_C_STATUS_OK);
+
+  xproc_c_options borrowed_consumer{};
+  xproc_c_options borrowed_observer{};
+  ASSERT_EQ(xproc_c_consumer_options(consumer, &borrowed_consumer), XPROC_C_STATUS_OK);
+  ASSERT_EQ(xproc_c_observer_options(observer, &borrowed_observer), XPROC_C_STATUS_OK);
+
+  EXPECT_EQ(borrowed_consumer.creator_timestamp_ns, persisted_timestamp);
+  EXPECT_EQ(borrowed_consumer.creator_flags, persisted_flags);
+  EXPECT_EQ(borrowed_observer.creator_timestamp_ns, persisted_timestamp);
+  EXPECT_EQ(borrowed_observer.creator_flags, persisted_flags);
+  EXPECT_EQ(borrowed_consumer.shm_size, XPROC_C_INFER_EXISTING_SHM_SIZE);
+  EXPECT_EQ(borrowed_observer.shm_size, XPROC_C_INFER_EXISTING_SHM_SIZE);
+
+  const std::uint32_t expected = 0x13579BDFu;
+  ASSERT_EQ(xproc_c_producer_send_fixed_sized(producer, &expected, sizeof(expected)), XPROC_C_STATUS_OK);
+
+  std::uint32_t observed = 0;
+  std::uint32_t observed_len = 0;
+
+  xproc_c_status observer_status = XPROC_C_STATUS_AGAIN;
+  for (int i = 0; i < 100 && observer_status == XPROC_C_STATUS_AGAIN; ++i) {
+    observer_status = xproc_c_observer_peek_copy(observer, &observed, sizeof(observed), &observed_len);
+  }
+  ASSERT_EQ(observer_status, XPROC_C_STATUS_OK);
+  EXPECT_EQ(observed_len, sizeof(observed));
+  EXPECT_EQ(observed, expected);
+
+  std::uint32_t consumed = 0;
+  std::uint32_t consumed_len = 0;
+  ASSERT_EQ(xproc_c_consumer_poll_copy(consumer, &consumed, sizeof(consumed), &consumed_len), XPROC_C_STATUS_OK);
+  EXPECT_EQ(consumed_len, sizeof(consumed));
+  EXPECT_EQ(consumed, expected);
+
+  xproc_c_observer_close(observer);
+  xproc_c_consumer_close(consumer);
+  xproc_c_producer_close(producer);
+  EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+}
+
 TEST(CApiSmoke, ValidationAndErrorCopy) {
   xproc_c_options opts;
   xproc_c_options_init(&opts);
