@@ -222,7 +222,7 @@ For the focused shared-memory builder / manifest / mismatch gate used by Phase 1
 cmake --build build --target xproc_run_phase1_tests
 ```
 
-Phase 1 makes this shared-memory workflow manifest-backed: creators persist the manifest, and attachers validate channel shape against stored control-block metadata before opening. Targeted regression coverage includes the supported Node and Python smoke checks for manifest-mismatch behavior, while additional metadata expansion, cross-binding parity work, and any future manifest-version semantics remain later-stage follow-up work rather than part of the Phase 1 public contract.
+Phase 1 makes this shared-memory workflow manifest-backed: creators persist the manifest, and attachers validate channel shape against stored control-block metadata before opening. The `creator timestamp` and `creator flags` fields are persisted creator metadata for observation and diagnostics, and are not current attach-validation requirements. Targeted regression coverage includes the supported Node and Python smoke checks for manifest-mismatch behavior, while additional metadata expansion, cross-binding parity work, and any future manifest-version semantics remain later-stage follow-up work rather than part of the Phase 1 public contract.
 
 On **Windows**, prefer serial test runs when debugging shared-memory tests to avoid stray handles and name collisions:
 
