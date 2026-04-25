@@ -319,6 +319,26 @@ TEST(ApiSurface, BuilderCreatorMetadataDefaultsToZero) {
   xproc::shm::shm::unlink(varlen_path);
 }
 
+TEST(ApiSurface, BuilderCreateDoesNotInitializeManifestBeforeOpen) {
+  const std::string path = "/xproc_api_surface_builder_no_side_effect";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
+                           .with_creator_timestamp_ns(0x1234u)
+                           .with_creator_flags(0x5678u)
+                           .create(4096);
+
+  EXPECT_THROW((void)xproc::ipc::attach_fixed_channel(path).options(), std::runtime_error);
+
+  xproc::ipc::producer producer = created.open_producer();
+  const auto attach_opts = xproc::ipc::attach_fixed_channel(path).options();
+  EXPECT_EQ(attach_opts.creator_timestamp_ns, 0x1234u);
+  EXPECT_EQ(attach_opts.creator_flags, 0x5678u);
+  (void)producer;
+
+  xproc::shm::shm::unlink(path);
+}
+
 TEST(ApiSurface, DirectTransportOptionsPersistCreatorMetadataOnCreateAndAttach) {
   const std::string path = "/xproc_api_surface_direct_creator_metadata";
   xproc::shm::shm::unlink(path);

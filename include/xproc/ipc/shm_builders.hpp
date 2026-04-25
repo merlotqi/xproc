@@ -1,6 +1,5 @@
 #pragma once
 
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -80,50 +79,12 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
   return opts;
 }
 
-inline void provision_shm_manifest(transport_options& opts) {
-  if (opts.backend != transport_backend::shared_memory || !opts.create_if_missing ||
-      opts.shm_size == infer_existing_shm_size) {
-    return;
-  }
-
-  shm::shm mapping;
-  if (!mapping.open(opts.path, opts.shm_size, shm::shm_open_mode::open_create, opts.win32_object_namespace)) {
-    throw std::runtime_error(make_shm_attach_error("create_channel: ", opts.path, mapping.last_os_error()));
-  }
-
-  const std::size_t data_capacity = shm_data_capacity_for_size(opts.shm_size);
-  const std::uint32_t layout_type = (opts.type == channel_type::fixed) ? 0u : 1u;
-  const std::uint32_t data_align = opts.data_align ? opts.data_align : 8u;
-  const std::uint32_t fixed_item_size = (opts.type == channel_type::fixed) ? opts.item_size : 0u;
-
-  auto* header =
-      shm::layout_manager::format(mapping, data_capacity, mapping.created_this_open(), layout_type, data_align,
-                                  fixed_item_size, opts.schema_id, opts.creator_timestamp_ns, opts.creator_flags,
-                                  shm::attach_behavior::readonly);
-  if (!header) {
-    const auto* raw = static_cast<const shm::control_block*>(mapping.addr());
-    const auto err =
-        shm::layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align, fixed_item_size,
-                                               opts.schema_id);
-    throw shm::layout_exception("create_channel: ", err);
-  }
-
-  opts.creator_timestamp_ns = header->creator_timestamp_ns;
-  opts.creator_flags = header->creator_flags;
-  if (mapping.created_this_open()) {
-    header->attach_count.store(0, std::memory_order_relaxed);
-    header->producer_pid.store(0, std::memory_order_relaxed);
-  }
-}
-
 }  // namespace detail
 
 // Stores one SHM channel configuration and can open producer / consumer / observer endpoints from it.
 class shm_channel_endpoints {
  public:
-  explicit shm_channel_endpoints(transport_options opts) : opts_(std::move(opts)) {
-    detail::provision_shm_manifest(opts_);
-  }
+  explicit shm_channel_endpoints(transport_options opts) : opts_(std::move(opts)) {}
 
   const transport_options& options() const noexcept { return opts_; }
 
