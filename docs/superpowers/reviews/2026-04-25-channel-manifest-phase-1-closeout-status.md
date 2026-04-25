@@ -25,11 +25,10 @@ requires documentation alignment and scope freeze.
 ## Items That Are No Longer Open Implementation Work
 
 - Core manifest-backed attach validation is already implemented and verified.
-- The supported Node and Python bindings now participate in the Phase 1 smoke
-  verification path rather than remaining as out-of-gate follow-up.
-- The current Phase 1 mismatch-observability gap has been closed for the
-  supported smoke-tested bindings because Python now exposes structured
-  `XprocError` metadata and mismatch smoke coverage.
+- The supported Node and Python bindings are no longer an out-of-gate follow-up
+  for Phase 1 smoke verification.
+- The supported smoke-tested bindings no longer have an open Phase 1
+  mismatch-observability gap.
 
 ## Deferred By Recommendation
 
@@ -54,7 +53,9 @@ requires documentation alignment and scope freeze.
 
 ## Verification Snapshot
 
-- This is the documentation-closeout verification snapshot for Phase 1.
+- This snapshot is limited to implementation-state and gate-registration
+  verification gathered during documentation closeout; it does not mean all
+  remaining Phase 1 closeout work is complete.
 - Verification was executed in the
   `channel-manifest-phase-1` implementation worktree build directory at
   `/home/merlot/codes/xproc/.worktrees/channel-manifest-phase-1/build`,
