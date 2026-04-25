@@ -54,11 +54,14 @@ requires documentation alignment and scope freeze.
 
 ## Verification Snapshot
 
-- Verification was executed from the
-  `channel-manifest-phase-1` implementation worktree build directory because
-  the implementation and test registration being confirmed live on that branch.
+- This is the documentation-closeout verification snapshot for Phase 1.
+- Verification was executed in the
+  `channel-manifest-phase-1` implementation worktree build directory at
+  `/home/merlot/codes/xproc/.worktrees/channel-manifest-phase-1/build`,
+  because that is where the implementation artifacts and test registration
+  being confirmed live.
 - `cmake --build /home/merlot/codes/xproc/.worktrees/channel-manifest-phase-1/build --target xproc_run_phase1_tests --parallel`
   passed on 2026-04-25 with `100% tests passed, 0 tests failed out of 18`.
 - `ctest --test-dir /home/merlot/codes/xproc/.worktrees/channel-manifest-phase-1/build -N | rg "xproc_(node|python)_smoke"`
-  confirmed both `xproc_node_smoke` and `xproc_python_smoke` are registered in
+  still shows both `xproc_node_smoke` and `xproc_python_smoke` registered in
   the test set.
