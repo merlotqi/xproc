@@ -318,3 +318,42 @@ TEST(ApiSurface, BuilderCreatorMetadataDefaultsToZero) {
   xproc::shm::shm::unlink(fixed_path);
   xproc::shm::shm::unlink(varlen_path);
 }
+
+TEST(ApiSurface, DirectTransportOptionsPersistCreatorMetadataOnCreateAndAttach) {
+  const std::string path = "/xproc_api_surface_direct_creator_metadata";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator_opts;
+  creator_opts.path = path;
+  creator_opts.shm_size = xproc::ipc::shm_size_for_data_capacity(8192);
+  creator_opts.type = xproc::ipc::channel_type::fixed;
+  creator_opts.item_size = sizeof(std::uint32_t);
+  creator_opts.creator_timestamp_ns = 0xCAFEBABE12345678ull;
+  creator_opts.creator_flags = 0x0F0E0D0C0B0A0908ull;
+
+  xproc::ipc::producer producer(creator_opts);
+  EXPECT_EQ(producer.header()->creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(producer.header()->creator_flags, creator_opts.creator_flags);
+  EXPECT_EQ(producer.options().creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(producer.options().creator_flags, creator_opts.creator_flags);
+
+  xproc::ipc::transport_options attach_opts = creator_opts;
+  attach_opts.shm_size = xproc::ipc::infer_existing_shm_size;
+  attach_opts.create_if_missing = false;
+  attach_opts.creator_timestamp_ns = 1u;
+  attach_opts.creator_flags = 2u;
+
+  xproc::ipc::consumer consumer(attach_opts);
+  EXPECT_EQ(consumer.options().creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(consumer.options().creator_flags, creator_opts.creator_flags);
+  EXPECT_EQ(consumer.header()->creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(consumer.header()->creator_flags, creator_opts.creator_flags);
+
+  xproc::ipc::observer observer(attach_opts);
+  EXPECT_EQ(observer.options().creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(observer.options().creator_flags, creator_opts.creator_flags);
+  EXPECT_EQ(observer.header()->creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(observer.header()->creator_flags, creator_opts.creator_flags);
+
+  xproc::shm::shm::unlink(path);
+}

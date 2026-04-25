@@ -88,7 +88,7 @@ class endpoint {
     const uint32_t data_align = opts_.data_align ? opts_.data_align : 8u;
     const uint32_t fixed_item_size = (opts_.type == channel_type::fixed) ? opts_.item_size : 0u;
     header_ = layout_manager::format(shm_, data_capacity, is_creator, layout_type, data_align, fixed_item_size,
-                                     opts_.schema_id);
+                                     opts_.schema_id, opts_.creator_timestamp_ns, opts_.creator_flags);
     if (!header_) {
       const auto* raw = static_cast<const control_block*>(shm_.addr());
       const auto err =
@@ -96,6 +96,9 @@ class endpoint {
                                             opts_.schema_id);
       throw layout_exception("endpoint: ", err);
     }
+
+    opts_.creator_timestamp_ns = header_->creator_timestamp_ns;
+    opts_.creator_flags = header_->creator_flags;
 
     if (is_creator && role_ != role::producer) {
       header_->producer_pid.store(0, std::memory_order_relaxed);
