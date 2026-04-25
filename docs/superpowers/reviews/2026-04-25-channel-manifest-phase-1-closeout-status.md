@@ -8,6 +8,9 @@ after the Node and Python binding-hardening work landed. It replaces stale
 what has been intentionally deferred, and how that differs from the earlier
 next-steps note.
 
+Phase 1 core implementation is effectively complete, but closeout still
+requires documentation alignment and scope freeze.
+
 ## Implemented Since The Initial Assessment
 
 - Node smoke coverage is now part of the Phase 1 gate through
@@ -24,8 +27,8 @@ next-steps note.
 - Core manifest-backed attach validation is already implemented and verified.
 - The supported Node and Python bindings now participate in the Phase 1 smoke
   verification path rather than remaining as out-of-gate follow-up.
-- Cross-language mismatch observability for the current supported bindings is
-  no longer an open hardening gap because Python now exposes structured
+- The current Phase 1 mismatch-observability gap has been closed for the
+  supported smoke-tested bindings because Python now exposes structured
   `XprocError` metadata and mismatch smoke coverage.
 
 ## Deferred By Recommendation
@@ -44,12 +47,16 @@ next-steps note.
 - The remaining Phase 1 closeout work is documentation alignment and boundary
   freezing, not additional core manifest delivery.
 - The closeout boundary is now clearer: Phase 1 includes Node smoke coverage
-  in the gate, Python mismatch assertions in smoke coverage, structured Python
-  `XprocError` metadata, and hardened Node addon loading, while the three
-  deferred topics stay outside the milestone.
+  in the gate, Python mismatch assertions in smoke coverage, and structured
+  Python `XprocError` metadata, while the three deferred topics stay outside
+  the milestone. The Node addon loading hardening is a landed improvement from
+  this closeout period, but not part of the formal Phase 1 exit boundary.
 
 ## Verification Snapshot
 
+- Verification was executed from the
+  `channel-manifest-phase-1` implementation worktree build directory because
+  the implementation and test registration being confirmed live on that branch.
 - `cmake --build /home/merlot/codes/xproc/.worktrees/channel-manifest-phase-1/build --target xproc_run_phase1_tests --parallel`
   passed on 2026-04-25 with `100% tests passed, 0 tests failed out of 18`.
 - `ctest --test-dir /home/merlot/codes/xproc/.worktrees/channel-manifest-phase-1/build -N | rg "xproc_(node|python)_smoke"`
