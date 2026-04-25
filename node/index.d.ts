@@ -24,6 +24,8 @@ declare namespace xproc {
     itemSize?: IntegerLike;
     dataAlign?: IntegerLike;
     schemaId?: IntegerLike;
+    creatorTimestampNs?: IntegerLike;
+    creatorFlags?: IntegerLike;
     createIfMissing?: BooleanLike;
     channelType?: ChannelTypeInput;
     type?: ChannelTypeInput;
@@ -42,6 +44,8 @@ declare namespace xproc {
     itemSize: number;
     dataAlign: number;
     schemaId: bigint;
+    creatorTimestampNs: bigint;
+    creatorFlags: bigint;
     createIfMissing: boolean;
     channelType: ChannelType;
     type: ChannelType;

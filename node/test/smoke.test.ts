@@ -71,22 +71,9 @@ test("node ts smoke: fixed channel roundtrip with observer and inferred attach s
 
     assert.equal(consumer.pollCopy(), null);
 
-    const producerOptions = producer.options() as {
-      schemaId?: bigint;
-      creatorTimestampNs?: bigint;
-      creatorFlags?: bigint;
-      type?: number;
-    };
-    const consumerOptions = consumer.options() as {
-      schemaId?: bigint;
-      creatorTimestampNs?: bigint;
-      creatorFlags?: bigint;
-      shmSize?: bigint | number;
-    };
-    const observerOptions = observer.options() as {
-      creatorTimestampNs?: bigint;
-      creatorFlags?: bigint;
-    };
+    const producerOptions = producer.options();
+    const consumerOptions = consumer.options();
+    const observerOptions = observer.options();
     assert.equal(producerOptions.schemaId, 0x1234n);
     assert.equal(producerOptions.creatorTimestampNs, persistedCreatorTimestampNs);
     assert.equal(producerOptions.creatorFlags, persistedCreatorFlags);
