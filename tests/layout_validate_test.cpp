@@ -127,6 +127,16 @@ TEST(LayoutValidate, ReadEmbeddedLayoutVersion) {
   EXPECT_EQ(v.minor, lm::version_minor);
 }
 
+TEST(LayoutValidate, CreatorMetadataFieldsDefaultToZero) {
+  xproc::shm::control_block header{};
+  EXPECT_EQ(header.creator_timestamp_ns, 0u);
+  EXPECT_EQ(header.creator_flags, 0u);
+
+  xproc::ipc::transport_options opts{};
+  EXPECT_EQ(opts.creator_timestamp_ns, 0u);
+  EXPECT_EQ(opts.creator_flags, 0u);
+}
+
 TEST(LayoutValidate, DefaultShmBackendStub) {
   xproc::shm::default_shm_backend b;
   EXPECT_FALSE(b.is_attached());
@@ -256,6 +266,31 @@ TEST(LayoutValidate, ObserverRejectsSchemaMismatchOnAttach) {
       EXPECT_EQ(e.code(), err::schema_id_mismatch);
     }
   }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(LayoutValidate, AttachIgnoresCreatorMetadataMismatch) {
+  const std::string path = "/xproc_layout_creator_metadata_attach";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
+                           .with_creator_timestamp_ns(123456789u)
+                           .with_creator_flags(0x55AAu)
+                           .create(4096);
+
+  xproc::ipc::producer producer(created.options());
+
+  xproc::ipc::transport_options attach = created.options();
+  attach.shm_size = xproc::ipc::infer_existing_shm_size;
+  attach.create_if_missing = false;
+  attach.creator_timestamp_ns += 1u;
+  attach.creator_flags += 1u;
+
+  EXPECT_NO_THROW({
+    xproc::ipc::consumer consumer(attach);
+    (void)consumer;
+  });
 
   xproc::shm::shm::unlink(path);
 }

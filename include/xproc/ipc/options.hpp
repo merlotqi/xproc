@@ -41,6 +41,10 @@ struct transport_options {
   uint32_t data_align = 0;
   /// Optional shared-memory manifest field for application-level protocol / schema compatibility checks.
   std::uint64_t schema_id = 0;
+  /// Optional shared-memory manifest field persisted by the creator for application metadata.
+  std::uint64_t creator_timestamp_ns = 0;
+  /// Optional shared-memory manifest field persisted by the creator for application metadata.
+  std::uint64_t creator_flags = 0;
   /// Shared-memory backend: allow the first producer or consumer opener to create the segment.
   bool create_if_missing = true;
   channel_type type = channel_type::fixed;

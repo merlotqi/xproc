@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
@@ -40,12 +41,16 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
   std::uint32_t data_align = 8u;
   std::uint32_t fixed_item_size = 0u;
   std::uint64_t schema_id = 0u;
+  std::uint64_t creator_timestamp_ns = 0u;
+  std::uint64_t creator_flags = 0u;
 
   if (header != nullptr) {
     layout_type = header->layout_type;
     data_align = header->data_alignment ? header->data_alignment : 8u;
     fixed_item_size = header->fixed_item_size;
     schema_id = header->schema_id;
+    creator_timestamp_ns = header->creator_timestamp_ns;
+    creator_flags = header->creator_flags;
   }
 
   const auto err =
@@ -66,6 +71,8 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
   opts.item_size = (layout_type == 0u) ? fixed_item_size : 0u;
   opts.data_align = data_align;
   opts.schema_id = schema_id;
+  opts.creator_timestamp_ns = creator_timestamp_ns;
+  opts.creator_flags = creator_flags;
   opts.create_if_missing = false;
   opts.type = (layout_type == 0u) ? channel_type::fixed : channel_type::varlen;
   opts.win32_object_namespace = win32_object_namespace;
@@ -73,12 +80,50 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
   return opts;
 }
 
+inline void provision_shm_manifest(transport_options& opts) {
+  if (opts.backend != transport_backend::shared_memory || !opts.create_if_missing ||
+      opts.shm_size == infer_existing_shm_size) {
+    return;
+  }
+
+  shm::shm mapping;
+  if (!mapping.open(opts.path, opts.shm_size, shm::shm_open_mode::open_create, opts.win32_object_namespace)) {
+    throw std::runtime_error(make_shm_attach_error("create_channel: ", opts.path, mapping.last_os_error()));
+  }
+
+  const std::size_t data_capacity = shm_data_capacity_for_size(opts.shm_size);
+  const std::uint32_t layout_type = (opts.type == channel_type::fixed) ? 0u : 1u;
+  const std::uint32_t data_align = opts.data_align ? opts.data_align : 8u;
+  const std::uint32_t fixed_item_size = (opts.type == channel_type::fixed) ? opts.item_size : 0u;
+
+  auto* header =
+      shm::layout_manager::format(mapping, data_capacity, mapping.created_this_open(), layout_type, data_align,
+                                  fixed_item_size, opts.schema_id, opts.creator_timestamp_ns, opts.creator_flags,
+                                  shm::attach_behavior::readonly);
+  if (!header) {
+    const auto* raw = static_cast<const shm::control_block*>(mapping.addr());
+    const auto err =
+        shm::layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align, fixed_item_size,
+                                               opts.schema_id);
+    throw shm::layout_exception("create_channel: ", err);
+  }
+
+  opts.creator_timestamp_ns = header->creator_timestamp_ns;
+  opts.creator_flags = header->creator_flags;
+  if (mapping.created_this_open()) {
+    header->attach_count.store(0, std::memory_order_relaxed);
+    header->producer_pid.store(0, std::memory_order_relaxed);
+  }
+}
+
 }  // namespace detail
 
 // Stores one SHM channel configuration and can open producer / consumer / observer endpoints from it.
 class shm_channel_endpoints {
  public:
-  explicit shm_channel_endpoints(transport_options opts) : opts_(std::move(opts)) {}
+  explicit shm_channel_endpoints(transport_options opts) : opts_(std::move(opts)) {
+    detail::provision_shm_manifest(opts_);
+  }
 
   const transport_options& options() const noexcept { return opts_; }
 
@@ -117,6 +162,16 @@ class fixed_channel_builder {
     return *this;
   }
 
+  fixed_channel_builder& with_creator_timestamp_ns(std::uint64_t creator_timestamp_ns) {
+    creator_timestamp_ns_ = creator_timestamp_ns;
+    return *this;
+  }
+
+  fixed_channel_builder& with_creator_flags(std::uint64_t creator_flags) {
+    creator_flags_ = creator_flags;
+    return *this;
+  }
+
   fixed_channel_builder& with_win32_object_namespace(std::string win32_object_namespace) {
     win32_object_namespace_ = std::move(win32_object_namespace);
     return *this;
@@ -129,6 +184,8 @@ class fixed_channel_builder {
     opts.item_size = item_size_;
     opts.data_align = data_align_;
     opts.schema_id = schema_id_;
+    opts.creator_timestamp_ns = creator_timestamp_ns_;
+    opts.creator_flags = creator_flags_;
     opts.create_if_missing = true;
     opts.type = channel_type::fixed;
     opts.win32_object_namespace = win32_object_namespace_;
@@ -143,6 +200,8 @@ class fixed_channel_builder {
   std::uint32_t item_size_{0};
   std::uint32_t data_align_{0};
   std::uint64_t schema_id_{0};
+  std::uint64_t creator_timestamp_ns_{0};
+  std::uint64_t creator_flags_{0};
   std::string win32_object_namespace_{"Local"};
 };
 
@@ -160,6 +219,16 @@ class varlen_channel_builder {
     return *this;
   }
 
+  varlen_channel_builder& with_creator_timestamp_ns(std::uint64_t creator_timestamp_ns) {
+    creator_timestamp_ns_ = creator_timestamp_ns;
+    return *this;
+  }
+
+  varlen_channel_builder& with_creator_flags(std::uint64_t creator_flags) {
+    creator_flags_ = creator_flags;
+    return *this;
+  }
+
   varlen_channel_builder& with_win32_object_namespace(std::string win32_object_namespace) {
     win32_object_namespace_ = std::move(win32_object_namespace);
     return *this;
@@ -172,6 +241,8 @@ class varlen_channel_builder {
     opts.item_size = 0u;
     opts.data_align = data_align_;
     opts.schema_id = schema_id_;
+    opts.creator_timestamp_ns = creator_timestamp_ns_;
+    opts.creator_flags = creator_flags_;
     opts.create_if_missing = true;
     opts.type = channel_type::varlen;
     opts.win32_object_namespace = win32_object_namespace_;
@@ -185,6 +256,8 @@ class varlen_channel_builder {
   std::string path_;
   std::uint32_t data_align_{0};
   std::uint64_t schema_id_{0};
+  std::uint64_t creator_timestamp_ns_{0};
+  std::uint64_t creator_flags_{0};
   std::string win32_object_namespace_{"Local"};
 };
 

@@ -11,14 +11,16 @@ namespace shm {
 
 control_block* layout_manager::format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type,
                                       uint32_t data_alignment, uint32_t fixed_item_size,
-                                      std::uint64_t expected_schema_id, attach_behavior behavior) {
+                                      std::uint64_t expected_schema_id, std::uint64_t creator_timestamp_ns,
+                                      std::uint64_t creator_flags, attach_behavior behavior) {
   if (!sm.is_attached()) {
     return nullptr;
   }
 
   auto* header = static_cast<control_block*>(sm.addr());
   if (is_creator) {
-    _init_header(header, capacity, layout_type, data_alignment, fixed_item_size, expected_schema_id);
+    _init_header(header, capacity, layout_type, data_alignment, fixed_item_size, expected_schema_id,
+                 creator_timestamp_ns, creator_flags);
   } else {
     if (!validate(header, capacity, layout_type, data_alignment, fixed_item_size, expected_schema_id)) {
       return nullptr;
@@ -126,7 +128,8 @@ bool layout_manager::validate(control_block* header, size_t expected_capacity, u
 }
 
 void layout_manager::_init_header(control_block* header, size_t capacity, uint32_t layout_type,
-                                  uint32_t data_alignment, uint32_t fixed_item_size, std::uint64_t schema_id) {
+                                  uint32_t data_alignment, uint32_t fixed_item_size, std::uint64_t schema_id,
+                                  std::uint64_t creator_timestamp_ns, std::uint64_t creator_flags) {
   header->magic = expected_magic;
   header->version_major = version_major;
   header->version_minor = version_minor;
@@ -142,6 +145,8 @@ void layout_manager::_init_header(control_block* header, size_t capacity, uint32
   header->data_alignment = data_alignment ? data_alignment : 8u;
   header->fixed_item_size = fixed_item_size;
   header->schema_id = schema_id;
+  header->creator_timestamp_ns = creator_timestamp_ns;
+  header->creator_flags = creator_flags;
   std::memset(header->reserved, 0, sizeof(header->reserved));
 
   header->producer_pid.store(xproc::platform::current_process_id(), std::memory_order_relaxed);

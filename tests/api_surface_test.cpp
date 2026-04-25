@@ -185,6 +185,8 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
   const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
                            .with_data_align(16u)
                            .with_schema_id(0x1234u)
+                           .with_creator_timestamp_ns(0x1122334455667788ull)
+                           .with_creator_flags(0x8877665544332211ull)
                            .create(8192);
 
   const auto creator_opts = created.options();
@@ -194,6 +196,8 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
   EXPECT_EQ(creator_opts.item_size, sizeof(std::uint32_t));
   EXPECT_EQ(creator_opts.data_align, 16u);
   EXPECT_EQ(creator_opts.schema_id, 0x1234u);
+  EXPECT_EQ(creator_opts.creator_timestamp_ns, 0x1122334455667788ull);
+  EXPECT_EQ(creator_opts.creator_flags, 0x8877665544332211ull);
   EXPECT_TRUE(creator_opts.create_if_missing);
 
   xproc::ipc::producer producer = created.open_producer();
@@ -206,6 +210,8 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
   EXPECT_EQ(attach_opts.item_size, sizeof(std::uint32_t));
   EXPECT_EQ(attach_opts.data_align, 16u);
   EXPECT_EQ(attach_opts.schema_id, 0x1234u);
+  EXPECT_EQ(attach_opts.creator_timestamp_ns, 0x1122334455667788ull);
+  EXPECT_EQ(attach_opts.creator_flags, 0x8877665544332211ull);
   EXPECT_FALSE(attach_opts.create_if_missing);
 
   xproc::ipc::consumer consumer = attacher.open_consumer();
@@ -248,7 +254,14 @@ TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
   const std::string path = "/xproc_api_surface_builder_varlen";
   xproc::shm::shm::unlink(path);
 
-  const auto created = xproc::ipc::make_varlen_channel(path).with_schema_id(0xBEEFu).create(16384);
+  const auto created = xproc::ipc::make_varlen_channel(path)
+                           .with_schema_id(0xBEEFu)
+                           .with_creator_timestamp_ns(0x1020304050607080ull)
+                           .with_creator_flags(0xA0B0C0D0E0F00102ull)
+                           .create(16384);
+  const auto creator_opts = created.options();
+  EXPECT_EQ(creator_opts.creator_timestamp_ns, 0x1020304050607080ull);
+  EXPECT_EQ(creator_opts.creator_flags, 0xA0B0C0D0E0F00102ull);
   xproc::ipc::consumer consumer = created.open_consumer();
 
   const auto attacher = xproc::ipc::attach_varlen_channel(path).with_schema_id(0xBEEFu);
@@ -258,6 +271,8 @@ TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
   EXPECT_EQ(attach_opts.type, xproc::ipc::channel_type::varlen);
   EXPECT_EQ(attach_opts.item_size, 0u);
   EXPECT_EQ(attach_opts.schema_id, 0xBEEFu);
+  EXPECT_EQ(attach_opts.creator_timestamp_ns, 0x1020304050607080ull);
+  EXPECT_EQ(attach_opts.creator_flags, 0xA0B0C0D0E0F00102ull);
   EXPECT_FALSE(attach_opts.create_if_missing);
 
   xproc::ipc::producer producer = attacher.open_producer();
@@ -278,4 +293,28 @@ TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
   }
 
   xproc::shm::shm::unlink(path);
+}
+
+TEST(ApiSurface, BuilderCreatorMetadataDefaultsToZero) {
+  const std::string fixed_path = "/xproc_api_surface_builder_fixed_defaults";
+  const std::string varlen_path = "/xproc_api_surface_builder_varlen_defaults";
+  xproc::shm::shm::unlink(fixed_path);
+  xproc::shm::shm::unlink(varlen_path);
+
+  const auto fixed_created = xproc::ipc::make_fixed_channel(fixed_path, sizeof(std::uint32_t)).create(4096);
+  const auto varlen_created = xproc::ipc::make_varlen_channel(varlen_path).create(4096);
+
+  xproc::ipc::producer fixed_producer = fixed_created.open_producer();
+  xproc::ipc::producer varlen_producer = varlen_created.open_producer();
+
+  const auto fixed_attach_opts = xproc::ipc::attach_fixed_channel(fixed_path).options();
+  EXPECT_EQ(fixed_attach_opts.creator_timestamp_ns, 0u);
+  EXPECT_EQ(fixed_attach_opts.creator_flags, 0u);
+
+  const auto varlen_attach_opts = xproc::ipc::attach_varlen_channel(varlen_path).options();
+  EXPECT_EQ(varlen_attach_opts.creator_timestamp_ns, 0u);
+  EXPECT_EQ(varlen_attach_opts.creator_flags, 0u);
+
+  xproc::shm::shm::unlink(fixed_path);
+  xproc::shm::shm::unlink(varlen_path);
 }

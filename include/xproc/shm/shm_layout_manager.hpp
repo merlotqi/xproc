@@ -95,7 +95,15 @@ class layout_manager {
 
   static control_block* format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type, uint32_t data_alignment,
                                uint32_t fixed_item_size = 0u, std::uint64_t expected_schema_id = 0u,
+                               std::uint64_t creator_timestamp_ns = 0u, std::uint64_t creator_flags = 0u,
                                attach_behavior behavior = attach_behavior::ref_count);
+
+  static control_block* format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type,
+                               uint32_t data_alignment, uint32_t fixed_item_size, std::uint64_t expected_schema_id,
+                               attach_behavior behavior) {
+    return format(sm, capacity, is_creator, layout_type, data_alignment, fixed_item_size, expected_schema_id, 0u, 0u,
+                  behavior);
+  }
 
   static bool validate(control_block* header, size_t expected_capacity, uint32_t expected_layout_type,
                        uint32_t expected_data_alignment, uint32_t expected_fixed_item_size = 0u,
@@ -110,7 +118,8 @@ class layout_manager {
 
  private:
   static void _init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
-                           uint32_t fixed_item_size, std::uint64_t schema_id);
+                           uint32_t fixed_item_size, std::uint64_t schema_id, std::uint64_t creator_timestamp_ns,
+                           std::uint64_t creator_flags);
 };
 
 }  // namespace shm
