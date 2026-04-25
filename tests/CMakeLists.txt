@@ -101,6 +101,13 @@ set(XPROC_PHASE1_TEST_TARGETS
     xproc_ipc_observer_attach_test
 )
 
+list(APPEND XPROC_PHASE1_TEST_PATTERNS
+    "ApiSurface[.]BuilderCreatorMetadataDefaultsToZero"
+    "ApiSurface[.]DirectTransportOptionsPersistCreatorMetadataOnCreateAndAttach"
+    "LayoutValidate[.]CreatorMetadataFieldsDefaultToZero"
+    "LayoutValidate[.]AttachIgnoresCreatorMetadataMismatch"
+)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(APPEND XPROC_PHASE1_TEST_PATTERNS "IpcIntegration[.]AttachersCanInferExistingShmSize")
     list(APPEND XPROC_PHASE1_TEST_TARGETS xproc_ipc_integration_test)
@@ -108,6 +115,7 @@ endif()
 
 if(TARGET xproc_c)
     list(APPEND XPROC_PHASE1_TEST_PATTERNS
+        "CApiSmoke[.]CreatorMetadataDefaultsAndAttachReturnsPersistedValues"
         "CApiSmoke[.]ObserverRejectsSocketAndReportsLayoutError"
         "CApiSmoke[.]FixedItemSizeAndSchemaIdMismatchReportLayoutErrors"
     )
