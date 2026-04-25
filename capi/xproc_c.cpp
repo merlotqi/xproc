@@ -96,6 +96,8 @@ xproc::ipc::transport_options to_cpp_options(const xproc_c_options& options) {
   out.item_size = options.item_size;
   out.data_align = options.data_align;
   out.schema_id = options.schema_id;
+  out.creator_timestamp_ns = options.creator_timestamp_ns;
+  out.creator_flags = options.creator_flags;
   out.create_if_missing = (options.create_if_missing != 0);
   out.type = (options.channel_type == XPROC_C_CHANNEL_VARLEN) ? xproc::ipc::channel_type::varlen
                                                               : xproc::ipc::channel_type::fixed;
@@ -116,6 +118,8 @@ void fill_borrowed_options(const xproc::ipc::transport_options& options, xproc_c
   out->item_size = options.item_size;
   out->data_align = options.data_align;
   out->schema_id = options.schema_id;
+  out->creator_timestamp_ns = options.creator_timestamp_ns;
+  out->creator_flags = options.creator_flags;
   out->create_if_missing = options.create_if_missing ? 1 : 0;
   out->channel_type =
       (options.type == xproc::ipc::channel_type::varlen) ? XPROC_C_CHANNEL_VARLEN : XPROC_C_CHANNEL_FIXED;
@@ -281,6 +285,8 @@ void xproc_c_options_init(xproc_c_options* options) {
   options->item_size = 0;
   options->data_align = 0;
   options->schema_id = 0;
+  options->creator_timestamp_ns = 0;
+  options->creator_flags = 0;
   options->create_if_missing = 1;
   options->channel_type = XPROC_C_CHANNEL_FIXED;
   options->win32_object_namespace = "Local";

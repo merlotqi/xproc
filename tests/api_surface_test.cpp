@@ -6,7 +6,12 @@
 #include <cstring>
 #include <string>
 #include <thread>
+#include <vector>
 #include <xproc/xproc.hpp>
+
+// Pull the C API implementation into this test target so ApiSurface can exercise
+// the C <-> C++ bridge without changing the target linkage in tests/CMakeLists.txt.
+#include "../capi/xproc_c.cpp"
 
 TEST(ApiSurface, PlatformInfoAndProcessId) {
   EXPECT_NE(xproc::platform::platform_info::os, nullptr);
@@ -317,6 +322,60 @@ TEST(ApiSurface, BuilderCreatorMetadataDefaultsToZero) {
 
   xproc::shm::shm::unlink(fixed_path);
   xproc::shm::shm::unlink(varlen_path);
+}
+
+TEST(ApiSurface, CApiCreatorMetadataDefaultsAndRoundTrip) {
+  xproc_c_options defaults{};
+  xproc_c_options_init(&defaults);
+  EXPECT_EQ(defaults.creator_timestamp_ns, 0u);
+  EXPECT_EQ(defaults.creator_flags, 0u);
+
+  const std::string path = "/xproc_api_surface_c_creator_metadata";
+  ASSERT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+
+  xproc_c_options producer_opts;
+  xproc_c_options_init(&producer_opts);
+  producer_opts.path = path.c_str();
+  producer_opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  producer_opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  producer_opts.item_size = sizeof(std::uint32_t);
+  producer_opts.creator_timestamp_ns = 0x1122334455667788ull;
+  producer_opts.creator_flags = 0x8877665544332211ull;
+
+  ASSERT_EQ(xproc_c_validate_options_for(XPROC_C_ENDPOINT_PRODUCER, &producer_opts), XPROC_C_STATUS_OK);
+
+  xproc_c_producer* producer = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&producer_opts, &producer), XPROC_C_STATUS_OK);
+
+  xproc_c_options borrowed{};
+  ASSERT_EQ(xproc_c_producer_options(producer, &borrowed), XPROC_C_STATUS_OK);
+  EXPECT_EQ(borrowed.creator_timestamp_ns, producer_opts.creator_timestamp_ns);
+  EXPECT_EQ(borrowed.creator_flags, producer_opts.creator_flags);
+
+  xproc_c_options consumer_opts = producer_opts;
+  consumer_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  consumer_opts.create_if_missing = 0;
+
+  xproc_c_consumer* consumer = nullptr;
+  ASSERT_EQ(xproc_c_consumer_open(&consumer_opts, &consumer), XPROC_C_STATUS_OK);
+
+  xproc_c_options borrowed_consumer{};
+  ASSERT_EQ(xproc_c_consumer_options(consumer, &borrowed_consumer), XPROC_C_STATUS_OK);
+  EXPECT_EQ(borrowed_consumer.creator_timestamp_ns, producer_opts.creator_timestamp_ns);
+  EXPECT_EQ(borrowed_consumer.creator_flags, producer_opts.creator_flags);
+
+  const std::uint32_t expected = 0x12345678u;
+  ASSERT_EQ(xproc_c_producer_send_fixed_sized(producer, &expected, sizeof(expected)), XPROC_C_STATUS_OK);
+
+  std::uint32_t actual = 0;
+  std::uint32_t out_len = 0;
+  ASSERT_EQ(xproc_c_consumer_poll_copy(consumer, &actual, sizeof(actual), &out_len), XPROC_C_STATUS_OK);
+  EXPECT_EQ(out_len, sizeof(actual));
+  EXPECT_EQ(actual, expected);
+
+  xproc_c_consumer_close(consumer);
+  xproc_c_producer_close(producer);
+  EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
 }
 
 TEST(ApiSurface, BuilderCreateDoesNotInitializeManifestBeforeOpen) {

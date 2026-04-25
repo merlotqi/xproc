@@ -80,6 +80,9 @@ typedef struct xproc_c_options {
   uint32_t data_align;
   /* Optional shared-memory manifest field for protocol / schema compatibility checks. */
   uint64_t schema_id;
+  /* Optional shared-memory manifest fields persisted by the creator for application metadata. */
+  uint64_t creator_timestamp_ns;
+  uint64_t creator_flags;
   int create_if_missing;
   xproc_c_channel_type channel_type;
   const char* win32_object_namespace;
