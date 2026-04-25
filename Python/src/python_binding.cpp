@@ -498,6 +498,19 @@ std::string repr_snapshot(const snapshot& value) {
 
 PYBIND11_MODULE(_xproc_pybind, m) {
   py::register_exception<status_error>(m, "XprocError");
+  py::register_exception_translator([](std::exception_ptr p) {
+    try {
+      if (p) {
+        std::rethrow_exception(p);
+      }
+    } catch (const status_error& err) {
+      py::object exc_type = py::module_::import("xproc._xproc_pybind").attr("XprocError");
+      py::object exc = exc_type(err.what());
+      exc.attr("status") = py::cast(err.status);
+      exc.attr("layout_error") = py::cast(err.layout_error);
+      PyErr_SetObject(exc_type.ptr(), exc.ptr());
+    }
+  });
 
   py::enum_<xproc_c_status>(m, "Status")
       .value("OK", XPROC_C_STATUS_OK)

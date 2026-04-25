@@ -7,7 +7,9 @@ from typing import Final
 BytesLike = bytes | bytearray | memoryview | str
 
 
-class XprocError(RuntimeError): ...
+class XprocError(RuntimeError):
+    status: "Status"
+    layout_error: "LayoutError"
 
 
 class Status(Enum):

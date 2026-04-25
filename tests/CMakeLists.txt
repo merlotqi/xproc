@@ -114,6 +114,11 @@ if(TARGET xproc_c)
     list(APPEND XPROC_PHASE1_TEST_TARGETS xproc_capi_smoke_tests)
 endif()
 
+list(APPEND XPROC_PHASE1_TEST_PATTERNS
+    "xproc_node_smoke"
+    "xproc_python_smoke"
+)
+
 string(JOIN "|" XPROC_PHASE1_TEST_REGEX_BODY ${XPROC_PHASE1_TEST_PATTERNS})
 set(XPROC_PHASE1_TEST_REGEX "^(${XPROC_PHASE1_TEST_REGEX_BODY})$")
 

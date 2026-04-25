@@ -8,6 +8,19 @@ import uuid
 from pathlib import Path
 
 
+def make_fixed_options(path: str, item_size: int, schema_id: int, *, create_if_missing: bool) -> "xproc.TransportOptions":
+    import xproc
+
+    options = xproc.TransportOptions()
+    options.path = path
+    options.shm_size = xproc.shm_size_for_data_capacity(4096)
+    options.item_size = item_size
+    options.create_if_missing = create_if_missing
+    options.channel_type = xproc.ChannelType.FIXED
+    options.schema_id = schema_id
+    return options
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--module-dir", required=True)
@@ -23,19 +36,10 @@ def main() -> int:
 
     payload = b"hello from python"
     shm_path = f"/xproc_py_smoke_{os.getpid()}_{uuid.uuid4().hex}"
-    create_options = xproc.TransportOptions()
-    create_options.path = shm_path
-    create_options.shm_size = xproc.shm_size_for_data_capacity(4096)
-    create_options.item_size = len(payload)
-    create_options.create_if_missing = True
-    create_options.channel_type = xproc.ChannelType.FIXED
+    create_options = make_fixed_options(shm_path, len(payload), 0, create_if_missing=True)
 
-    attach_options = xproc.TransportOptions()
-    attach_options.path = shm_path
+    attach_options = make_fixed_options(shm_path, len(payload), 0, create_if_missing=False)
     attach_options.shm_size = xproc.INFER_EXISTING_SHM_SIZE
-    attach_options.item_size = len(payload)
-    attach_options.create_if_missing = False
-    attach_options.channel_type = xproc.ChannelType.FIXED
 
     xproc.validate_options_for(xproc.EndpointKind.CONSUMER, create_options)
     xproc.validate_options_for(xproc.EndpointKind.PRODUCER, attach_options)
@@ -71,6 +75,25 @@ def main() -> int:
         observer.close()
         consumer.close()
         xproc.shm_unlink(shm_path)
+
+    mismatch_path = f"/xproc_py_schema_mismatch_{os.getpid()}_{uuid.uuid4().hex}"
+    producer_options = make_fixed_options(mismatch_path, 4, 7, create_if_missing=True)
+    consumer_options = make_fixed_options(mismatch_path, 4, 8, create_if_missing=False)
+    consumer_options.shm_size = xproc.INFER_EXISTING_SHM_SIZE
+
+    producer = xproc.Producer(producer_options)
+    try:
+        try:
+            xproc.Consumer(consumer_options)
+        except xproc.XprocError as exc:
+            assert exc.status == xproc.Status.LAYOUT_ERROR
+            assert exc.layout_error == xproc.LayoutError.SCHEMA_ID_MISMATCH
+            assert "schema_id mismatch" in str(exc).lower()
+        else:
+            raise AssertionError("expected schema mismatch to raise XprocError")
+    finally:
+        producer.close()
+        xproc.shm_unlink(mismatch_path)
 
     return 0
 
