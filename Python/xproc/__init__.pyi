@@ -61,6 +61,8 @@ class TransportOptions:
     item_size: int
     data_align: int
     schema_id: int
+    creator_timestamp_ns: int
+    creator_flags: int
     create_if_missing: bool
     channel_type: ChannelType
     win32_object_namespace: str | None

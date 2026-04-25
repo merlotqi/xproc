@@ -8,7 +8,15 @@ import uuid
 from pathlib import Path
 
 
-def make_fixed_options(path: str, item_size: int, schema_id: int, *, create_if_missing: bool) -> "xproc.TransportOptions":
+def make_fixed_options(
+    path: str,
+    item_size: int,
+    schema_id: int,
+    *,
+    create_if_missing: bool,
+    creator_timestamp_ns: int = 0,
+    creator_flags: int = 0,
+) -> "xproc.TransportOptions":
     import xproc
 
     options = xproc.TransportOptions()
@@ -18,6 +26,8 @@ def make_fixed_options(path: str, item_size: int, schema_id: int, *, create_if_m
     options.create_if_missing = create_if_missing
     options.channel_type = xproc.ChannelType.FIXED
     options.schema_id = schema_id
+    options.creator_timestamp_ns = creator_timestamp_ns
+    options.creator_flags = creator_flags
     return options
 
 
@@ -33,12 +43,33 @@ def main() -> int:
     assert xproc.version_string()
     assert xproc.status_string(xproc.Status.OK) == "ok"
     assert xproc.layout_error_string(xproc.LayoutError.NONE) == "none"
+    defaults = xproc.TransportOptions()
+    assert defaults.creator_timestamp_ns == 0
+    assert defaults.creator_flags == 0
+    assert "creator_timestamp_ns=0" in repr(defaults)
+    assert "creator_flags=0" in repr(defaults)
 
     payload = b"hello from python"
     shm_path = f"/xproc_py_smoke_{os.getpid()}_{uuid.uuid4().hex}"
-    create_options = make_fixed_options(shm_path, len(payload), 0, create_if_missing=True)
+    persisted_creator_timestamp_ns = 0x1122334455667788
+    persisted_creator_flags = 0x8877665544332211
+    create_options = make_fixed_options(
+        shm_path,
+        len(payload),
+        0,
+        create_if_missing=True,
+        creator_timestamp_ns=persisted_creator_timestamp_ns,
+        creator_flags=persisted_creator_flags,
+    )
 
-    attach_options = make_fixed_options(shm_path, len(payload), 0, create_if_missing=False)
+    attach_options = make_fixed_options(
+        shm_path,
+        len(payload),
+        0,
+        create_if_missing=False,
+        creator_timestamp_ns=0x0102030405060708,
+        creator_flags=0xAABBCCDDEEFF0011,
+    )
     attach_options.shm_size = xproc.INFER_EXISTING_SHM_SIZE
 
     xproc.validate_options_for(xproc.EndpointKind.CONSUMER, create_options)
@@ -70,6 +101,16 @@ def main() -> int:
         snapshot = observer.snapshot()
         assert snapshot.attach_count >= 2
         assert consumer.pending_len() == 0
+
+        producer_borrowed = producer.options()
+        consumer_borrowed = consumer.options()
+        observer_borrowed = observer.options()
+        assert producer_borrowed.creator_timestamp_ns == persisted_creator_timestamp_ns
+        assert producer_borrowed.creator_flags == persisted_creator_flags
+        assert consumer_borrowed.creator_timestamp_ns == persisted_creator_timestamp_ns
+        assert consumer_borrowed.creator_flags == persisted_creator_flags
+        assert observer_borrowed.creator_timestamp_ns == persisted_creator_timestamp_ns
+        assert observer_borrowed.creator_flags == persisted_creator_flags
     finally:
         producer.close()
         observer.close()

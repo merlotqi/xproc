@@ -309,6 +309,14 @@ bool options_from_js(Napi::Env env, const Napi::Value& value, owned_options* out
   if (object.Has("schemaId") && !parse_uint64(env, object.Get("schemaId"), "schemaId", &out->value.schema_id)) {
     return false;
   }
+  if (object.Has("creatorTimestampNs") &&
+      !parse_uint64(env, object.Get("creatorTimestampNs"), "creatorTimestampNs", &out->value.creator_timestamp_ns)) {
+    return false;
+  }
+  if (object.Has("creatorFlags") &&
+      !parse_uint64(env, object.Get("creatorFlags"), "creatorFlags", &out->value.creator_flags)) {
+    return false;
+  }
   if (object.Has("createIfMissing") &&
       !parse_bool(env, object.Get("createIfMissing"), "createIfMissing", &out->value.create_if_missing)) {
     return false;
@@ -366,6 +374,8 @@ Napi::Object options_to_js(Napi::Env env, const xproc_c_options& options) {
   object.Set("itemSize", Napi::Number::New(env, options.item_size));
   object.Set("dataAlign", Napi::Number::New(env, options.data_align));
   object.Set("schemaId", js_bigint_from_u64(env, options.schema_id));
+  object.Set("creatorTimestampNs", js_bigint_from_u64(env, options.creator_timestamp_ns));
+  object.Set("creatorFlags", js_bigint_from_u64(env, options.creator_flags));
   object.Set("createIfMissing", Napi::Boolean::New(env, options.create_if_missing != 0));
   object.Set("channelType", Napi::Number::New(env, options.channel_type));
   object.Set("type", Napi::Number::New(env, options.channel_type));

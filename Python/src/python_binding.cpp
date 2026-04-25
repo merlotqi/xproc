@@ -34,6 +34,8 @@ struct transport_options {
     item_size = defaults.item_size;
     data_align = defaults.data_align;
     schema_id = defaults.schema_id;
+    creator_timestamp_ns = defaults.creator_timestamp_ns;
+    creator_flags = defaults.creator_flags;
     create_if_missing = (defaults.create_if_missing != 0);
     channel_type = defaults.channel_type;
     if (defaults.win32_object_namespace != nullptr) {
@@ -54,6 +56,8 @@ struct transport_options {
   std::uint32_t item_size{};
   std::uint32_t data_align{};
   std::uint64_t schema_id{};
+  std::uint64_t creator_timestamp_ns{};
+  std::uint64_t creator_flags{};
   bool create_if_missing{};
   xproc_c_channel_type channel_type{};
   std::optional<std::string> win32_object_namespace;
@@ -81,6 +85,8 @@ struct marshalled_options {
     value.item_size = options.item_size;
     value.data_align = options.data_align;
     value.schema_id = options.schema_id;
+    value.creator_timestamp_ns = options.creator_timestamp_ns;
+    value.creator_flags = options.creator_flags;
     value.create_if_missing = options.create_if_missing ? 1 : 0;
     value.channel_type = options.channel_type;
     value.socket_port = options.socket_port;
@@ -128,6 +134,8 @@ transport_options make_transport_options(const xproc_c_options& options) {
   out.item_size = options.item_size;
   out.data_align = options.data_align;
   out.schema_id = options.schema_id;
+  out.creator_timestamp_ns = options.creator_timestamp_ns;
+  out.creator_flags = options.creator_flags;
   out.create_if_missing = (options.create_if_missing != 0);
   out.channel_type = options.channel_type;
   if (options.win32_object_namespace != nullptr) {
@@ -481,6 +489,8 @@ std::string repr_transport_options(const transport_options& options) {
   repr += ", item_size=" + std::to_string(options.item_size);
   repr += ", data_align=" + std::to_string(options.data_align);
   repr += ", schema_id=" + std::to_string(options.schema_id);
+  repr += ", creator_timestamp_ns=" + std::to_string(options.creator_timestamp_ns);
+  repr += ", creator_flags=" + std::to_string(options.creator_flags);
   repr += ", create_if_missing=" + std::string(options.create_if_missing ? "True" : "False");
   repr += ", channel_type=" + std::string(channel_type_name(options.channel_type));
   repr += ")";
@@ -562,6 +572,8 @@ PYBIND11_MODULE(_xproc_pybind, m) {
       .def_readwrite("item_size", &transport_options::item_size)
       .def_readwrite("data_align", &transport_options::data_align)
       .def_readwrite("schema_id", &transport_options::schema_id)
+      .def_readwrite("creator_timestamp_ns", &transport_options::creator_timestamp_ns)
+      .def_readwrite("creator_flags", &transport_options::creator_flags)
       .def_readwrite("create_if_missing", &transport_options::create_if_missing)
       .def_readwrite("channel_type", &transport_options::channel_type)
       .def_readwrite("win32_object_namespace", &transport_options::win32_object_namespace)
