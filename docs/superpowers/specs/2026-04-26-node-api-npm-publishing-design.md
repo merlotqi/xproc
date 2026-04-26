@@ -10,13 +10,13 @@ Status: Proposed and user-approved in interactive design review
 This design defines the next-step work for the `node/` module on the `channel-manifest-phase-1` branch, with two priorities:
 
 1. Make the Node API easier to use for the common shared-memory and socket workflows.
-2. Make `npm install xproc` work out of the box on mainstream platforms by shipping prebuilt native binaries.
+2. Make `npm install @merlot/xproc` work out of the box on mainstream platforms by shipping prebuilt native binaries.
 
 The recommended direction is an incremental design:
 
 - Keep the existing low-level `Producer` / `Consumer` / `Observer` API as the stable raw layer.
 - Add a new high-level `shm` and `socket` API for happy-path usage.
-- Publish a single `xproc` npm package that contains package-local prebuilt binaries under `prebuilds/`.
+- Publish a single `@merlot/xproc` npm package that contains package-local prebuilt binaries under `prebuilds/`.
 - Load those binaries at runtime with `node-gyp-build`, while preserving a development fallback for local repository builds.
 
 This approach improves first-run usability without introducing a breaking change or forcing an early package split.
@@ -43,7 +43,7 @@ In short, the binding itself is viable, but the package is not yet publish-ready
 
 ## Goals
 
-- Make `npm install xproc` directly usable on:
+- Make `npm install @merlot/xproc` directly usable on:
   - Linux x64 glibc
   - Linux arm64 glibc
   - macOS x64
@@ -359,7 +359,7 @@ This keeps diagnostics aligned with the C API and existing test expectations.
 
 ### Package structure
 
-The first npm-release design uses a single package: `xproc`.
+The first npm-release design uses a single package: `@merlot/xproc`.
 
 The published package will contain:
 
@@ -524,9 +524,8 @@ Mitigation:
 
 This work is complete when all of the following are true:
 
-- A user can run `npm install xproc` on the approved mainstream platforms and immediately `require("xproc")`.
+- A user can run `npm install @merlot/xproc` on the approved mainstream platforms and immediately `require("@merlot/xproc")`.
 - The README leads with high-level SHM and socket workflows.
 - The package exports both raw and high-level APIs without breaking the existing low-level constructors.
 - CI proves that the packed tarball is usable outside the repository.
 - The design still leaves room for later package splitting if needed, without requiring it now.
-
