@@ -98,6 +98,49 @@ declare namespace xproc {
     attachVarlenChannel(options: ShmAttachOptions): ShmChannelEndpoints;
   }
 
+  interface SocketListenFixedOptions {
+    host?: string | null;
+    port: IntegerLike;
+    itemSize: IntegerLike;
+  }
+
+  interface SocketConnectFixedOptions {
+    host: string;
+    port: IntegerLike;
+    itemSize: IntegerLike;
+    connectRetries?: number;
+    connectRetryMs?: number;
+  }
+
+  interface SocketListenVarlenOptions {
+    host?: string | null;
+    port: IntegerLike;
+  }
+
+  interface SocketConnectVarlenOptions {
+    host: string;
+    port: IntegerLike;
+    connectRetries?: number;
+    connectRetryMs?: number;
+  }
+
+  interface SocketListener {
+    options(): ResolvedTransportOptions;
+    openConsumer(): Consumer;
+  }
+
+  interface SocketConnector {
+    options(): ResolvedTransportOptions;
+    openProducer(): Producer;
+  }
+
+  interface SocketNamespace {
+    listenFixed(options: SocketListenFixedOptions): SocketListener;
+    connectFixed(options: SocketConnectFixedOptions): SocketConnector;
+    listenVarlen(options: SocketListenVarlenOptions): SocketListener;
+    connectVarlen(options: SocketConnectVarlenOptions): SocketConnector;
+  }
+
   interface Snapshot {
     writePos: bigint;
     readPos: bigint;
@@ -152,6 +195,7 @@ declare namespace xproc {
   function shmUnlink(path: string): void;
 
   const shm: ShmNamespace;
+  const socket: SocketNamespace;
 
   const XPROC_C_STATUS_OK: 0;
   const XPROC_C_STATUS_AGAIN: 1;

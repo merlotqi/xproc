@@ -307,6 +307,28 @@ function makeShmEndpoints(baseOptions) {
   });
 }
 
+function makeSocketListener(baseOptions) {
+  return Object.freeze({
+    options() {
+      return decorateOptions({ ...baseOptions });
+    },
+    openConsumer() {
+      return new Consumer(baseOptions);
+    },
+  });
+}
+
+function makeSocketConnector(baseOptions) {
+  return Object.freeze({
+    options() {
+      return decorateOptions({ ...baseOptions });
+    },
+    openProducer() {
+      return new Producer(baseOptions);
+    },
+  });
+}
+
 const shm = Object.freeze({
   createFixedChannel(options = {}) {
     const pathValue = requireNonEmptyString(options.path, "path");
@@ -388,6 +410,62 @@ const shm = Object.freeze({
   },
 });
 
+const socket = Object.freeze({
+  listenFixed(options = {}) {
+    const baseOptions = normalizeOptions({
+      backend: BACKEND.socket,
+      channelType: CHANNEL_TYPE.fixed,
+      itemSize: options.itemSize,
+      socketHost: options.host,
+      socketPort: options.port !== undefined ? options.port : 0,
+      socketListen: true,
+    });
+    validateOptionsFor(ENDPOINT_KIND.consumer, baseOptions);
+    return makeSocketListener(baseOptions);
+  },
+
+  connectFixed(options = {}) {
+    const baseOptions = normalizeOptions({
+      backend: BACKEND.socket,
+      channelType: CHANNEL_TYPE.fixed,
+      itemSize: options.itemSize,
+      socketHost: requireNonEmptyString(options.host, "host"),
+      socketPort: options.port,
+      socketListen: false,
+      socketConnectRetries: options.connectRetries,
+      socketConnectRetryMs: options.connectRetryMs,
+    });
+    validateOptionsFor(ENDPOINT_KIND.producer, baseOptions);
+    return makeSocketConnector(baseOptions);
+  },
+
+  listenVarlen(options = {}) {
+    const baseOptions = normalizeOptions({
+      backend: BACKEND.socket,
+      channelType: CHANNEL_TYPE.varlen,
+      socketHost: options.host,
+      socketPort: options.port !== undefined ? options.port : 0,
+      socketListen: true,
+    });
+    validateOptionsFor(ENDPOINT_KIND.consumer, baseOptions);
+    return makeSocketListener(baseOptions);
+  },
+
+  connectVarlen(options = {}) {
+    const baseOptions = normalizeOptions({
+      backend: BACKEND.socket,
+      channelType: CHANNEL_TYPE.varlen,
+      socketHost: requireNonEmptyString(options.host, "host"),
+      socketPort: options.port,
+      socketListen: false,
+      socketConnectRetries: options.connectRetries,
+      socketConnectRetryMs: options.connectRetryMs,
+    });
+    validateOptionsFor(ENDPOINT_KIND.producer, baseOptions);
+    return makeSocketConnector(baseOptions);
+  },
+});
+
 module.exports = {
   ...native,
   Producer,
@@ -399,6 +477,7 @@ module.exports = {
   CHANNEL_TYPE,
   LAYOUT_ERROR,
   shm,
+  socket,
   shmSizeForDataCapacity,
   shmDataCapacityForSize,
   validateOptionsFor,
