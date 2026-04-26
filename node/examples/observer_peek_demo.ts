@@ -35,24 +35,14 @@ async function waitForPoll(consumer: Consumer): Promise<Uint8Array> {
 async function main(): Promise<void> {
   const shmPath = `/xproc_node_observer_demo_${process.pid}`;
   cleanupShm(shmPath);
-
-  const createOptions: TransportOptions = {
+  const created = xproc.shm.createFixedChannel({
     path: shmPath,
-    shmSize: xproc.shmSizeForDataCapacity(16384n),
-    channelType: "fixed",
     itemSize: 4,
-    createIfMissing: true,
-  };
-
-  const attachOptions: TransportOptions = {
-    ...createOptions,
-    shmSize: xproc.XPROC_C_INFER_EXISTING_SHM_SIZE,
-    createIfMissing: false,
-  };
-
-  const producer = new xproc.Producer(createOptions);
-  const consumer = new xproc.Consumer(attachOptions);
-  const observer = new xproc.Observer(attachOptions);
+    dataCapacity: 16384n,
+  });
+  const producer = created.openProducer();
+  const consumer = xproc.shm.attachFixedChannel({ path: shmPath }).openConsumer();
+  const observer = xproc.shm.attachFixedChannel({ path: shmPath }).openObserver();
 
   try {
     const payload = Buffer.alloc(4);

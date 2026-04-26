@@ -17,22 +17,12 @@ async function main(): Promise<void> {
   cleanupShm(shmPath);
 
   const messages = ["hello", "xproc", "variable-length", "messages"];
-
-  const createOptions: TransportOptions = {
+  const created = xproc.shm.createVarlenChannel({
     path: shmPath,
-    shmSize: xproc.shmSizeForDataCapacity(32768n),
-    channelType: "varlen",
-    createIfMissing: true,
-  };
-
-  const attachOptions: TransportOptions = {
-    ...createOptions,
-    shmSize: xproc.XPROC_C_INFER_EXISTING_SHM_SIZE,
-    createIfMissing: false,
-  };
-
-  const producer = new xproc.Producer(createOptions);
-  const consumer = new xproc.Consumer(attachOptions);
+    dataCapacity: 32768n,
+  });
+  const producer = created.openProducer();
+  const consumer = xproc.shm.attachVarlenChannel({ path: shmPath }).openConsumer();
 
   let received = 0;
 
