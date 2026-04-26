@@ -931,6 +931,34 @@ Napi::Value shm_unlink_callback(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
+Napi::Value read_existing_shm_options_callback(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsString()) {
+    throw_type_error(env, "_readExistingShmOptions requires a path string");
+    return env.Undefined();
+  }
+
+  const std::string path = info[0].As<Napi::String>().Utf8Value();
+  std::string win32_namespace_storage;
+  const char* win32_namespace = nullptr;
+  if (info.Length() > 1 && !info[1].IsUndefined() && !info[1].IsNull()) {
+    if (!info[1].IsString()) {
+      throw_type_error(env, "_readExistingShmOptions win32ObjectNamespace must be a string when provided");
+      return env.Undefined();
+    }
+    win32_namespace_storage = info[1].As<Napi::String>().Utf8Value();
+    win32_namespace = win32_namespace_storage.c_str();
+  }
+
+  xproc_c_options options{};
+  const xproc_c_status status = xproc_c_shm_read_existing_options(path.c_str(), win32_namespace, &options);
+  if (status != XPROC_C_STATUS_OK) {
+    throw_xproc_status(env, status, "_readExistingShmOptions");
+    return env.Undefined();
+  }
+  return options_to_js(env, options);
+}
+
 void export_constants(Napi::Env env, Napi::Object exports) {
   exports.Set("XPROC_C_STATUS_OK", Napi::Number::New(env, XPROC_C_STATUS_OK));
   exports.Set("XPROC_C_STATUS_AGAIN", Napi::Number::New(env, XPROC_C_STATUS_AGAIN));
@@ -984,6 +1012,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("currentProcessId", Napi::Function::New(env, current_process_id_callback));
   exports.Set("validateOptionsFor", Napi::Function::New(env, validate_options_for_callback));
   exports.Set("shmUnlink", Napi::Function::New(env, shm_unlink_callback));
+  exports.Set("_readExistingShmOptions", Napi::Function::New(env, read_existing_shm_options_callback));
 
   exports.Set("Producer", producer_wrap::init(env));
   exports.Set("Consumer", consumer_wrap::init(env));

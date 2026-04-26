@@ -57,6 +57,47 @@ declare namespace xproc {
     socketConnectRetryMs: number;
   }
 
+  interface ShmFixedCreateOptions {
+    path: string;
+    itemSize: IntegerLike;
+    dataCapacity: IntegerLike;
+    dataAlign?: IntegerLike;
+    schemaId?: IntegerLike;
+    creatorTimestampNs?: IntegerLike;
+    creatorFlags?: IntegerLike;
+    win32ObjectNamespace?: string | null;
+  }
+
+  interface ShmVarlenCreateOptions {
+    path: string;
+    dataCapacity: IntegerLike;
+    dataAlign?: IntegerLike;
+    schemaId?: IntegerLike;
+    creatorTimestampNs?: IntegerLike;
+    creatorFlags?: IntegerLike;
+    win32ObjectNamespace?: string | null;
+  }
+
+  interface ShmAttachOptions {
+    path: string;
+    schemaId?: IntegerLike;
+    win32ObjectNamespace?: string | null;
+  }
+
+  interface ShmChannelEndpoints {
+    options(): ResolvedTransportOptions;
+    openProducer(): Producer;
+    openConsumer(): Consumer;
+    openObserver(): Observer;
+  }
+
+  interface ShmNamespace {
+    createFixedChannel(options: ShmFixedCreateOptions): ShmChannelEndpoints;
+    attachFixedChannel(options: ShmAttachOptions): ShmChannelEndpoints;
+    createVarlenChannel(options: ShmVarlenCreateOptions): ShmChannelEndpoints;
+    attachVarlenChannel(options: ShmAttachOptions): ShmChannelEndpoints;
+  }
+
   interface Snapshot {
     writePos: bigint;
     readPos: bigint;
@@ -109,6 +150,8 @@ declare namespace xproc {
   function currentProcessId(): number;
   function validateOptionsFor(kind: EndpointKindInput, options: TransportOptions): true;
   function shmUnlink(path: string): void;
+
+  const shm: ShmNamespace;
 
   const XPROC_C_STATUS_OK: 0;
   const XPROC_C_STATUS_AGAIN: 1;

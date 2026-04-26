@@ -38,7 +38,8 @@ function loadNative() {
   throw new Error(message);
 }
 
-const native = loadNative();
+const nativeModule = loadNative();
+const { _readExistingShmOptions, ...native } = nativeModule;
 
 const STATUS = Object.freeze({
   ok: native.XPROC_C_STATUS_OK,
@@ -152,6 +153,11 @@ function normalizeOptions(options = {}) {
   }
 
   const normalized = { ...options };
+  for (const [key, value] of Object.entries(normalized)) {
+    if (value === undefined) {
+      delete normalized[key];
+    }
+  }
   normalized.backend = normalizeBackend(normalized.backend);
 
   const typeValue = normalized.channelType !== undefined ? normalized.channelType : normalized.type;
@@ -185,6 +191,26 @@ function decorateOptions(options) {
     ...options,
     type: options.channelType,
   };
+}
+
+function requireNonEmptyString(value, fieldName) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new TypeError(`${fieldName} must be a non-empty string`);
+  }
+  return value;
+}
+
+function makeLayoutError(message, layoutError) {
+  const error = new Error(message);
+  error.status = STATUS.layoutError;
+  error.statusCode = native.statusString(STATUS.layoutError);
+  error.layoutError = layoutError;
+  error.layoutErrorCode = native.layoutErrorString(layoutError);
+  return error;
+}
+
+function inferExistingShmOptions(pathValue, win32ObjectNamespace) {
+  return decorateOptions(_readExistingShmOptions(pathValue, win32ObjectNamespace));
 }
 
 function coerceBuffer(value, fieldName = "data") {
@@ -260,6 +286,108 @@ function validateOptionsFor(kind, options) {
   return native.validateOptionsFor(normalizeEndpointKind(kind), normalizeOptions(options));
 }
 
+function makeShmEndpoints(baseOptions) {
+  const producerOptions = { ...baseOptions };
+  const consumerOptions = { ...baseOptions };
+  const observerOptions = { ...baseOptions, createIfMissing: false };
+
+  return Object.freeze({
+    options() {
+      return decorateOptions({ ...baseOptions });
+    },
+    openProducer() {
+      return new Producer(producerOptions);
+    },
+    openConsumer() {
+      return new Consumer(consumerOptions);
+    },
+    openObserver() {
+      return new Observer(observerOptions);
+    },
+  });
+}
+
+const shm = Object.freeze({
+  createFixedChannel(options = {}) {
+    const pathValue = requireNonEmptyString(options.path, "path");
+    const baseOptions = normalizeOptions({
+      path: pathValue,
+      shmSize: shmSizeForDataCapacity(normalizeIntegerLike(options.dataCapacity, "dataCapacity")),
+      itemSize: options.itemSize,
+      dataAlign: options.dataAlign,
+      schemaId: options.schemaId,
+      creatorTimestampNs: options.creatorTimestampNs,
+      creatorFlags: options.creatorFlags,
+      win32ObjectNamespace: options.win32ObjectNamespace,
+      createIfMissing: true,
+      channelType: CHANNEL_TYPE.fixed,
+    });
+    validateOptionsFor(ENDPOINT_KIND.producer, baseOptions);
+    validateOptionsFor(ENDPOINT_KIND.consumer, baseOptions);
+    return makeShmEndpoints(baseOptions);
+  },
+
+  attachFixedChannel(options = {}) {
+    const pathValue = requireNonEmptyString(options.path, "path");
+    const inferred = inferExistingShmOptions(pathValue, options.win32ObjectNamespace);
+    if (inferred.channelType !== CHANNEL_TYPE.fixed) {
+      throw makeLayoutError("attachFixedChannel: expected a fixed shared-memory channel", LAYOUT_ERROR.layoutTypeMismatch);
+    }
+    const baseOptions = normalizeOptions({
+      ...inferred,
+      path: pathValue,
+      schemaId: options.schemaId !== undefined ? options.schemaId : inferred.schemaId,
+      win32ObjectNamespace: options.win32ObjectNamespace !== undefined
+        ? options.win32ObjectNamespace
+        : inferred.win32ObjectNamespace,
+      createIfMissing: false,
+      channelType: CHANNEL_TYPE.fixed,
+    });
+    validateOptionsFor(ENDPOINT_KIND.producer, baseOptions);
+    validateOptionsFor(ENDPOINT_KIND.consumer, baseOptions);
+    return makeShmEndpoints(baseOptions);
+  },
+
+  createVarlenChannel(options = {}) {
+    const pathValue = requireNonEmptyString(options.path, "path");
+    const baseOptions = normalizeOptions({
+      path: pathValue,
+      shmSize: shmSizeForDataCapacity(normalizeIntegerLike(options.dataCapacity, "dataCapacity")),
+      dataAlign: options.dataAlign,
+      schemaId: options.schemaId,
+      creatorTimestampNs: options.creatorTimestampNs,
+      creatorFlags: options.creatorFlags,
+      win32ObjectNamespace: options.win32ObjectNamespace,
+      createIfMissing: true,
+      channelType: CHANNEL_TYPE.varlen,
+    });
+    validateOptionsFor(ENDPOINT_KIND.producer, baseOptions);
+    validateOptionsFor(ENDPOINT_KIND.consumer, baseOptions);
+    return makeShmEndpoints(baseOptions);
+  },
+
+  attachVarlenChannel(options = {}) {
+    const pathValue = requireNonEmptyString(options.path, "path");
+    const inferred = inferExistingShmOptions(pathValue, options.win32ObjectNamespace);
+    if (inferred.channelType !== CHANNEL_TYPE.varlen) {
+      throw makeLayoutError("attachVarlenChannel: expected a varlen shared-memory channel", LAYOUT_ERROR.layoutTypeMismatch);
+    }
+    const baseOptions = normalizeOptions({
+      ...inferred,
+      path: pathValue,
+      schemaId: options.schemaId !== undefined ? options.schemaId : inferred.schemaId,
+      win32ObjectNamespace: options.win32ObjectNamespace !== undefined
+        ? options.win32ObjectNamespace
+        : inferred.win32ObjectNamespace,
+      createIfMissing: false,
+      channelType: CHANNEL_TYPE.varlen,
+    });
+    validateOptionsFor(ENDPOINT_KIND.producer, baseOptions);
+    validateOptionsFor(ENDPOINT_KIND.consumer, baseOptions);
+    return makeShmEndpoints(baseOptions);
+  },
+});
+
 module.exports = {
   ...native,
   Producer,
@@ -270,6 +398,7 @@ module.exports = {
   BACKEND,
   CHANNEL_TYPE,
   LAYOUT_ERROR,
+  shm,
   shmSizeForDataCapacity,
   shmDataCapacityForSize,
   validateOptionsFor,
