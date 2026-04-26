@@ -40,8 +40,12 @@ test("high-level shm fixed create/attach infers manifest fields", () => {
 
     const observed = observer.peekCopy();
     const polled = consumer.pollCopy();
-    assert.ok(observed !== null);
-    assert.ok(polled !== null);
+    if (observed === null) {
+      throw new Error("expected observer payload");
+    }
+    if (polled === null) {
+      throw new Error("expected consumer payload");
+    }
     assert.deepEqual([...Buffer.from(observed)], [1, 2, 3, 4]);
     assert.deepEqual([...Buffer.from(polled)], [1, 2, 3, 4]);
 
@@ -75,7 +79,9 @@ test("high-level shm varlen create/attach infers manifest fields", () => {
   try {
     producer.sendVarlen("hello-high-level-varlen");
     const payload = consumer.pollCopy();
-    assert.ok(payload !== null);
+    if (payload === null) {
+      throw new Error("expected consumer payload");
+    }
     assert.equal(Buffer.from(payload).toString("utf8"), "hello-high-level-varlen");
     assert.equal(consumer.options().type, xproc.CHANNEL_TYPE.varlen);
     assert.equal(consumer.options().schemaId, 0x2233n);
