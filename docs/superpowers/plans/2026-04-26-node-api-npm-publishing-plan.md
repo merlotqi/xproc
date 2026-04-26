@@ -8,6 +8,14 @@
 
 **Tech Stack:** Node.js CommonJS, N-API / node-addon-api, xproc C API, CMake/CTest, GitHub Actions, npm trusted publishing (OIDC), TypeScript declaration files.
 
+## Execution Status
+
+- Completed on 2026-04-26: Task 1 through Task 4, including scoped package wiring for `@merlot/xproc`, staged prebuild loading, and packed-tarball install verification.
+- Example migration is being split into multiple implementation commits:
+  - SHM example migration: `01daa0e`
+  - Socket loopback examples: `0bb6df6`
+- Remaining implementation work in this plan: rewrite `node/README.md`, update CI coverage for packaged Node artifacts, and add the publish workflow.
+
 ---
 
 ## File Structure
