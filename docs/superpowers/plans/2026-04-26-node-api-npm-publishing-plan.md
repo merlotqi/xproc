@@ -14,7 +14,11 @@
 - Example migration is being split into multiple implementation commits:
   - SHM example migration: `01daa0e`
   - Socket loopback examples: `0bb6df6`
-- Remaining implementation work in this plan: rewrite `node/README.md`, update CI coverage for packaged Node artifacts, and add the publish workflow.
+- Completed on 2026-04-26: npm-consumer README rewrite and workflow automation.
+  - README rewrite: `644b9e9`
+  - Verification-only SHM test guard fix: `a3b92e7`
+  - CI and publish workflow wiring: `e3422db`
+- Implementation status: complete in the feature branch, with local verification covering C API regression, Node typecheck/test, packaged file assertions, and packed-install smoke verification.
 
 ---
 
