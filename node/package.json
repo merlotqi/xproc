@@ -14,6 +14,8 @@
     "example:fixed-channel-inprocess": "node --experimental-strip-types examples/fixed_channel_inprocess.ts",
     "example:varlen-channel-inprocess": "node --experimental-strip-types examples/varlen_channel_inprocess.ts",
     "example:observer-peek-demo": "node --experimental-strip-types examples/observer_peek_demo.ts",
+    "example:socket-fixed-loopback": "node --experimental-strip-types examples/socket_fixed_loopback.ts",
+    "example:socket-varlen-loopback": "node --experimental-strip-types examples/socket_varlen_loopback.ts",
     "example:parent-child-struct-monitor": "node --experimental-strip-types examples/parent_child_struct_monitor.ts",
     "example:node-parent-cpp-child-struct-monitor": "node --experimental-strip-types examples/node_parent_cpp_child_struct_monitor.ts"
   },
