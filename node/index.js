@@ -1,44 +1,8 @@
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
+const loadNative = require("./lib/load-native");
 
-function loadNative() {
-  const buildDir = path.join(__dirname, "..", "build");
-  const multiConfigCandidates = ["Release", "Debug", "RelWithDebInfo", "MinSizeRel"].map((config) =>
-    path.join(buildDir, "node", config, "xproc.node"),
-  );
-  const candidates = [
-    path.join(__dirname, "xproc.node"),
-    path.join(buildDir, "node", "xproc.node"),
-    ...multiConfigCandidates,
-    path.join(buildDir, "Release", "xproc.node"),
-    path.join(buildDir, "Debug", "xproc.node"),
-  ];
-
-  let lastError = null;
-  for (const candidate of candidates) {
-    if (!fs.existsSync(candidate)) {
-      continue;
-    }
-    try {
-      return require(candidate);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  const message = [
-    "Unable to load xproc.node.",
-    `Tried: ${candidates.join(", ")}`,
-    lastError ? `Last error: ${lastError.message}` : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  throw new Error(message);
-}
-
-const nativeModule = loadNative();
+const nativeModule = loadNative(__dirname);
 const { _readExistingShmOptions, ...native } = nativeModule;
 
 const STATUS = Object.freeze({
