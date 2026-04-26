@@ -251,6 +251,36 @@ TEST(CApiSmoke, CreatorMetadataDefaultsAndAttachReturnsPersistedValues) {
   EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
 }
 
+TEST(CApiSmoke, ReadExistingShmOptionsInfersManifestBackedFields) {
+  const std::string path = "/xproc_capi_read_existing_options";
+  ASSERT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+
+  xproc_c_options creator{};
+  xproc_c_options_init(&creator);
+  creator.path = path.c_str();
+  creator.shm_size = xproc_c_shm_size_for_data_capacity(8192);
+  creator.channel_type = XPROC_C_CHANNEL_FIXED;
+  creator.item_size = sizeof(std::uint32_t);
+  creator.schema_id = 0x1234ull;
+  creator.creator_timestamp_ns = 0x1122334455667788ull;
+  creator.creator_flags = 0x8877665544332211ull;
+
+  xproc_c_producer* producer = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&creator, &producer), XPROC_C_STATUS_OK);
+
+  xproc_c_options inferred{};
+  ASSERT_EQ(xproc_c_shm_read_existing_options(path.c_str(), "Local", &inferred), XPROC_C_STATUS_OK);
+  EXPECT_EQ(inferred.channel_type, XPROC_C_CHANNEL_FIXED);
+  EXPECT_EQ(inferred.item_size, sizeof(std::uint32_t));
+  EXPECT_EQ(inferred.schema_id, 0x1234ull);
+  EXPECT_EQ(inferred.creator_timestamp_ns, 0x1122334455667788ull);
+  EXPECT_EQ(inferred.creator_flags, 0x8877665544332211ull);
+  EXPECT_EQ(inferred.create_if_missing, 0);
+
+  xproc_c_producer_close(producer);
+  EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+}
+
 TEST(CApiSmoke, ValidationAndErrorCopy) {
   xproc_c_options opts;
   xproc_c_options_init(&opts);

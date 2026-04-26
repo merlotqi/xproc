@@ -11,6 +11,7 @@
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/observer.hpp>
 #include <xproc/ipc/options.hpp>
+#include <xproc/ipc/shm_builders.hpp>
 #include <xproc/ipc/transport_factory.hpp>
 #include <xproc/platform/process.hpp>
 #include <xproc/shm/layout_exception.hpp>
@@ -303,6 +304,26 @@ std::size_t xproc_c_shm_size_for_data_capacity(std::size_t data_capacity) {
 
 std::size_t xproc_c_shm_data_capacity_for_size(std::size_t shm_size) {
   return xproc::ipc::shm_data_capacity_for_size(shm_size);
+}
+
+xproc_c_status xproc_c_shm_read_existing_options(const char* path, const char* win32_object_namespace,
+                                                 xproc_c_options* out_options) {
+  if (path == nullptr) {
+    return invalid_argument("xproc_c_shm_read_existing_options: path must not be null");
+  }
+  if (out_options == nullptr) {
+    return invalid_argument("xproc_c_shm_read_existing_options: out_options must not be null");
+  }
+
+  return catch_status([&]() -> xproc_c_status {
+    const std::string ns = (win32_object_namespace != nullptr) ? win32_object_namespace : "Local";
+    const xproc::ipc::transport_options options =
+        xproc::ipc::detail::read_existing_shm_options(path, ns, "xproc_c_shm_read_existing_options: ");
+    xproc_c_options_init(out_options);
+    fill_borrowed_options(options, out_options);
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
 }
 
 const char* xproc_c_status_string(xproc_c_status status) {

@@ -133,6 +133,21 @@ XPROC_C_API size_t xproc_c_shm_size_for_data_capacity(size_t data_capacity);
 XPROC_C_API size_t xproc_c_shm_data_capacity_for_size(size_t shm_size);
 
 /**
+ * @brief Reads the manifest-backed options from an existing shared-memory segment.
+ *
+ * This helper infers the persisted shared-memory configuration so higher-level
+ * bindings can attach without restating fixed item sizing or other creator-owned
+ * metadata.
+ *
+ * @param path Shared-memory object name.
+ * @param win32_object_namespace Optional Win32 namespace. Pass NULL to use the default.
+ * @param out_options Receives the inferred option view.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status and thread-local diagnostics.
+ */
+XPROC_C_API xproc_c_status xproc_c_shm_read_existing_options(const char* path, const char* win32_object_namespace,
+                                                             xproc_c_options* out_options);
+
+/**
  * @brief Returns a stable string for a status code.
  *
  * @param status Status value to stringify.
