@@ -127,6 +127,16 @@ TEST(LayoutValidate, ReadEmbeddedLayoutVersion) {
   EXPECT_EQ(v.minor, lm::version_minor);
 }
 
+TEST(LayoutValidate, CreatorMetadataFieldsDefaultToZero) {
+  xproc::shm::control_block header{};
+  EXPECT_EQ(header.creator_timestamp_ns, 0u);
+  EXPECT_EQ(header.creator_flags, 0u);
+
+  xproc::ipc::transport_options opts{};
+  EXPECT_EQ(opts.creator_timestamp_ns, 0u);
+  EXPECT_EQ(opts.creator_flags, 0u);
+}
+
 TEST(LayoutValidate, DefaultShmBackendStub) {
   xproc::shm::default_shm_backend b;
   EXPECT_FALSE(b.is_attached());
@@ -141,4 +151,204 @@ TEST(LayoutValidate, RingbufferFacadeAndErrorStrings) {
   EXPECT_EQ(view.capacity_bytes(), 1024u);
   EXPECT_EQ(view.data_alignment(), 8u);
   EXPECT_STREQ(xproc::ringbuffer::ringbuffer_error_cstr(xproc::ringbuffer::ringbuffer_error::empty), "empty");
+}
+
+TEST(LayoutValidate, FixedItemSizeMismatchOnAttach) {
+  const std::string path = "/xproc_layout_fixed_item_size_attach";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = path;
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(4096);
+  creator.type = xproc::ipc::channel_type::fixed;
+  creator.item_size = sizeof(std::uint32_t);
+
+  {
+    xproc::ipc::producer producer(creator);
+
+    xproc::ipc::transport_options attach = creator;
+    attach.shm_size = xproc::ipc::infer_existing_shm_size;
+    attach.create_if_missing = false;
+    attach.item_size = sizeof(std::uint64_t);
+
+    try {
+      (void)xproc::ipc::consumer(attach);
+      FAIL() << "expected layout_exception";
+    } catch (const xproc::shm::layout_exception& e) {
+      EXPECT_EQ(e.code(), err::fixed_item_size_mismatch);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(LayoutValidate, AlignmentMismatchOnAttach) {
+  const std::string path = "/xproc_layout_alignment_attach";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = path;
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(4096);
+  creator.type = xproc::ipc::channel_type::fixed;
+  creator.item_size = sizeof(std::uint32_t);
+  creator.data_align = 16u;
+
+  {
+    xproc::ipc::producer producer(creator);
+
+    xproc::ipc::transport_options attach = creator;
+    attach.shm_size = xproc::ipc::infer_existing_shm_size;
+    attach.create_if_missing = false;
+    attach.data_align = 8u;
+
+    try {
+      (void)xproc::ipc::consumer(attach);
+      FAIL() << "expected layout_exception";
+    } catch (const xproc::shm::layout_exception& e) {
+      EXPECT_EQ(e.code(), err::alignment_invalid);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(LayoutValidate, ObserverRejectsLayoutTypeMismatchOnAttach) {
+  const std::string path = "/xproc_layout_observer_type_attach";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = path;
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(4096);
+  creator.type = xproc::ipc::channel_type::fixed;
+  creator.item_size = sizeof(std::uint32_t);
+
+  {
+    xproc::ipc::producer producer(creator);
+
+    xproc::ipc::transport_options observer_opts = creator;
+    observer_opts.shm_size = xproc::ipc::infer_existing_shm_size;
+    observer_opts.create_if_missing = false;
+    observer_opts.type = xproc::ipc::channel_type::varlen;
+
+    try {
+      (void)xproc::ipc::observer(observer_opts);
+      FAIL() << "expected layout_exception";
+    } catch (const xproc::shm::layout_exception& e) {
+      EXPECT_EQ(e.code(), err::layout_type_mismatch);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(LayoutValidate, ObserverRejectsSchemaMismatchOnAttach) {
+  const std::string path = "/xproc_layout_observer_schema_attach";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = path;
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(4096);
+  creator.type = xproc::ipc::channel_type::varlen;
+  creator.schema_id = 0x01020304u;
+
+  {
+    xproc::ipc::producer producer(creator);
+
+    xproc::ipc::transport_options observer_opts = creator;
+    observer_opts.shm_size = xproc::ipc::infer_existing_shm_size;
+    observer_opts.create_if_missing = false;
+    observer_opts.schema_id += 1u;
+
+    try {
+      (void)xproc::ipc::observer(observer_opts);
+      FAIL() << "expected layout_exception";
+    } catch (const xproc::shm::layout_exception& e) {
+      EXPECT_EQ(e.code(), err::schema_id_mismatch);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(LayoutValidate, AttachIgnoresCreatorMetadataMismatch) {
+  const std::string path = "/xproc_layout_creator_metadata_attach";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
+                           .with_creator_timestamp_ns(123456789u)
+                           .with_creator_flags(0x55AAu)
+                           .create(4096);
+
+  xproc::ipc::producer producer(created.options());
+
+  xproc::ipc::transport_options attach = created.options();
+  attach.shm_size = xproc::ipc::infer_existing_shm_size;
+  attach.create_if_missing = false;
+  attach.creator_timestamp_ns += 1u;
+  attach.creator_flags += 1u;
+
+  EXPECT_NO_THROW({
+    xproc::ipc::consumer consumer(attach);
+    (void)consumer;
+  });
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(LayoutValidate, VersionMismatchOnAttach) {
+  const std::string path = "/xproc_layout_version_attach";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = path;
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(4096);
+  creator.type = xproc::ipc::channel_type::fixed;
+  creator.item_size = sizeof(std::uint32_t);
+
+  {
+    xproc::ipc::producer producer(creator);
+    producer.header()->version_minor = lm::version_minor + 1u;
+
+    xproc::ipc::transport_options attach = creator;
+    attach.shm_size = xproc::ipc::infer_existing_shm_size;
+    attach.create_if_missing = false;
+
+    try {
+      (void)xproc::ipc::consumer(attach);
+      FAIL() << "expected layout_exception";
+    } catch (const xproc::shm::layout_exception& e) {
+      EXPECT_EQ(e.code(), err::version_mismatch);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(LayoutValidate, ObserverRejectsVersionMismatchOnAttach) {
+  const std::string path = "/xproc_layout_observer_version_attach";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = path;
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(4096);
+  creator.type = xproc::ipc::channel_type::varlen;
+  creator.schema_id = 0x99u;
+
+  {
+    xproc::ipc::producer producer(creator);
+    producer.header()->version_minor = lm::version_minor + 1u;
+
+    xproc::ipc::transport_options observer_opts = creator;
+    observer_opts.shm_size = xproc::ipc::infer_existing_shm_size;
+    observer_opts.create_if_missing = false;
+
+    try {
+      (void)xproc::ipc::observer(observer_opts);
+      FAIL() << "expected layout_exception";
+    } catch (const xproc::shm::layout_exception& e) {
+      EXPECT_EQ(e.code(), err::version_mismatch);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
 }

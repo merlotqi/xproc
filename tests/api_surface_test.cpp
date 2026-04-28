@@ -177,3 +177,203 @@ TEST(ApiSurface, IpcInspectorPolymorphism) {
 
   xproc::shm::shm::unlink(path);
 }
+
+TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
+  const std::string path = "/xproc_api_surface_builder_fixed";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
+                           .with_data_align(16u)
+                           .with_schema_id(0x1234u)
+                           .with_creator_timestamp_ns(0x1122334455667788ull)
+                           .with_creator_flags(0x8877665544332211ull)
+                           .create(8192);
+
+  const auto creator_opts = created.options();
+  EXPECT_EQ(creator_opts.path, path);
+  EXPECT_EQ(creator_opts.shm_size, xproc::ipc::shm_size_for_data_capacity(8192));
+  EXPECT_EQ(creator_opts.type, xproc::ipc::channel_type::fixed);
+  EXPECT_EQ(creator_opts.item_size, sizeof(std::uint32_t));
+  EXPECT_EQ(creator_opts.data_align, 16u);
+  EXPECT_EQ(creator_opts.schema_id, 0x1234u);
+  EXPECT_EQ(creator_opts.creator_timestamp_ns, 0x1122334455667788ull);
+  EXPECT_EQ(creator_opts.creator_flags, 0x8877665544332211ull);
+  EXPECT_TRUE(creator_opts.create_if_missing);
+
+  xproc::ipc::producer producer = created.open_producer();
+
+  const auto attacher = xproc::ipc::attach_fixed_channel(path);
+  const auto attach_opts = attacher.options();
+  EXPECT_EQ(attach_opts.path, path);
+  EXPECT_EQ(attach_opts.shm_size, creator_opts.shm_size);
+  EXPECT_EQ(attach_opts.type, xproc::ipc::channel_type::fixed);
+  EXPECT_EQ(attach_opts.item_size, sizeof(std::uint32_t));
+  EXPECT_EQ(attach_opts.data_align, 16u);
+  EXPECT_EQ(attach_opts.schema_id, 0x1234u);
+  EXPECT_EQ(attach_opts.creator_timestamp_ns, 0x1122334455667788ull);
+  EXPECT_EQ(attach_opts.creator_flags, 0x8877665544332211ull);
+  EXPECT_FALSE(attach_opts.create_if_missing);
+
+  xproc::ipc::consumer consumer = attacher.open_consumer();
+  xproc::ipc::observer observer = attacher.open_observer();
+
+  producer.send_fixed<std::uint32_t>(0xA1B2C3D4u);
+
+  bool peeked = false;
+  while (!peeked) {
+    peeked = observer.peek([&](const void* p, std::uint32_t len) {
+      EXPECT_EQ(len, sizeof(std::uint32_t));
+      std::uint32_t value = 0;
+      std::memcpy(&value, p, sizeof(value));
+      EXPECT_EQ(value, 0xA1B2C3D4u);
+    });
+    if (!peeked) {
+      const std::uint32_t c = observer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&observer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  bool consumed = false;
+  while (!consumed) {
+    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+      EXPECT_EQ(len, sizeof(std::uint32_t));
+      std::uint32_t value = 0;
+      std::memcpy(&value, p, sizeof(value));
+      EXPECT_EQ(value, 0xA1B2C3D4u);
+    });
+    if (!consumed) {
+      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
+  const std::string path = "/xproc_api_surface_builder_varlen";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_varlen_channel(path)
+                           .with_schema_id(0xBEEFu)
+                           .with_creator_timestamp_ns(0x1020304050607080ull)
+                           .with_creator_flags(0xA0B0C0D0E0F00102ull)
+                           .create(16384);
+  const auto creator_opts = created.options();
+  EXPECT_EQ(creator_opts.creator_timestamp_ns, 0x1020304050607080ull);
+  EXPECT_EQ(creator_opts.creator_flags, 0xA0B0C0D0E0F00102ull);
+  xproc::ipc::consumer consumer = created.open_consumer();
+
+  const auto attacher = xproc::ipc::attach_varlen_channel(path).with_schema_id(0xBEEFu);
+  const auto attach_opts = attacher.options();
+  EXPECT_EQ(attach_opts.path, path);
+  EXPECT_EQ(attach_opts.shm_size, xproc::ipc::shm_size_for_data_capacity(16384));
+  EXPECT_EQ(attach_opts.type, xproc::ipc::channel_type::varlen);
+  EXPECT_EQ(attach_opts.item_size, 0u);
+  EXPECT_EQ(attach_opts.schema_id, 0xBEEFu);
+  EXPECT_EQ(attach_opts.creator_timestamp_ns, 0x1020304050607080ull);
+  EXPECT_EQ(attach_opts.creator_flags, 0xA0B0C0D0E0F00102ull);
+  EXPECT_FALSE(attach_opts.create_if_missing);
+
+  xproc::ipc::producer producer = attacher.open_producer();
+
+  const std::string expected = "builder-varlen-roundtrip";
+  producer.send_varlen(expected.data(), static_cast<std::uint32_t>(expected.size()));
+
+  bool consumed = false;
+  while (!consumed) {
+    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+      std::string actual(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      EXPECT_EQ(actual, expected);
+    });
+    if (!consumed) {
+      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+    }
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(ApiSurface, BuilderCreatorMetadataDefaultsToZero) {
+  const std::string fixed_path = "/xproc_api_surface_builder_fixed_defaults";
+  const std::string varlen_path = "/xproc_api_surface_builder_varlen_defaults";
+  xproc::shm::shm::unlink(fixed_path);
+  xproc::shm::shm::unlink(varlen_path);
+
+  const auto fixed_created = xproc::ipc::make_fixed_channel(fixed_path, sizeof(std::uint32_t)).create(4096);
+  const auto varlen_created = xproc::ipc::make_varlen_channel(varlen_path).create(4096);
+
+  xproc::ipc::producer fixed_producer = fixed_created.open_producer();
+  xproc::ipc::producer varlen_producer = varlen_created.open_producer();
+
+  const auto fixed_attach_opts = xproc::ipc::attach_fixed_channel(fixed_path).options();
+  EXPECT_EQ(fixed_attach_opts.creator_timestamp_ns, 0u);
+  EXPECT_EQ(fixed_attach_opts.creator_flags, 0u);
+
+  const auto varlen_attach_opts = xproc::ipc::attach_varlen_channel(varlen_path).options();
+  EXPECT_EQ(varlen_attach_opts.creator_timestamp_ns, 0u);
+  EXPECT_EQ(varlen_attach_opts.creator_flags, 0u);
+
+  xproc::shm::shm::unlink(fixed_path);
+  xproc::shm::shm::unlink(varlen_path);
+}
+
+TEST(ApiSurface, BuilderCreateDoesNotInitializeManifestBeforeOpen) {
+  const std::string path = "/xproc_api_surface_builder_no_side_effect";
+  xproc::shm::shm::unlink(path);
+
+  const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
+                           .with_creator_timestamp_ns(0x1234u)
+                           .with_creator_flags(0x5678u)
+                           .create(4096);
+
+  EXPECT_THROW((void)xproc::ipc::attach_fixed_channel(path).options(), std::runtime_error);
+
+  xproc::ipc::producer producer = created.open_producer();
+  const auto attach_opts = xproc::ipc::attach_fixed_channel(path).options();
+  EXPECT_EQ(attach_opts.creator_timestamp_ns, 0x1234u);
+  EXPECT_EQ(attach_opts.creator_flags, 0x5678u);
+  (void)producer;
+
+  xproc::shm::shm::unlink(path);
+}
+
+TEST(ApiSurface, DirectTransportOptionsPersistCreatorMetadataOnCreateAndAttach) {
+  const std::string path = "/xproc_api_surface_direct_creator_metadata";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator_opts;
+  creator_opts.path = path;
+  creator_opts.shm_size = xproc::ipc::shm_size_for_data_capacity(8192);
+  creator_opts.type = xproc::ipc::channel_type::fixed;
+  creator_opts.item_size = sizeof(std::uint32_t);
+  creator_opts.creator_timestamp_ns = 0xCAFEBABE12345678ull;
+  creator_opts.creator_flags = 0x0F0E0D0C0B0A0908ull;
+
+  xproc::ipc::producer producer(creator_opts);
+  EXPECT_EQ(producer.header()->creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(producer.header()->creator_flags, creator_opts.creator_flags);
+  EXPECT_EQ(producer.options().creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(producer.options().creator_flags, creator_opts.creator_flags);
+
+  xproc::ipc::transport_options attach_opts = creator_opts;
+  attach_opts.shm_size = xproc::ipc::infer_existing_shm_size;
+  attach_opts.create_if_missing = false;
+  attach_opts.creator_timestamp_ns = 1u;
+  attach_opts.creator_flags = 2u;
+
+  xproc::ipc::consumer consumer(attach_opts);
+  EXPECT_EQ(consumer.options().creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(consumer.options().creator_flags, creator_opts.creator_flags);
+  EXPECT_EQ(consumer.header()->creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(consumer.header()->creator_flags, creator_opts.creator_flags);
+
+  xproc::ipc::observer observer(attach_opts);
+  EXPECT_EQ(observer.options().creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(observer.options().creator_flags, creator_opts.creator_flags);
+  EXPECT_EQ(observer.header()->creator_timestamp_ns, creator_opts.creator_timestamp_ns);
+  EXPECT_EQ(observer.header()->creator_flags, creator_opts.creator_flags);
+
+  xproc::shm::shm::unlink(path);
+}

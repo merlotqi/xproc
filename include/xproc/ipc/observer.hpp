@@ -37,13 +37,19 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
     const std::size_t data_capacity = shm_data_capacity_for_size(opts_.shm_size);
     const std::uint32_t layout_type = (opts_.type == channel_type::fixed) ? 0u : 1u;
     const std::uint32_t data_align = opts_.data_align ? opts_.data_align : 8u;
-    header_ = shm::layout_manager::format(shm_, data_capacity, false, layout_type, data_align,
+    const std::uint32_t fixed_item_size = (opts_.type == channel_type::fixed) ? opts_.item_size : 0u;
+    header_ = shm::layout_manager::format(shm_, data_capacity, false, layout_type, data_align, fixed_item_size,
+                                          opts_.schema_id, opts_.creator_timestamp_ns, opts_.creator_flags,
                                           shm::attach_behavior::readonly);
     if (!header_) {
       const auto* raw = static_cast<const shm::control_block*>(shm_.addr());
-      const auto err = shm::layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align);
+      const auto err = shm::layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align,
+                                                              fixed_item_size, opts_.schema_id);
       throw shm::layout_exception("observer: ", err);
     }
+
+    opts_.creator_timestamp_ns = header_->creator_timestamp_ns;
+    opts_.creator_flags = header_->creator_flags;
 
     if (opts_.type == channel_type::fixed) {
       fixed_reader_ = std::make_unique<ringbuffer::fixed_reader>(header_);

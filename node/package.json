@@ -1,16 +1,50 @@
 {
-  "name": "xproc",
+  "name": "@merlot/xproc",
   "version": "0.1.0",
   "description": "xproc: High-performance Single Producer Single Consumer (SPSC) Inter-Process Communication (IPC) library using ring buffers. Supports both fixed-length frames and variable-length messages.",
   "main": "index.js",
+  "types": "index.d.ts",
   "gypfile": true,
-  "scripts": {},
+  "scripts": {
+    "test": "node --test --experimental-strip-types test/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "stage:prebuild": "node scripts/stage-prebuild.js",
+    "assert:packlist": "node scripts/assert-packlist.js",
+    "verify:pack": "node scripts/verify-packed-install.js",
+    "example:fixed-channel-inprocess": "node --experimental-strip-types examples/fixed_channel_inprocess.ts",
+    "example:varlen-channel-inprocess": "node --experimental-strip-types examples/varlen_channel_inprocess.ts",
+    "example:observer-peek-demo": "node --experimental-strip-types examples/observer_peek_demo.ts",
+    "example:socket-fixed-loopback": "node --experimental-strip-types examples/socket_fixed_loopback.ts",
+    "example:socket-varlen-loopback": "node --experimental-strip-types examples/socket_varlen_loopback.ts",
+    "example:parent-child-struct-monitor": "node --experimental-strip-types examples/parent_child_struct_monitor.ts",
+    "example:node-parent-cpp-child-struct-monitor": "node --experimental-strip-types examples/node_parent_cpp_child_struct_monitor.ts"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "globals.d.ts",
+    "xproc-types.d.ts",
+    "LICENSE",
+    "README.md",
+    "examples/",
+    "lib/",
+    "prebuilds/"
+  ],
   "dependencies": {
     "node-addon-api": "^8.7.0",
-    "node-api-headers": "^1.8.0"
+    "node-api-headers": "^1.8.0",
+    "node-gyp-build": "^4.8.4"
   },
   "devDependencies": {
     "node-gyp": "^12.2.0"
   },
-  "license": "GPL-3.0-only"
+  "license": "GPL-3.0-only",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/merlotqi/xproc.git",
+    "directory": "node"
+  }
 }

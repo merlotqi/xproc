@@ -24,22 +24,16 @@ High-performance **Single Producer Single Consumer (SPSC)** Inter-Process Commun
 ```cpp
 #include <xproc/xproc.hpp>
 
-// Producer side
-xproc::ipc::transport_options opts;
-opts.path = "/my_ipc_channel";
-opts.shm_size = xproc::ipc::shm_size_for_data_capacity(1024 * 1024);
-opts.type = xproc::ipc::channel_type::fixed;
-opts.create_if_missing = true;
-// The first producer or consumer opener can create the shared-memory segment.
+const std::string path = "/my_ipc_channel";
+auto channel = xproc::ipc::make_fixed_channel(path, 256).create(1024 * 1024);
 
-opts.item_size = 256; // fixed slot size in bytes
-xproc::ipc::producer producer(opts);
+xproc::ipc::producer producer = channel.open_producer();
+// Non-creators can attach without repeating shm_size / item_size.
+xproc::ipc::consumer consumer = xproc::ipc::attach_fixed_channel(path).open_consumer();
 
 std::string message = "Hello, IPC!";
 producer.send_fixed_bytes(reinterpret_cast<const std::byte *>(message.data()),
                           static_cast<std::uint32_t>(message.size()));
-
-xproc::ipc::consumer consumer(opts);
 consumer.poll([](void *data, std::uint32_t len) {
     std::string received(static_cast<const char *>(data), static_cast<std::size_t>(len));
     std::cout << "Received: " << received << std::endl;
@@ -49,11 +43,11 @@ consumer.poll([](void *data, std::uint32_t len) {
 ### Variable-Length Messages
 
 ```cpp
-// Using variable-length channel
-opts.type = xproc::ipc::channel_type::varlen;
+const std::string path = "/my_varlen_channel";
+auto channel = xproc::ipc::make_varlen_channel(path).create(1024 * 1024);
 
-xproc::ipc::producer producer(opts);
-xproc::ipc::consumer consumer(opts);
+xproc::ipc::producer producer = channel.open_producer();
+xproc::ipc::consumer consumer = xproc::ipc::attach_varlen_channel(path).open_consumer();
 
 std::vector<std::byte> data(1024);
 producer.send_varlen(data.data(), static_cast<std::uint32_t>(data.size()));
@@ -62,6 +56,9 @@ consumer.poll([](void *ptr, std::uint32_t len) {
     process_data(static_cast<std::byte *>(ptr), len);
 });
 ```
+
+For advanced flows, `transport_options` is still available when you want to set the layout explicitly or override the
+schema / namespace checks yourself.
 
 ### C API
 
@@ -76,9 +73,14 @@ borrowed option views, and thread-local error reporting.
 xproc_c_options opts;
 xproc_c_options_init(&opts);
 opts.path = "/xproc_capi_demo";
-opts.shm_size = 65536;
+opts.shm_size = xproc_c_shm_size_for_data_capacity(65536);
 opts.channel_type = XPROC_C_CHANNEL_FIXED;
 opts.item_size = sizeof(uint32_t);
+opts.schema_id = 0x20260423u;
+
+xproc_c_options attach_opts = opts;
+attach_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+attach_opts.create_if_missing = 0;
 
 xproc_c_producer* producer = NULL;
 xproc_c_consumer* consumer = NULL;
@@ -86,7 +88,7 @@ xproc_c_consumer* consumer = NULL;
 if (xproc_c_producer_open(&opts, &producer) != XPROC_C_STATUS_OK) {
   /* inspect xproc_c_last_error_message() */
 }
-if (xproc_c_consumer_open(&opts, &consumer) != XPROC_C_STATUS_OK) {
+if (xproc_c_consumer_open(&attach_opts, &consumer) != XPROC_C_STATUS_OK) {
   /* inspect xproc_c_last_error_message() */
 }
 
@@ -111,9 +113,9 @@ xproc_c_shm_unlink(opts.path);
 Error handling is status-code based. For richer diagnostics, use `xproc_c_last_error_message()`,
 `xproc_c_last_error_copy()`, and `xproc_c_last_layout_error()`.
 
-For C++ shared-memory endpoints, only the creator needs to choose a size. Use
-`xproc::ipc::shm_size_for_data_capacity(...)` when creating the segment, and let non-creators attach with
-`opts.shm_size = xproc::ipc::infer_existing_shm_size;`.
+For shared-memory endpoints, only the creator needs to choose a size. Use
+`xproc_c_shm_size_for_data_capacity(...)` when creating the segment, and let non-creators attach with
+`opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;`.
 
 ### Using Codecs
 
@@ -213,6 +215,14 @@ cmake -S . -B build -DXPROC_BUILD_BENCHMARKS=ON
 cd build
 ctest
 ```
+
+For the focused shared-memory builder / manifest / mismatch gate used by Phase 1 work:
+
+```bash
+cmake --build build --target xproc_run_phase1_tests
+```
+
+Phase 1 makes this shared-memory workflow manifest-backed: creators persist the manifest, and attachers validate channel shape against stored control-block metadata before opening. The `creator timestamp` and `creator flags` fields are persisted creator metadata for observation and diagnostics, and are not current attach-validation requirements. Targeted regression coverage now includes creator-metadata coverage across C++ and C alongside the supported Node and Python smoke checks for manifest-backed shared-memory behavior, while additional metadata expansion, cross-binding parity work, and any future manifest-version semantics remain later-stage follow-up work rather than part of the Phase 1 public contract.
 
 On **Windows**, prefer serial test runs when debugging shared-memory tests to avoid stray handles and name collisions:
 

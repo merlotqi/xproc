@@ -10,6 +10,8 @@
 #include <vector>
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/observer.hpp>
+#include <xproc/ipc/options.hpp>
+#include <xproc/ipc/shm_builders.hpp>
 #include <xproc/ipc/transport_factory.hpp>
 #include <xproc/platform/process.hpp>
 #include <xproc/shm/layout_exception.hpp>
@@ -65,6 +67,10 @@ xproc_c_layout_error to_c_layout_error(xproc::shm::validate_error error) {
       return XPROC_C_LAYOUT_ERROR_HEADER_SIZE_MISMATCH;
     case xproc::shm::validate_error::layout_type_mismatch:
       return XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH;
+    case xproc::shm::validate_error::fixed_item_size_mismatch:
+      return XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH;
+    case xproc::shm::validate_error::schema_id_mismatch:
+      return XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH;
     case xproc::shm::validate_error::alignment_invalid:
       return XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID;
     case xproc::shm::validate_error::capacity_insufficient:
@@ -90,6 +96,9 @@ xproc::ipc::transport_options to_cpp_options(const xproc_c_options& options) {
   out.shm_size = options.shm_size;
   out.item_size = options.item_size;
   out.data_align = options.data_align;
+  out.schema_id = options.schema_id;
+  out.creator_timestamp_ns = options.creator_timestamp_ns;
+  out.creator_flags = options.creator_flags;
   out.create_if_missing = (options.create_if_missing != 0);
   out.type = (options.channel_type == XPROC_C_CHANNEL_VARLEN) ? xproc::ipc::channel_type::varlen
                                                               : xproc::ipc::channel_type::fixed;
@@ -109,6 +118,9 @@ void fill_borrowed_options(const xproc::ipc::transport_options& options, xproc_c
   out->shm_size = options.shm_size;
   out->item_size = options.item_size;
   out->data_align = options.data_align;
+  out->schema_id = options.schema_id;
+  out->creator_timestamp_ns = options.creator_timestamp_ns;
+  out->creator_flags = options.creator_flags;
   out->create_if_missing = options.create_if_missing ? 1 : 0;
   out->channel_type =
       (options.type == xproc::ipc::channel_type::varlen) ? XPROC_C_CHANNEL_VARLEN : XPROC_C_CHANNEL_FIXED;
@@ -273,6 +285,9 @@ void xproc_c_options_init(xproc_c_options* options) {
   options->shm_size = 0;
   options->item_size = 0;
   options->data_align = 0;
+  options->schema_id = 0;
+  options->creator_timestamp_ns = 0;
+  options->creator_flags = 0;
   options->create_if_missing = 1;
   options->channel_type = XPROC_C_CHANNEL_FIXED;
   options->win32_object_namespace = "Local";
@@ -281,6 +296,34 @@ void xproc_c_options_init(xproc_c_options* options) {
   options->socket_listen = 0;
   options->socket_connect_retries = 200;
   options->socket_connect_retry_ms = 10;
+}
+
+std::size_t xproc_c_shm_size_for_data_capacity(std::size_t data_capacity) {
+  return xproc::ipc::shm_size_for_data_capacity(data_capacity);
+}
+
+std::size_t xproc_c_shm_data_capacity_for_size(std::size_t shm_size) {
+  return xproc::ipc::shm_data_capacity_for_size(shm_size);
+}
+
+xproc_c_status xproc_c_shm_read_existing_options(const char* path, const char* win32_object_namespace,
+                                                 xproc_c_options* out_options) {
+  if (path == nullptr) {
+    return invalid_argument("xproc_c_shm_read_existing_options: path must not be null");
+  }
+  if (out_options == nullptr) {
+    return invalid_argument("xproc_c_shm_read_existing_options: out_options must not be null");
+  }
+
+  return catch_status([&]() -> xproc_c_status {
+    const std::string ns = (win32_object_namespace != nullptr) ? win32_object_namespace : "Local";
+    const xproc::ipc::transport_options options =
+        xproc::ipc::detail::read_existing_shm_options(path, ns, "xproc_c_shm_read_existing_options: ");
+    xproc_c_options_init(out_options);
+    fill_borrowed_options(options, out_options);
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
 }
 
 const char* xproc_c_status_string(xproc_c_status status) {
@@ -323,6 +366,10 @@ const char* xproc_c_layout_error_string(xproc_c_layout_error error) {
       return "header_size_mismatch";
     case XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH:
       return "layout_type_mismatch";
+    case XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH:
+      return "fixed_item_size_mismatch";
+    case XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH:
+      return "schema_id_mismatch";
     case XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID:
       return "alignment_invalid";
     case XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT:

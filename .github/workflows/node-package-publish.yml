@@ -1,0 +1,127 @@
+name: Node Package Publish
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "node-v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-prebuild:
+    name: Prebuild ${{ matrix.id }}
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-x64
+            runs_on: ubuntu-24.04
+            prebuild_dir: linux-x64
+            artifact_name: prebuild-linux-x64
+            stage_args: "--source ../build/node/xproc.node --platform linux --arch x64 --libc glibc"
+          - id: linux-arm64
+            runs_on: ubuntu-24.04-arm
+            prebuild_dir: linux-arm64
+            artifact_name: prebuild-linux-arm64
+            stage_args: "--source ../build/node/xproc.node --platform linux --arch arm64 --libc glibc"
+          - id: darwin-x64
+            runs_on: macos-15-intel
+            prebuild_dir: darwin-x64
+            artifact_name: prebuild-darwin-x64
+            stage_args: "--source ../build/node/xproc.node --platform darwin --arch x64"
+          - id: darwin-arm64
+            runs_on: macos-15
+            prebuild_dir: darwin-arm64
+            artifact_name: prebuild-darwin-arm64
+            stage_args: "--source ../build/node/xproc.node --platform darwin --arch arm64"
+          - id: win32-x64
+            runs_on: windows-latest
+            prebuild_dir: win32-x64
+            artifact_name: prebuild-win32-x64
+            stage_args: "--source ../build/node/Release/xproc.node --platform win32 --arch x64"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: node/package-lock.json
+      - name: Install Node binding deps
+        working-directory: node
+        run: npm ci
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_CAPI=ON -DXPROC_BUILD_NODE=ON
+      - name: Build xproc_node
+        run: cmake --build build --target xproc_node --config Release --parallel
+      - name: Test Node package
+        working-directory: node
+        run: npm test
+      - name: Stage prebuild
+        working-directory: node
+        run: npm run stage:prebuild -- ${{ matrix.stage_args }}
+      - name: Upload prebuild artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: node/prebuilds/${{ matrix.prebuild_dir }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish @merlot/xproc
+    needs: build-prebuild
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: node/package-lock.json
+      - name: Install Node binding deps
+        working-directory: node
+        run: npm ci
+      - name: Download linux-x64 prebuild
+        uses: actions/download-artifact@v4
+        with:
+          name: prebuild-linux-x64
+          path: node/prebuilds/linux-x64
+      - name: Download linux-arm64 prebuild
+        uses: actions/download-artifact@v4
+        with:
+          name: prebuild-linux-arm64
+          path: node/prebuilds/linux-arm64
+      - name: Download darwin-x64 prebuild
+        uses: actions/download-artifact@v4
+        with:
+          name: prebuild-darwin-x64
+          path: node/prebuilds/darwin-x64
+      - name: Download darwin-arm64 prebuild
+        uses: actions/download-artifact@v4
+        with:
+          name: prebuild-darwin-arm64
+          path: node/prebuilds/darwin-arm64
+      - name: Download win32-x64 prebuild
+        uses: actions/download-artifact@v4
+        with:
+          name: prebuild-win32-x64
+          path: node/prebuilds/win32-x64
+      - name: Assert packaged file list
+        working-directory: node
+        run: npm run assert:packlist
+      - name: Verify packed install
+        working-directory: node
+        run: npm run verify:pack
+      - name: Publish package
+        working-directory: node
+        run: npm publish --access public
