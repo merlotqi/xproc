@@ -107,6 +107,32 @@ TEST(LayoutValidate, SharedMemorySizeHelpersAndInferExistingSemantics) {
   EXPECT_NO_THROW(xproc::ipc::validate_observer_transport_options(attacher));
 }
 
+#if defined(_WIN32)
+TEST(LayoutValidate, WindowsInferExistingShmSizeReturnsExactSectionSize) {
+  const std::string path = "/xproc_win32_infer_exact_size";
+  xproc::shm::shm::unlink(path);
+
+  xproc::ipc::transport_options creator{};
+  creator.path = path;
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(12345);
+  creator.type = xproc::ipc::channel_type::fixed;
+  creator.item_size = sizeof(std::uint32_t);
+
+  {
+    xproc::ipc::producer producer(creator);
+
+    xproc::ipc::transport_options attach = creator;
+    attach.shm_size = xproc::ipc::infer_existing_shm_size;
+    attach.create_if_missing = false;
+
+    xproc::ipc::consumer consumer(attach);
+    EXPECT_EQ(consumer.options().shm_size, creator.shm_size);
+  }
+
+  xproc::shm::shm::unlink(path);
+}
+#endif
+
 TEST(LayoutValidate, LayoutExceptionCarriesCodeAndErrorCode) {
   try {
     throw xproc::shm::layout_exception("test: ", err::bad_magic);

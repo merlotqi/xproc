@@ -25,6 +25,14 @@ namespace xproc {
 namespace shm {
 namespace {
 
+using NtQuerySectionFn = LONG(WINAPI*)(HANDLE, int, void*, unsigned long, unsigned long*);
+
+struct SectionBasicInformation {
+  void* base_address;
+  unsigned long allocation_attributes;
+  LARGE_INTEGER maximum_size;
+};
+
 // Same-process second opens: OpenFileMapping can block or misbehave while the creator still holds the
 // section handle; DuplicateHandle from the creator's mapping object is reliable (see in-process IPC tests).
 std::mutex g_win32_shm_mutex;
@@ -102,6 +110,37 @@ bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes,
   }
   *out_addr = p;
   *out_region_bytes = mbi.RegionSize;
+  return true;
+}
+
+bool query_section_size(HANDLE h, std::size_t* out_size) {
+  if (out_size == nullptr) {
+    return false;
+  }
+
+  static const NtQuerySectionFn query_section = []() -> NtQuerySectionFn {
+    const HMODULE ntdll = ::GetModuleHandleA("ntdll.dll");
+    if (ntdll == nullptr) {
+      return nullptr;
+    }
+    return reinterpret_cast<NtQuerySectionFn>(::GetProcAddress(ntdll, "NtQuerySection"));
+  }();
+
+  if (query_section == nullptr) {
+    return false;
+  }
+
+  SectionBasicInformation info{};
+  const LONG status = query_section(h, 0, &info, static_cast<unsigned long>(sizeof(info)), nullptr);
+  if (status < 0) {
+    return false;
+  }
+
+  if (info.maximum_size.QuadPart <= 0) {
+    return false;
+  }
+
+  *out_size = static_cast<std::size_t>(info.maximum_size.QuadPart);
   return true;
 }
 
@@ -228,7 +267,8 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
     return false;
   }
   if (size_ == 0) {
-    size_ = mapped_bytes;
+    std::size_t section_bytes = 0;
+    size_ = query_section_size(h, &section_bytes) ? section_bytes : mapped_bytes;
   }
   const std::string actual_vkey = view_registry_key(name_, map_access, size_);
 

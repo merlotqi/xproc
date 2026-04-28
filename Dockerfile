@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     pkg-config \
     python3 \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
