@@ -16,6 +16,7 @@ xproc documentation
    architecture
    platforms
    advanced
+   benchmark
    design
 
 When built with Sphinx, use the sidebar search or the generated index pages.
