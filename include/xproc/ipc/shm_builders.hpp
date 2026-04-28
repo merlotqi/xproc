@@ -1,9 +1,11 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <utility>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/observer.hpp>
@@ -31,7 +33,20 @@ inline std::string make_shm_attach_error(const char* context, const std::string&
 inline transport_options read_existing_shm_options(const std::string& path, const std::string& win32_object_namespace,
                                                    const char* context) {
   shm::shm mapping;
-  if (!mapping.open(path, infer_existing_shm_size, shm::shm_open_mode::read, win32_object_namespace)) {
+  // On Windows, shared memory may not be immediately available after creation;
+  // retry a few times with small delays to handle timing issues.
+  const int max_retries = 10;
+  bool opened = false;
+  for (int i = 0; i < max_retries && !opened; ++i) {
+    if (mapping.open(path, infer_existing_shm_size, shm::shm_open_mode::read, win32_object_namespace)) {
+      opened = true;
+    } else {
+      if (i + 1 < max_retries) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+    }
+  }
+  if (!opened) {
     throw std::runtime_error(make_shm_attach_error(context, path, mapping.last_os_error()));
   }
 
