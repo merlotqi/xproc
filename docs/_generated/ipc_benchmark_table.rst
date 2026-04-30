@@ -4,6 +4,7 @@ Generated Results
 .. note::
 
    The table below is generated from the most recent local benchmark run.
+   Host: Intel(R) Core(TM) i7-14700KF with 64 GB RAM.
    Missing frameworks mean the corresponding optional dependency was not
    enabled or not available when the benchmark executable was built.
 
@@ -17,24 +18,33 @@ Fair Shared-Memory Baseline
    * - Framework
      - Payload
      - Latency
+   * - Poco
+     - 64 B
+     - 11.000 ns
    * - Qt
      - 64 B
-     - 39.059 ns
+     - 10.700 ns
    * - xproc
      - 64 B
-     - 41.240 ns
+     - 3.770 ns
+   * - Poco
+     - 1024 B
+     - 16.900 ns
    * - Qt
      - 1024 B
-     - 46.500 ns
+     - 17.600 ns
    * - xproc
      - 1024 B
-     - 47.228 ns
+     - 15.000 ns
+   * - Poco
+     - 4096 B
+     - 45.300 ns
    * - Qt
      - 4096 B
-     - 73.960 ns
+     - 42.000 ns
    * - xproc
      - 4096 B
-     - 73.547 ns
+     - 39.600 ns
 
 xproc Native Channel
 ^^^^^^^^^^^^^^^^^^^^
@@ -48,19 +58,19 @@ xproc Native Channel
      - Latency
    * - xproc fixed
      - 64 B
-     - 360.066 ns
+     - 16.700 ns
    * - xproc varlen
      - 64 B
-     - 348.556 ns
+     - 18.400 ns
    * - xproc fixed
      - 1024 B
-     - 378.456 ns
+     - 24.600 ns
    * - xproc varlen
      - 1024 B
-     - 381.735 ns
+     - 31.100 ns
    * - xproc fixed
      - 4096 B
-     - 424.902 ns
+     - 55.800 ns
    * - xproc varlen
      - 4096 B
-     - 436.472 ns
+     - 71.500 ns

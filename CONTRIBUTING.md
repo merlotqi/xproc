@@ -36,12 +36,6 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-For the focused Phase 1 shared-memory regression suite:
-
-```bash
-cmake --build build --target xproc_run_phase1_tests
-```
-
 On **Windows**, parallel `ctest` (`-j` greater than 1) can run multiple executables that reuse similar shared-memory object names, or leave test binaries locked while another job links (LNK1168). Prefer a single job when debugging SHM-related failures:
 
 ```powershell
@@ -70,7 +64,6 @@ cmake --build build --target xproc_run_benchmarks
 - [ ] Project configures successfully (`cmake -S . -B build`)
 - [ ] Build passes (`cmake --build build`)
 - [ ] Tests pass (`ctest --test-dir build --output-on-failure`)
-- [ ] API coverage gate remains clean when applicable
 - [ ] Documentation updated for user-facing changes
 - [ ] Changelog updated for notable changes
 

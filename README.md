@@ -216,13 +216,11 @@ cd build
 ctest
 ```
 
-For the focused shared-memory builder / manifest / mismatch gate used by Phase 1 work:
+Or use the aggregate test target:
 
 ```bash
-cmake --build build --target xproc_run_phase1_tests
+cmake --build build --target xproc_run_tests
 ```
-
-Phase 1 makes this shared-memory workflow manifest-backed: creators persist the manifest, and attachers validate channel shape against stored control-block metadata before opening. The `creator timestamp` and `creator flags` fields are persisted creator metadata for observation and diagnostics, and are not current attach-validation requirements. Targeted regression coverage now includes creator-metadata coverage across C++ and C alongside the supported Node and Python smoke checks for manifest-backed shared-memory behavior, while additional metadata expansion, cross-binding parity work, and any future manifest-version semantics remain later-stage follow-up work rather than part of the Phase 1 public contract.
 
 On **Windows**, prefer serial test runs when debugging shared-memory tests to avoid stray handles and name collisions:
 
@@ -277,18 +275,21 @@ include/xproc/
 ### Key Classes
 
 #### Ring Buffer Layer
+
 - **`fixed_writer`** / **`fixed_reader`**: For fixed-length messages
 - **`varlen_writer`** / **`varlen_reader`**: For variable-length messages
 - **`ringbuffer_view`**: Base class for buffer access
 - **`IRingBuffer`**: Polymorphic interface for testing
 
 #### IPC Layer
+
 - **`endpoint`**: Establishes shared memory connection
 - **`producer`** / **`consumer`**: Type-safe channel wrappers
 - **`ipc_observer`**: Read-only monitoring without interfering
 - **`ipc_messaging`**: High-level send/receive operations
 
 #### Protocol Layer
+
 - **`codec_traits`**: Template traits for custom codecs
 - **`raw_pod_codec<T>`**: For plain old data types
 - **`bounded_bytes_codec<N>`**: For fixed-size byte arrays
@@ -303,6 +304,7 @@ The shared memory layout consists of:
 3. **Data Region**: Actual message storage
 
 Key synchronization fields:
+
 - **`write_pos`** / **`read_pos`**: Monotonic logical byte offsets
 - **`commit_seq`**: Incremented after each message commit (for consumer waiting)
 - **`read_wake_seq`**: Incremented when read position advances (for producer waiting)
@@ -317,11 +319,13 @@ Key synchronization fields:
 ## Platform Support
 
 ### Linux
+
 - **Shared Memory**: `shm_open` + `mmap`
 - **Synchronization**: futex (`FUTEX_WAIT` / `FUTEX_WAKE`)
 - **Requirements**: POSIX shared memory support
 
 ### Windows
+
 - **Build**: With the Visual Studio generator, pass `-A x64` (or use the default set by this project’s CMake) so MSVC targets x64; otherwise SDK headers can fail with `C1189: No Target Architecture`. With Ninja + MSVC, use an **x64 Native Tools** developer prompt (or matching vcvars) so `cl` defines `_M_X64` / `_WIN64`.
 - **Shared Memory**: `CreateFileMapping` + `MapViewOfFile` (full section mapped; `VirtualQuery` must report `RegionSize >= opts.shm_size`; smaller sections fail `open`)
 - **Synchronization**: `atomic_wait` / `atomic_notify_*` use **polling with backoff** on Windows; `atomic_notify_*` is a no-op (waiters observe `commit_seq` / `read_wake_seq` via loads). Linux uses futex with real wake.
