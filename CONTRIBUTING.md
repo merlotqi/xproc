@@ -84,7 +84,7 @@ The current codebase already covers the core SPSC shared-memory path, read-only 
 ## Shared Memory Path Guidance
 
 Use unique `transport_options::path` values in tests and long-running integrations.
-On Windows, `shm::unlink` does not remove mapping names, so uniqueness helps avoid stale-name collisions.
+On Windows, `core::unlink` does not remove mapping names, so uniqueness helps avoid stale-name collisions.
 
 ## Reporting Issues
 

@@ -59,57 +59,57 @@ TEST(ApiSurface, AtomicBackoffPauseAndReset) {
 TEST(ApiSurface, ShmOpenModeCreateOpenReadAndErrors) {
   const std::string path = "/xproc_api_surface_shm_modes";
   const std::string create_path = "/xproc_api_surface_shm_modes_open_create";
-  const std::size_t shm_bytes = sizeof(xproc::shm::control_block) + 4096;
-  xproc::shm::shm::unlink(path);
-  xproc::shm::shm::unlink(create_path);
+  const std::size_t shm_bytes = sizeof(xproc::core::control_block) + 4096;
+  xproc::core::shm::unlink(path);
+  xproc::core::shm::unlink(create_path);
 
-  xproc::shm::shm creator;
-  ASSERT_TRUE(creator.open(path, shm_bytes, xproc::shm::shm_open_mode::create));
+  xproc::core::shm creator;
+  ASSERT_TRUE(creator.open(path, shm_bytes, xproc::core::shm_open_mode::create));
   EXPECT_TRUE(creator.created_this_open());
   // POSIX shm survives until unlink after all fds are closed; Windows named mappings are deleted
   // when the last handle closes - keep creator mapped until other modes have opened.
 
-  xproc::shm::shm opener;
-  ASSERT_TRUE(opener.open(path, shm_bytes, xproc::shm::shm_open_mode::open));
+  xproc::core::shm opener;
+  ASSERT_TRUE(opener.open(path, shm_bytes, xproc::core::shm_open_mode::open));
   EXPECT_FALSE(opener.created_this_open());
   opener.detach();
 
-  xproc::shm::shm reader;
-  ASSERT_TRUE(reader.open(path, shm_bytes, xproc::shm::shm_open_mode::read));
+  xproc::core::shm reader;
+  ASSERT_TRUE(reader.open(path, shm_bytes, xproc::core::shm_open_mode::read));
   EXPECT_FALSE(reader.created_this_open());
   reader.detach();
 
-  xproc::shm::shm open_create;
-  ASSERT_TRUE(open_create.open(path, shm_bytes, xproc::shm::shm_open_mode::open_create));
+  xproc::core::shm open_create;
+  ASSERT_TRUE(open_create.open(path, shm_bytes, xproc::core::shm_open_mode::open_create));
   EXPECT_FALSE(open_create.created_this_open());
   open_create.detach();
 
-  xproc::shm::shm open_create_missing;
-  ASSERT_TRUE(open_create_missing.open(create_path, shm_bytes, xproc::shm::shm_open_mode::open_create));
+  xproc::core::shm open_create_missing;
+  ASSERT_TRUE(open_create_missing.open(create_path, shm_bytes, xproc::core::shm_open_mode::open_create));
   EXPECT_TRUE(open_create_missing.created_this_open());
   open_create_missing.detach();
 
   creator.detach();
 
-  xproc::shm::shm missing;
-  EXPECT_FALSE(missing.open("/xproc_api_surface_missing", 4096, xproc::shm::shm_open_mode::open));
+  xproc::core::shm missing;
+  EXPECT_FALSE(missing.open("/xproc_api_surface_missing", 4096, xproc::core::shm_open_mode::open));
   EXPECT_NE(missing.last_os_error(), 0);
 
-  xproc::shm::shm::unlink(path);
-  xproc::shm::shm::unlink(create_path);
+  xproc::core::shm::unlink(path);
+  xproc::core::shm::unlink(create_path);
 }
 
 #if defined(_WIN32)
 TEST(ApiSurface, ShmOpenRejectsInvalidWin32Namespace) {
-  xproc::shm::shm sm;
-  EXPECT_FALSE(sm.open("/xproc_api_bad_ns", 4096, xproc::shm::shm_open_mode::create, "Session"));
+  xproc::core::shm sm;
+  EXPECT_FALSE(sm.open("/xproc_api_bad_ns", 4096, xproc::core::shm_open_mode::create, "Session"));
   EXPECT_NE(sm.last_os_error(), 0);
 }
 
 TEST(ApiSurface, TransportOptionsRejectsBadWin32Namespace) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_api_bad_transport_ns";
-  opts.shm_size = sizeof(xproc::shm::control_block) + 4096;
+  opts.shm_size = sizeof(xproc::core::control_block) + 4096;
   opts.item_size = 4;
   opts.win32_object_namespace = "Bad";
   EXPECT_THROW(xproc::ipc::validate_transport_options(opts), std::invalid_argument);
@@ -118,11 +118,11 @@ TEST(ApiSurface, TransportOptionsRejectsBadWin32Namespace) {
 
 TEST(ApiSurface, IpcRuntimeRunAndStop) {
   const std::string path = "/xproc_api_surface_runtime";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
+  opts.shm_size = sizeof(xproc::core::control_block) + 16384;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 4;
 
@@ -152,16 +152,16 @@ TEST(ApiSurface, IpcRuntimeRunAndStop) {
   runtime.stop();
   rt.join();
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ApiSurface, IpcInspectorPolymorphism) {
   const std::string path = "/xproc_api_surface_inspector";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+  opts.shm_size = sizeof(xproc::core::control_block) + 8192;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
 
@@ -175,12 +175,12 @@ TEST(ApiSurface, IpcInspectorPolymorphism) {
   EXPECT_GE(snap.attach_count, attach.attach_count());
   EXPECT_GE(snap.commit_seq, 1u);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
   const std::string path = "/xproc_api_surface_builder_fixed";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
                            .with_data_align(16u)
@@ -247,12 +247,12 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
     }
   }
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
   const std::string path = "/xproc_api_surface_builder_varlen";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   const auto created = xproc::ipc::make_varlen_channel(path)
                            .with_schema_id(0xBEEFu)
@@ -292,14 +292,14 @@ TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
     }
   }
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ApiSurface, BuilderCreatorMetadataDefaultsToZero) {
   const std::string fixed_path = "/xproc_api_surface_builder_fixed_defaults";
   const std::string varlen_path = "/xproc_api_surface_builder_varlen_defaults";
-  xproc::shm::shm::unlink(fixed_path);
-  xproc::shm::shm::unlink(varlen_path);
+  xproc::core::shm::unlink(fixed_path);
+  xproc::core::shm::unlink(varlen_path);
 
   const auto fixed_created = xproc::ipc::make_fixed_channel(fixed_path, sizeof(std::uint32_t)).create(4096);
   const auto varlen_created = xproc::ipc::make_varlen_channel(varlen_path).create(4096);
@@ -315,13 +315,13 @@ TEST(ApiSurface, BuilderCreatorMetadataDefaultsToZero) {
   EXPECT_EQ(varlen_attach_opts.creator_timestamp_ns, 0u);
   EXPECT_EQ(varlen_attach_opts.creator_flags, 0u);
 
-  xproc::shm::shm::unlink(fixed_path);
-  xproc::shm::shm::unlink(varlen_path);
+  xproc::core::shm::unlink(fixed_path);
+  xproc::core::shm::unlink(varlen_path);
 }
 
 TEST(ApiSurface, BuilderCreateDoesNotInitializeManifestBeforeOpen) {
   const std::string path = "/xproc_api_surface_builder_no_side_effect";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
                            .with_creator_timestamp_ns(0x1234u)
@@ -336,12 +336,12 @@ TEST(ApiSurface, BuilderCreateDoesNotInitializeManifestBeforeOpen) {
   EXPECT_EQ(attach_opts.creator_flags, 0x5678u);
   (void)producer;
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ApiSurface, DirectTransportOptionsPersistCreatorMetadataOnCreateAndAttach) {
   const std::string path = "/xproc_api_surface_direct_creator_metadata";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options creator_opts;
   creator_opts.path = path;
@@ -375,5 +375,5 @@ TEST(ApiSurface, DirectTransportOptionsPersistCreatorMetadataOnCreateAndAttach) 
   EXPECT_EQ(observer.header()->creator_timestamp_ns, creator_opts.creator_timestamp_ns);
   EXPECT_EQ(observer.header()->creator_flags, creator_opts.creator_flags);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }

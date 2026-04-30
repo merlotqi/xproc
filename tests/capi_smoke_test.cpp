@@ -10,8 +10,8 @@ extern "C" {
 #include <xproc_c.h>
 }
 
-#include <xproc/shm/shm.hpp>
-#include <xproc/shm/shm_layout.hpp>
+#include <xproc/core/shm.hpp>
+#include <xproc/core/shm_layout.hpp>
 
 TEST(CApiSmoke, FixedProducerConsumerRoundTrip) {
   const std::string path = "/xproc_capi_fixed_roundtrip";

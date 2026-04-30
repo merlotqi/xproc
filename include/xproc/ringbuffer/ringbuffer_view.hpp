@@ -2,14 +2,13 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <xproc/shm/shm_layout.hpp>
+#include <xproc/core/shm_layout.hpp>
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 class ringbuffer_view {
  public:
-  explicit ringbuffer_view(shm::control_block* header)
+  explicit ringbuffer_view(core::control_block* header)
       : header_(header), data_(reinterpret_cast<uint8_t*>(header) + header->header_size) {}
 
   inline std::size_t capacity() const { return header_->data_capacity; }
@@ -29,9 +28,8 @@ class ringbuffer_view {
   }
 
  protected:
-  shm::control_block* header_;
+  core::control_block* header_;
   uint8_t* data_;
 };
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

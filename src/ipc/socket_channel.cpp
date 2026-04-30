@@ -22,8 +22,7 @@
 #include <unistd.h>
 #endif
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 namespace {
 
 constexpr std::uint32_t k_max_varlen = 16u * 1024u * 1024u;
@@ -546,5 +545,4 @@ bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>&
   }
 }
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc

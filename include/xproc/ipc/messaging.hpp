@@ -11,8 +11,7 @@
 #include <xproc/protocol/codec_traits.hpp>
 #include <xproc/protocol/protocol.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 namespace detail {
 
@@ -201,5 +200,4 @@ inline void send_encoded(producer_channel_interface& ch, const protocol::IByteCo
   }
 }
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace ipc::xproc

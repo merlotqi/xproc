@@ -9,7 +9,7 @@
 
 int main() {
   const std::string path = "/xproc_example_runtime_dispatch";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -49,6 +49,6 @@ int main() {
   runtime.stop();
   rt.join();
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   return done.load(std::memory_order_acquire) ? 0 : 1;
 }

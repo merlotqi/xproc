@@ -3,8 +3,7 @@
 #include <atomic>
 #include <xproc/platform/platform.hpp>
 
-namespace xproc {
-namespace shm {
+namespace xproc::core {
 
 // SPSC ring indices and futex wait words. write_pos/read_pos are monotonic logical
 // offsets; the data region index is pos % data_capacity.
@@ -41,13 +40,12 @@ struct XPROC_ALIGNAS_CACHE_LINE control_block {
 
   uint64_t data_capacity;
   uint32_t data_alignment;
-  uint32_t fixed_item_size{0};  // Fixed channel manifest field; 0 for varlen channels.
-  uint64_t schema_id{0};        // Optional user-supplied protocol/schema identifier.
+  uint32_t fixed_item_size{0};       // Fixed channel manifest field; 0 for varlen channels.
+  uint64_t schema_id{0};             // Optional user-supplied protocol/schema identifier.
   uint64_t creator_timestamp_ns{0};  // Optional creator-supplied persisted metadata.
   uint64_t creator_flags{0};         // Optional creator-supplied persisted metadata.
 
   uint64_t reserved[1];
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace core::xproc

@@ -12,7 +12,7 @@
 #include <thread>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/endpoint.hpp>
-#include <xproc/shm/shm_layout.hpp>
+#include <xproc/core/shm_layout.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
 int main(int argc, char** argv) {
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     waitpid(pid, &st, 0);
   }
 
-  xproc::shm::shm::unlink(shm_path);
+  xproc::core::shm::unlink(shm_path);
 
   if (!WIFEXITED(st) || WEXITSTATUS(st) != 0) {
     std::cerr << "child failed\n";

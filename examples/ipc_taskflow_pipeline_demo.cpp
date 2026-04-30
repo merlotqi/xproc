@@ -50,7 +50,7 @@ int main() {
   manager.start_processing(std::max<std::size_t>(2, std::thread::hardware_concurrency()));
 
   const std::string path = "/xproc_ipc_taskflow_pipe_" + std::to_string(xproc::platform::current_process_id());
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -133,7 +133,7 @@ int main() {
   rt.join();
   manager.stop_processing();
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   if (!done.load(std::memory_order_acquire)) {
     std::cerr << "timeout waiting for consumer\n";

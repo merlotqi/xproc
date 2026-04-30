@@ -2,22 +2,22 @@
 
 #include <array>
 #include <cstdint>
-#include <xproc/shm/shm_layout_manager.hpp>
+#include <xproc/core/shm_layout_manager.hpp>
 
 namespace {
 
 template <std::size_t N>
-struct alignas(xproc::shm::control_block) ring_arena {
+struct alignas(xproc::core::control_block) ring_arena {
   std::array<std::uint8_t, N> bytes{};
 };
 
-void init_valid_header(xproc::shm::control_block& h, std::uint64_t cap, std::uint32_t layout_type,
+void init_valid_header(xproc::core::control_block& h, std::uint64_t cap, std::uint32_t layout_type,
                        std::uint32_t data_align) {
-  using xproc::shm::layout_manager;
+  using xproc::core::layout_manager;
   h.magic = layout_manager::expected_magic;
   h.version_major = layout_manager::version_major;
   h.version_minor = layout_manager::version_minor;
-  h.header_size = sizeof(xproc::shm::control_block);
+  h.header_size = sizeof(xproc::core::control_block);
   h.layout_type = layout_type;
   h.rb_meta.write_pos.store(0, std::memory_order_relaxed);
   h.rb_meta.read_pos.store(0, std::memory_order_relaxed);
@@ -33,16 +33,16 @@ void init_valid_header(xproc::shm::control_block& h, std::uint64_t cap, std::uin
 static void BM_ShmLayoutValidate(benchmark::State& state) {
   const std::uint32_t layout_type = static_cast<std::uint32_t>(state.range(0));
   constexpr std::uint64_t cap = 65536;
-  constexpr std::size_t total = sizeof(xproc::shm::control_block) + static_cast<std::size_t>(cap);
+  constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::shm::control_block*>(arena.bytes.data());
-  new (hdr) xproc::shm::control_block{};
+  auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
+  new (hdr) xproc::core::control_block{};
   init_valid_header(*hdr, cap, layout_type, 8);
 
   const std::size_t expected_cap = static_cast<std::size_t>(cap);
 
   for (auto _ : state) {
-    const bool ok = xproc::shm::layout_manager::validate(hdr, expected_cap, layout_type, 8u);
+    const bool ok = xproc::core::layout_manager::validate(hdr, expected_cap, layout_type, 8u);
     volatile bool sink = ok;
     benchmark::DoNotOptimize(sink);
   }

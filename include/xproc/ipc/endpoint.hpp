@@ -5,16 +5,15 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <xproc/core/layout_exception.hpp>
+#include <xproc/core/shm.hpp>
+#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/shm_layout_manager.hpp>
+#include <xproc/core/shm_open_mode.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/platform/process.hpp>
-#include <xproc/shm/layout_exception.hpp>
-#include <xproc/shm/shm.hpp>
-#include <xproc/shm/shm_layout.hpp>
-#include <xproc/shm/shm_layout_manager.hpp>
-#include <xproc/shm/shm_open_mode.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 class endpoint {
  public:
@@ -37,13 +36,13 @@ class endpoint {
 
   role get_role() const { return role_; }
   bool is_connected() const { return header_ != nullptr; }
-  shm::control_block* header() const { return header_; }
+  core::control_block* header() const { return header_; }
   const transport_options& options() const { return opts_; }
 
  protected:
   role role_;
-  shm::shm shm_;
-  shm::control_block* header_{nullptr};
+  core::shm shm_;
+  core::control_block* header_{nullptr};
   transport_options opts_;
 
  private:
@@ -64,7 +63,7 @@ class endpoint {
       validate_transport_options(opts_);
     }
 
-    using namespace xproc::shm;
+    using namespace xproc::core;
     shm_open_mode mode = shm_open_mode::open;
     if (opts_.create_if_missing) {
       mode = shm_open_mode::open_create;
@@ -91,9 +90,8 @@ class endpoint {
                                      opts_.schema_id, opts_.creator_timestamp_ns, opts_.creator_flags);
     if (!header_) {
       const auto* raw = static_cast<const control_block*>(shm_.addr());
-      const auto err =
-          layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align, fixed_item_size,
-                                            opts_.schema_id);
+      const auto err = layout_manager::validate_detailed(raw, data_capacity, layout_type, data_align, fixed_item_size,
+                                                         opts_.schema_id);
       throw layout_exception("endpoint: ", err);
     }
 
@@ -110,5 +108,4 @@ class endpoint {
   }
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace ipc::xproc

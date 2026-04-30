@@ -9,8 +9,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-namespace xproc {
-namespace protocol {
+namespace xproc::protocol {
 
 // UTF-8 JSON text on the wire (no extra framing; ring varlen/fixed carries the byte length).
 template <std::size_t MaxWire>
@@ -43,7 +42,6 @@ struct nlohmann_json_codec {
   }
 };
 
-}  // namespace protocol
-}  // namespace xproc
+}  // namespace protocol::xproc
 
 #endif  // XPROC_WITH_NLOHMANN_JSON

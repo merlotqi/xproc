@@ -11,8 +11,7 @@
 #include <limits>
 #include <type_traits>
 
-namespace xproc {
-namespace protocol {
+namespace xproc::protocol {
 
 // Wire format is Message::SerializeToArray bytes (no extra length prefix; ring supplies length).
 template <typename MessageType, std::size_t MaxWire>
@@ -46,7 +45,6 @@ struct protobuf_message_codec {
   }
 };
 
-}  // namespace protocol
-}  // namespace xproc
+}  // namespace protocol::xproc
 
 #endif  // XPROC_WITH_PROTOBUF

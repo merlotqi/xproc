@@ -6,8 +6,7 @@
 #include <xproc/ringbuffer/ringbuffer_view.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 class fixed_reader : public ringbuffer_view {
  public:
@@ -57,5 +56,4 @@ class fixed_reader : public ringbuffer_view {
   }
 };
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

@@ -5,8 +5,7 @@
 #include <xproc/platform/platform.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
-namespace xproc {
-namespace sync {
+namespace xproc::sync {
 
 class atomic_backoff {
  public:
@@ -35,5 +34,4 @@ class atomic_backoff {
   uint32_t iterations_;
 };
 
-}  // namespace sync
-}  // namespace xproc
+}  // namespace xproc::sync

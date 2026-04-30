@@ -117,14 +117,14 @@ TEST(SocketTransport, FactoryCreatesShmAndSocket) {
   xproc::ipc::transport_options shm_o;
   shm_o.backend = xproc::ipc::transport_backend::shared_memory;
   shm_o.path = "/xproc_socket_test_factory_shm";
-  shm_o.shm_size = sizeof(xproc::shm::control_block) + 4096;
+  shm_o.shm_size = sizeof(xproc::core::control_block) + 4096;
   shm_o.type = xproc::ipc::channel_type::fixed;
   shm_o.item_size = 4;
-  xproc::shm::shm::unlink(shm_o.path);
+  xproc::core::shm::unlink(shm_o.path);
   auto prod = xproc::ipc::create_producer_transport(shm_o);
   ASSERT_NE(prod, nullptr);
   EXPECT_NE(prod->shared_header(), nullptr);
-  xproc::shm::shm::unlink(shm_o.path);
+  xproc::core::shm::unlink(shm_o.path);
 }
 
 TEST(SocketTransport, ValidateRejectsEmptySocketHost) {

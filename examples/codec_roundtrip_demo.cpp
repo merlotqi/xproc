@@ -7,7 +7,7 @@
 
 int main() {
   const std::string path = "/xproc_example_codec_roundtrip";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -35,6 +35,6 @@ int main() {
 
   xproc::ipc::send_encoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(producer, 20260326ull);
   t.join();
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   return 0;
 }

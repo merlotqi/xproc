@@ -22,11 +22,11 @@ static void BM_FixedSendPoll(benchmark::State& state) {
   }
 
   const std::string path = unique_path("fixed", static_cast<int>(payload_len));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 1 * 1024 * 1024;
+  opts.shm_size = sizeof(xproc::core::control_block) + 1 * 1024 * 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = static_cast<std::uint32_t>(payload_len);
   opts.create_if_missing = true;
@@ -48,7 +48,7 @@ static void BM_FixedSendPoll(benchmark::State& state) {
   }
 
   state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * payload_len));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 static void BM_VarlenSendPoll(benchmark::State& state) {
@@ -59,11 +59,11 @@ static void BM_VarlenSendPoll(benchmark::State& state) {
   }
 
   const std::string path = unique_path("varlen", static_cast<int>(payload_len));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 1 * 1024 * 1024;
+  opts.shm_size = sizeof(xproc::core::control_block) + 1 * 1024 * 1024;
   opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
 
@@ -84,16 +84,16 @@ static void BM_VarlenSendPoll(benchmark::State& state) {
   }
 
   state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * payload_len));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 static void BM_SendEncodedRawPod(benchmark::State& state) {
   const std::string path = unique_path("encoded", 0);
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 512 * 1024;
+  opts.shm_size = sizeof(xproc::core::control_block) + 512 * 1024;
   opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
 
@@ -119,7 +119,7 @@ static void BM_SendEncodedRawPod(benchmark::State& state) {
 
   state.SetItemsProcessed(state.iterations());
   state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * sizeof(std::uint64_t)));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 }  // namespace

@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 
   const std::string path = "/xproc_example_parent_child_struct";
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
   const pid_t pid = fork();
   if (pid < 0) {
     std::perror("fork");
-    xproc::shm::shm::unlink(path);
+    xproc::core::shm::unlink(path);
     return 1;
   }
   if (pid == 0) {
@@ -141,7 +141,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
     std::cerr << "child process failed\n";
     return 1;
@@ -161,7 +161,7 @@ int main(int argc, char** argv) {
 
   const std::string path = std::string("/xproc_example_parent_child_struct_") + std::to_string(::GetCurrentProcessId());
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
   char exe_path[MAX_PATH];
   if (::GetModuleFileNameA(nullptr, exe_path, MAX_PATH) == 0u) {
     std::cerr << "GetModuleFileNameA failed\n";
-    xproc::shm::shm::unlink(path);
+    xproc::core::shm::unlink(path);
     return 1;
   }
 
@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
 
   if (!::CreateProcessA(exe_path, cmd_mut.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
     std::cerr << "CreateProcessA failed\n";
-    xproc::shm::shm::unlink(path);
+    xproc::core::shm::unlink(path);
     return 1;
   }
   ::CloseHandle(pi.hThread);
@@ -224,7 +224,7 @@ int main(int argc, char** argv) {
   }
   ::CloseHandle(pi.hProcess);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   if (exit_code != 0) {
     std::cerr << "child process failed\n";
     return 1;

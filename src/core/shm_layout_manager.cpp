@@ -1,13 +1,11 @@
 #include <atomic>
 #include <cstring>
+#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/shm_layout_manager.hpp>
 #include <xproc/platform/platform.hpp>
 #include <xproc/platform/process.hpp>
-#include <xproc/shm/shm_layout_manager.hpp>
 
-#include "xproc/shm/shm_layout.hpp"
-
-namespace xproc {
-namespace shm {
+namespace xproc::core {
 
 control_block* layout_manager::format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type,
                                       uint32_t data_alignment, uint32_t fixed_item_size,
@@ -69,8 +67,7 @@ const char* layout_manager::validate_cstr(validate_error e) noexcept {
 
 validate_error layout_manager::validate_detailed(const control_block* header, size_t expected_capacity,
                                                  uint32_t expected_layout_type, uint32_t expected_data_alignment,
-                                                 uint32_t expected_fixed_item_size,
-                                                 std::uint64_t expected_schema_id) {
+                                                 uint32_t expected_fixed_item_size, std::uint64_t expected_schema_id) {
   if (header == nullptr) {
     return validate_error::not_attached;
   }
@@ -123,13 +120,12 @@ bool layout_manager::validate(control_block* header, size_t expected_capacity, u
                               uint32_t expected_data_alignment, uint32_t expected_fixed_item_size,
                               std::uint64_t expected_schema_id) {
   return validate_detailed(header, expected_capacity, expected_layout_type, expected_data_alignment,
-                           expected_fixed_item_size, expected_schema_id) ==
-         validate_error::ok;
+                           expected_fixed_item_size, expected_schema_id) == validate_error::ok;
 }
 
-void layout_manager::_init_header(control_block* header, size_t capacity, uint32_t layout_type,
-                                  uint32_t data_alignment, uint32_t fixed_item_size, std::uint64_t schema_id,
-                                  std::uint64_t creator_timestamp_ns, std::uint64_t creator_flags) {
+void layout_manager::_init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
+                                  uint32_t fixed_item_size, std::uint64_t schema_id, std::uint64_t creator_timestamp_ns,
+                                  std::uint64_t creator_flags) {
   header->magic = expected_magic;
   header->version_major = version_major;
   header->version_minor = version_minor;
@@ -155,5 +151,4 @@ void layout_manager::_init_header(control_block* header, size_t capacity, uint32
   header->is_ready.store(true, std::memory_order_release);
 }
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::core

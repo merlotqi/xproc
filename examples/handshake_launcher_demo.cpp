@@ -149,8 +149,8 @@ int fused_child_main(int argc, char** argv) {
   const std::string ipc_path = argv[4];
 
   {
-    xproc::shm::shm seg;
-    if (!seg.open(handshake_path, kHandshakeShmBytes, xproc::shm::shm_open_mode::open)) {
+    xproc::core::shm seg;
+    if (!seg.open(handshake_path, kHandshakeShmBytes, xproc::core::shm_open_mode::open)) {
       return 4;
     }
 
@@ -236,14 +236,14 @@ int main(int argc, char** argv) {
   const std::string handshake_path = base + "_h";
   const std::string ipc_path = base + "_ipc";
 
-  xproc::shm::shm::unlink(handshake_path);
-  xproc::shm::shm::unlink(ipc_path);
+  xproc::core::shm::unlink(handshake_path);
+  xproc::core::shm::unlink(ipc_path);
 
   const std::uint64_t token = make_token();
   const std::string hex = token_to_hex(token);
 
-  xproc::shm::shm parent_hs;
-  if (!parent_hs.open(handshake_path, kHandshakeShmBytes, xproc::shm::shm_open_mode::open_create)) {
+  xproc::core::shm parent_hs;
+  if (!parent_hs.open(handshake_path, kHandshakeShmBytes, xproc::core::shm_open_mode::open_create)) {
     std::cerr << "parent: handshake shm open_create failed\n";
     return 1;
   }
@@ -269,8 +269,8 @@ int main(int argc, char** argv) {
   if (n <= 0) {
     std::cerr << "parent: readlink /proc/self/exe failed\n";
     parent_hs.detach();
-    xproc::shm::shm::unlink(handshake_path);
-    xproc::shm::shm::unlink(ipc_path);
+    xproc::core::shm::unlink(handshake_path);
+    xproc::core::shm::unlink(ipc_path);
     return 1;
   }
   exe[n] = '\0';
@@ -279,8 +279,8 @@ int main(int argc, char** argv) {
   if (child < 0) {
     std::perror("fork");
     parent_hs.detach();
-    xproc::shm::shm::unlink(handshake_path);
-    xproc::shm::shm::unlink(ipc_path);
+    xproc::core::shm::unlink(handshake_path);
+    xproc::core::shm::unlink(ipc_path);
     return 1;
   }
 
@@ -313,19 +313,19 @@ int main(int argc, char** argv) {
     int st = 0;
     (void)::waitpid(child, &st, 0);
     parent_hs.detach();
-    xproc::shm::shm::unlink(handshake_path);
-    xproc::shm::shm::unlink(ipc_path);
+    xproc::core::shm::unlink(handshake_path);
+    xproc::core::shm::unlink(ipc_path);
     return 1;
   }
 
   parent_hs.detach();
-  xproc::shm::shm::unlink(handshake_path);
+  xproc::core::shm::unlink(handshake_path);
   std::cout << "handshake ok: pid " << child << ", telemetry follows (ipc " << ipc_path << ")\n";
 
   int status = 0;
   parent_consume_until_child_done(consumer, child, status);
 
-  xproc::shm::shm::unlink(ipc_path);
+  xproc::core::shm::unlink(ipc_path);
   if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
     std::cerr << "child process failed\n";
     return 1;
@@ -350,14 +350,14 @@ int main(int argc, char** argv) {
   const std::string handshake_path = base + "_h";
   const std::string ipc_path = base + "_ipc";
 
-  xproc::shm::shm::unlink(handshake_path);
-  xproc::shm::shm::unlink(ipc_path);
+  xproc::core::shm::unlink(handshake_path);
+  xproc::core::shm::unlink(ipc_path);
 
   const std::uint64_t token = make_token();
   const std::string hex = token_to_hex(token);
 
-  xproc::shm::shm parent_hs;
-  if (!parent_hs.open(handshake_path, kHandshakeShmBytes, xproc::shm::shm_open_mode::open_create)) {
+  xproc::core::shm parent_hs;
+  if (!parent_hs.open(handshake_path, kHandshakeShmBytes, xproc::core::shm_open_mode::open_create)) {
     std::cerr << "parent: handshake shm open_create failed\n";
     return 1;
   }
@@ -382,8 +382,8 @@ int main(int argc, char** argv) {
   if (::GetModuleFileNameA(nullptr, exe_path, MAX_PATH) == 0u) {
     std::cerr << "parent: GetModuleFileNameA failed\n";
     parent_hs.detach();
-    xproc::shm::shm::unlink(handshake_path);
-    xproc::shm::shm::unlink(ipc_path);
+    xproc::core::shm::unlink(handshake_path);
+    xproc::core::shm::unlink(ipc_path);
     return 1;
   }
 
@@ -399,8 +399,8 @@ int main(int argc, char** argv) {
   if (!::CreateProcessA(exe_path, cmd_mut.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
     std::cerr << "parent: CreateProcessA failed\n";
     parent_hs.detach();
-    xproc::shm::shm::unlink(handshake_path);
-    xproc::shm::shm::unlink(ipc_path);
+    xproc::core::shm::unlink(handshake_path);
+    xproc::core::shm::unlink(ipc_path);
     return 1;
   }
   ::CloseHandle(pi.hThread);
@@ -427,20 +427,20 @@ int main(int argc, char** argv) {
     ::TerminateProcess(pi.hProcess, 1);
     ::CloseHandle(pi.hProcess);
     parent_hs.detach();
-    xproc::shm::shm::unlink(handshake_path);
-    xproc::shm::shm::unlink(ipc_path);
+    xproc::core::shm::unlink(handshake_path);
+    xproc::core::shm::unlink(ipc_path);
     return 1;
   }
 
   parent_hs.detach();
-  xproc::shm::shm::unlink(handshake_path);
+  xproc::core::shm::unlink(handshake_path);
   std::cout << "handshake ok: pid " << expected_pid << ", telemetry follows (ipc " << ipc_path << ")\n";
 
   DWORD exit_code = 1;
   parent_consume_until_child_done(consumer, pi.hProcess, exit_code);
   ::CloseHandle(pi.hProcess);
 
-  xproc::shm::shm::unlink(ipc_path);
+  xproc::core::shm::unlink(ipc_path);
   if (exit_code != 0) {
     std::cerr << "child process failed\n";
     return 1;

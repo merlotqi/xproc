@@ -11,8 +11,7 @@
 #include <climits>
 #include <cstdint>
 
-namespace xproc {
-namespace sync {
+namespace xproc::sync {
 namespace details {
 
 inline long futex(uint32_t* uaddr, int futex_op, uint32_t val, const struct timespec* timeout, uint32_t* uaddr2,
@@ -50,7 +49,6 @@ template void atomic_wait<uint32_t>(const std::atomic<uint32_t>*, uint32_t);
 template void atomic_notify_one<uint32_t>(const std::atomic<uint32_t>*);
 template void atomic_notify_all<uint32_t>(const std::atomic<uint32_t>*);
 
-}  // namespace sync
-}  // namespace xproc
+}  // namespace sync::xproc
 
 #endif

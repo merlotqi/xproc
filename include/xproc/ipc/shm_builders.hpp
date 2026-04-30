@@ -7,16 +7,15 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <xproc/core/layout_exception.hpp>
+#include <xproc/core/shm.hpp>
+#include <xproc/core/shm_layout_manager.hpp>
+#include <xproc/core/shm_open_mode.hpp>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/observer.hpp>
 #include <xproc/ipc/options.hpp>
-#include <xproc/shm/layout_exception.hpp>
-#include <xproc/shm/shm.hpp>
-#include <xproc/shm/shm_layout_manager.hpp>
-#include <xproc/shm/shm_open_mode.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 namespace detail {
 
@@ -32,13 +31,13 @@ inline std::string make_shm_attach_error(const char* context, const std::string&
 
 inline transport_options read_existing_shm_options(const std::string& path, const std::string& win32_object_namespace,
                                                    const char* context) {
-  shm::shm mapping;
+  core::shm mapping;
   // On Windows, shared memory may not be immediately available after creation;
   // retry a few times with small delays to handle timing issues.
   const int max_retries = 10;
   bool opened = false;
   for (int i = 0; i < max_retries && !opened; ++i) {
-    if (mapping.open(path, infer_existing_shm_size, shm::shm_open_mode::read, win32_object_namespace)) {
+    if (mapping.open(path, infer_existing_shm_size, core::shm_open_mode::read, win32_object_namespace)) {
       opened = true;
     } else {
       if (i + 1 < max_retries) {
@@ -50,7 +49,7 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
     throw std::runtime_error(make_shm_attach_error(context, path, mapping.last_os_error()));
   }
 
-  const auto* header = static_cast<const shm::control_block*>(mapping.addr());
+  const auto* header = static_cast<const core::control_block*>(mapping.addr());
   std::uint32_t layout_type = 0u;
   std::uint32_t data_align = 8u;
   std::uint32_t fixed_item_size = 0u;
@@ -68,19 +67,18 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
   }
 
   const auto err =
-      shm::layout_manager::validate_detailed(header, 0u, layout_type, data_align, fixed_item_size, schema_id);
-  if (err != shm::validate_error::ok) {
-    throw shm::layout_exception(context, err);
+      core::layout_manager::validate_detailed(header, 0u, layout_type, data_align, fixed_item_size, schema_id);
+  if (err != core::validate_error::ok) {
+    throw core::layout_exception(context, err);
   }
   if (layout_type != 0u && layout_type != 1u) {
-    throw shm::layout_exception(context, shm::validate_error::layout_type_mismatch);
+    throw core::layout_exception(context, core::validate_error::layout_type_mismatch);
   }
   if (layout_type == 0u && fixed_item_size == 0u) {
-    throw shm::layout_exception(context, shm::validate_error::fixed_item_size_mismatch);
+    throw core::layout_exception(context, core::validate_error::fixed_item_size_mismatch);
   }
 
-  const std::size_t logical_shm_size =
-      shm_size_for_data_capacity(static_cast<std::size_t>(header->data_capacity));
+  const std::size_t logical_shm_size = shm_size_for_data_capacity(static_cast<std::size_t>(header->data_capacity));
 
   transport_options opts;
   opts.path = path;
@@ -131,8 +129,7 @@ class shm_channel_endpoints {
 
 class fixed_channel_builder {
  public:
-  fixed_channel_builder(std::string path, std::uint32_t item_size)
-      : path_(std::move(path)), item_size_(item_size) {}
+  fixed_channel_builder(std::string path, std::uint32_t item_size) : path_(std::move(path)), item_size_(item_size) {}
 
   fixed_channel_builder& with_data_align(std::uint32_t data_align) {
     data_align_ = data_align;
@@ -175,7 +172,9 @@ class fixed_channel_builder {
     return opts;
   }
 
-  shm_channel_endpoints create(std::size_t data_capacity) const { return shm_channel_endpoints(options(data_capacity)); }
+  shm_channel_endpoints create(std::size_t data_capacity) const {
+    return shm_channel_endpoints(options(data_capacity));
+  }
 
  private:
   std::string path_;
@@ -232,7 +231,9 @@ class varlen_channel_builder {
     return opts;
   }
 
-  shm_channel_endpoints create(std::size_t data_capacity) const { return shm_channel_endpoints(options(data_capacity)); }
+  shm_channel_endpoints create(std::size_t data_capacity) const {
+    return shm_channel_endpoints(options(data_capacity));
+  }
 
  private:
   std::string path_;
@@ -262,10 +263,10 @@ class fixed_channel_attacher {
     transport_options opts =
         detail::read_existing_shm_options(path_, win32_object_namespace_, "attach_fixed_channel: ");
     if (opts.type != channel_type::fixed) {
-      throw shm::layout_exception("attach_fixed_channel: ", shm::validate_error::layout_type_mismatch);
+      throw core::layout_exception("attach_fixed_channel: ", core::validate_error::layout_type_mismatch);
     }
     if (schema_id_set_ && opts.schema_id != schema_id_) {
-      throw shm::layout_exception("attach_fixed_channel: ", shm::validate_error::schema_id_mismatch);
+      throw core::layout_exception("attach_fixed_channel: ", core::validate_error::schema_id_mismatch);
     }
     if (schema_id_set_) {
       opts.schema_id = schema_id_;
@@ -305,10 +306,10 @@ class varlen_channel_attacher {
     transport_options opts =
         detail::read_existing_shm_options(path_, win32_object_namespace_, "attach_varlen_channel: ");
     if (opts.type != channel_type::varlen) {
-      throw shm::layout_exception("attach_varlen_channel: ", shm::validate_error::layout_type_mismatch);
+      throw core::layout_exception("attach_varlen_channel: ", core::validate_error::layout_type_mismatch);
     }
     if (schema_id_set_ && opts.schema_id != schema_id_) {
-      throw shm::layout_exception("attach_varlen_channel: ", shm::validate_error::schema_id_mismatch);
+      throw core::layout_exception("attach_varlen_channel: ", core::validate_error::schema_id_mismatch);
     }
     if (schema_id_set_) {
       opts.schema_id = schema_id_;
@@ -335,13 +336,10 @@ inline fixed_channel_builder make_fixed_channel(std::string path, std::uint32_t 
 
 inline varlen_channel_builder make_varlen_channel(std::string path) { return varlen_channel_builder(std::move(path)); }
 
-inline fixed_channel_attacher attach_fixed_channel(std::string path) {
-  return fixed_channel_attacher(std::move(path));
-}
+inline fixed_channel_attacher attach_fixed_channel(std::string path) { return fixed_channel_attacher(std::move(path)); }
 
 inline varlen_channel_attacher attach_varlen_channel(std::string path) {
   return varlen_channel_attacher(std::move(path));
 }
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace ipc::xproc

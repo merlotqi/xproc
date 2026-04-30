@@ -2,11 +2,10 @@
 
 #include <cstdint>
 #include <system_error>
-#include <xproc/shm/shm.hpp>
-#include <xproc/shm/shm_layout.hpp>
+#include <xproc/core/shm.hpp>
+#include <xproc/core/shm_layout.hpp>
 
-namespace xproc {
-namespace shm {
+namespace xproc::core {
 
 // Versions stored in a mapped control block (for logging / compatibility checks before full validate).
 struct embedded_version {
@@ -98,9 +97,8 @@ class layout_manager {
                                std::uint64_t creator_timestamp_ns = 0u, std::uint64_t creator_flags = 0u,
                                attach_behavior behavior = attach_behavior::ref_count);
 
-  static control_block* format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type,
-                               uint32_t data_alignment, uint32_t fixed_item_size, std::uint64_t expected_schema_id,
-                               attach_behavior behavior) {
+  static control_block* format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type, uint32_t data_alignment,
+                               uint32_t fixed_item_size, std::uint64_t expected_schema_id, attach_behavior behavior) {
     return format(sm, capacity, is_creator, layout_type, data_alignment, fixed_item_size, expected_schema_id, 0u, 0u,
                   behavior);
   }
@@ -122,10 +120,9 @@ class layout_manager {
                            std::uint64_t creator_flags);
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace core::xproc
 
 namespace std {
 template <>
-struct is_error_code_enum<xproc::shm::validate_error> : true_type {};
+struct is_error_code_enum<xproc::core::validate_error> : true_type {};
 }  // namespace std

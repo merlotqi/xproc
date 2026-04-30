@@ -1,5 +1,5 @@
+#include <xproc/core/shm.hpp>
 #include <xproc/platform/platform.hpp>
-#include <xproc/shm/shm.hpp>
 
 #if !defined(_WIN32)
 #error shm_win32.cpp is Windows-only
@@ -21,8 +21,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace xproc {
-namespace shm {
+namespace xproc::core {
 namespace {
 
 using NtQuerySectionFn = LONG(WINAPI*)(HANDLE, int, void*, unsigned long, unsigned long*);
@@ -362,5 +361,4 @@ void shm::unlink(const std::string& name) {
   // No POSIX-style shm_unlink on Windows; last CloseHandle on the mapping object releases the name.
 }
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::core

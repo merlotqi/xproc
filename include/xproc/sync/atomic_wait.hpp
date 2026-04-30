@@ -2,8 +2,7 @@
 
 #include <atomic>
 
-namespace xproc {
-namespace sync {
+namespace xproc::sync {
 
 template <typename T>
 void atomic_wait(const std::atomic<T>* atomic, T old);
@@ -14,8 +13,7 @@ void atomic_notify_one(const std::atomic<T>* atomic);
 template <typename T>
 void atomic_notify_all(const std::atomic<T>* atomic);
 
-}  // namespace sync
-}  // namespace xproc
+}  // namespace sync::xproc
 
 #if defined(__linux__)
 #include <xproc/sync/atomic_wait_futex.hpp>

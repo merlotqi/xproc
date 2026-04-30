@@ -10,8 +10,7 @@
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 class channel : public endpoint {
  public:
@@ -143,5 +142,4 @@ class consumer : private channel {
   const channel& as_channel() const noexcept { return static_cast<const channel&>(*this); }
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace ipc::xproc

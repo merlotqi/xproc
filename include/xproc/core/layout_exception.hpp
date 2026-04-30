@@ -3,10 +3,9 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <xproc/shm/shm_layout_manager.hpp>
+#include <xproc/core/shm_layout_manager.hpp>
 
-namespace xproc {
-namespace shm {
+namespace xproc::core {
 
 // Thrown when format/validate fails; carries validate_error for programmatic handling.
 class layout_exception : public std::runtime_error {
@@ -21,5 +20,4 @@ class layout_exception : public std::runtime_error {
   validate_error code_;
 };
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace core::xproc

@@ -19,7 +19,7 @@ The primary comparison uses a fixed layout in shared memory:
 For the fair shared-memory baseline, all frameworks use their shared-memory
 primitive only:
 
-- `xproc`: raw `xproc::shm::shm`
+- `xproc`: raw `xproc::core::shm`
 - `Qt`: `QSharedMemory`
 - `Poco`: `Poco::SharedMemory`
 

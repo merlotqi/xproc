@@ -7,8 +7,7 @@
 #include <xproc/sync/atomic_backoff.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 class varlen_writer : public ringbuffer_view {
  public:
@@ -59,5 +58,4 @@ class varlen_writer : public ringbuffer_view {
   sync::atomic_backoff backoff_;
 };
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

@@ -8,7 +8,7 @@
 
 int main() {
   const std::string path = "/xproc_example_observer";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -57,6 +57,6 @@ int main() {
   std::cout << "snapshot write_pos=" << snap.write_pos << " read_pos=" << snap.read_pos
             << " attach_count=" << snap.attach_count << "\n";
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   return 0;
 }

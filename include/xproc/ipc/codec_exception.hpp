@@ -4,8 +4,7 @@
 #include <string>
 #include <system_error>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 enum class codec_error {
   encode_failed,
@@ -51,8 +50,7 @@ class codec_exception : public std::runtime_error {
   codec_error code_;
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace ipc::xproc
 
 namespace std {
 template <>

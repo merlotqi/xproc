@@ -102,11 +102,11 @@ void run_slot_benchmark(benchmark::State& state, Mapping& mapping) {
 struct xproc_slot_mapping {
   explicit xproc_slot_mapping(std::size_t payload_len)
       : name_(unique_segment_name("xproc_shm_slot", payload_len, true)), size_(shm_slot_bytes(payload_len)) {
-    xproc::shm::shm::unlink(name_);
-    if (!writer_.open(name_, size_, xproc::shm::shm_open_mode::open_create)) {
+    xproc::core::shm::unlink(name_);
+    if (!writer_.open(name_, size_, xproc::core::shm_open_mode::open_create)) {
       throw std::runtime_error("xproc_slot_mapping: failed to create shared memory segment");
     }
-    if (!reader_.open(name_, size_, xproc::shm::shm_open_mode::open)) {
+    if (!reader_.open(name_, size_, xproc::core::shm_open_mode::open)) {
       throw std::runtime_error("xproc_slot_mapping: failed to open reader shared memory segment");
     }
 
@@ -120,7 +120,7 @@ struct xproc_slot_mapping {
     writer_header_->length.store(0, std::memory_order_relaxed);
   }
 
-  ~xproc_slot_mapping() { xproc::shm::shm::unlink(name_); }
+  ~xproc_slot_mapping() { xproc::core::shm::unlink(name_); }
 
   shm_slot_header* writer_header() { return writer_header_; }
   std::byte* writer_payload() { return reinterpret_cast<std::byte*>(writer_header_ + 1); }
@@ -130,8 +130,8 @@ struct xproc_slot_mapping {
  private:
   std::string name_;
   std::size_t size_{0};
-  xproc::shm::shm writer_;
-  xproc::shm::shm reader_;
+  xproc::core::shm writer_;
+  xproc::core::shm reader_;
   shm_slot_header* writer_header_{nullptr};
   shm_slot_header* reader_header_{nullptr};
 };
@@ -386,7 +386,7 @@ void run_native_benchmark(benchmark::State& state, xproc::ipc::channel_type type
   const auto payload_len = static_cast<std::size_t>(state.range(0));
   const auto path = unique_segment_name(type == xproc::ipc::channel_type::fixed ? "native_fixed" : "native_varlen",
                                         payload_len, true);
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -427,7 +427,7 @@ void run_native_benchmark(benchmark::State& state, xproc::ipc::channel_type type
   }
 
   state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * payload_len));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 static void BM_xproc_shm_slot(benchmark::State& state) {

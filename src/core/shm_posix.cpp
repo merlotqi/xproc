@@ -4,14 +4,13 @@
 #include <unistd.h>
 
 #include <cerrno>
-#include <xproc/shm/shm.hpp>
+#include <xproc/core/shm.hpp>
 
 #if defined(_WIN32)
 #error shm_posix.cpp must not be built on Windows
 #endif
 
-namespace xproc {
-namespace shm {
+namespace xproc::core {
 
 shm::shm(shm&& other) noexcept { *this = std::move(other); }
 
@@ -135,5 +134,4 @@ void shm::unlink(const std::string& name) {
   shm_unlink(name.c_str());
 }
 
-}  // namespace shm
-}  // namespace xproc
+}  // namespace xproc::core

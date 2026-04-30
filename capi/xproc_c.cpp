@@ -14,7 +14,7 @@
 #include <xproc/ipc/shm_builders.hpp>
 #include <xproc/ipc/transport_factory.hpp>
 #include <xproc/platform/process.hpp>
-#include <xproc/shm/layout_exception.hpp>
+#include <xproc/core/layout_exception.hpp>
 
 #ifndef XPROC_CAPI_PROJECT_VERSION
 #define XPROC_CAPI_PROJECT_VERSION "0.0.0"
@@ -57,29 +57,29 @@ void clear_last_error() {
   g_last_layout_error = XPROC_C_LAYOUT_ERROR_NONE;
 }
 
-xproc_c_layout_error to_c_layout_error(xproc::shm::validate_error error) {
+xproc_c_layout_error to_c_layout_error(xproc::core::validate_error error) {
   switch (error) {
-    case xproc::shm::validate_error::ok:
+    case xproc::core::validate_error::ok:
       return XPROC_C_LAYOUT_ERROR_NONE;
-    case xproc::shm::validate_error::not_attached:
+    case xproc::core::validate_error::not_attached:
       return XPROC_C_LAYOUT_ERROR_NOT_ATTACHED;
-    case xproc::shm::validate_error::bad_magic:
+    case xproc::core::validate_error::bad_magic:
       return XPROC_C_LAYOUT_ERROR_BAD_MAGIC;
-    case xproc::shm::validate_error::not_ready_timeout:
+    case xproc::core::validate_error::not_ready_timeout:
       return XPROC_C_LAYOUT_ERROR_NOT_READY_TIMEOUT;
-    case xproc::shm::validate_error::version_mismatch:
+    case xproc::core::validate_error::version_mismatch:
       return XPROC_C_LAYOUT_ERROR_VERSION_MISMATCH;
-    case xproc::shm::validate_error::header_size_mismatch:
+    case xproc::core::validate_error::header_size_mismatch:
       return XPROC_C_LAYOUT_ERROR_HEADER_SIZE_MISMATCH;
-    case xproc::shm::validate_error::layout_type_mismatch:
+    case xproc::core::validate_error::layout_type_mismatch:
       return XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH;
-    case xproc::shm::validate_error::fixed_item_size_mismatch:
+    case xproc::core::validate_error::fixed_item_size_mismatch:
       return XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH;
-    case xproc::shm::validate_error::schema_id_mismatch:
+    case xproc::core::validate_error::schema_id_mismatch:
       return XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH;
-    case xproc::shm::validate_error::alignment_invalid:
+    case xproc::core::validate_error::alignment_invalid:
       return XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID;
-    case xproc::shm::validate_error::capacity_insufficient:
+    case xproc::core::validate_error::capacity_insufficient:
       return XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT;
   }
   return XPROC_C_LAYOUT_ERROR_NONE;
@@ -236,7 +236,7 @@ template <typename Func>
 xproc_c_status catch_status(Func&& func) {
   try {
     return std::forward<Func>(func)();
-  } catch (const xproc::shm::layout_exception& ex) {
+  } catch (const xproc::core::layout_exception& ex) {
     return set_last_error(XPROC_C_STATUS_LAYOUT_ERROR, ex.what(), to_c_layout_error(ex.code()));
   } catch (const std::invalid_argument& ex) {
     return set_last_error(XPROC_C_STATUS_INVALID_ARGUMENT, ex.what());
@@ -411,7 +411,7 @@ xproc_c_status xproc_c_shm_unlink(const char* path) {
   if (path == nullptr) {
     return invalid_argument("xproc_c_shm_unlink: path must not be null");
   }
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   clear_last_error();
   return XPROC_C_STATUS_OK;
 }

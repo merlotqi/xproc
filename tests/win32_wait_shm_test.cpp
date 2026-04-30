@@ -22,7 +22,7 @@
 
 namespace {
 
-constexpr std::size_t kShmTotal = sizeof(xproc::shm::control_block) + 8192;
+constexpr std::size_t kShmTotal = sizeof(xproc::core::control_block) + 8192;
 
 int run_win_ipc_child(const char* shm_path) {
   ::Sleep(400);
@@ -67,7 +67,7 @@ void test_atomic_wait_notify_thread() {
 
 void test_shm_producer_observer_peek() {
   const std::string path = "/xproc_win32_shm_" + std::to_string(xproc::platform::current_process_id());
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
@@ -94,12 +94,12 @@ void test_shm_producer_observer_peek() {
     EXPECT_TRUE(ok);
   }
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 void test_cross_process_commit_seq() {
   std::string path = "/xproc_win32_ipc_" + std::to_string(::GetCurrentProcessId());
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   char exe_path[MAX_PATH];
   ASSERT_GT(::GetModuleFileNameA(nullptr, exe_path, MAX_PATH), 0u);
@@ -136,7 +136,7 @@ void test_cross_process_commit_seq() {
     EXPECT_EQ(code, 0u);
   }
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 }  // namespace

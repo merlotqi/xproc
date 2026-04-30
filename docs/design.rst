@@ -16,7 +16,7 @@ Monotonic positions and the data ring
 Windows naming and lifetime
 -----------------------------
 
-Paths are hashed and prefixed under ``<namespace>\`` (default ``Local\``; optional ``Global\`` via ``transport_options::win32_object_namespace``) for kernel object names. Because ``shm::unlink`` is a no-op on Windows, processes must choose **new unique names** when a previous mapping may still be referenced.
+Paths are hashed and prefixed under ``<namespace>\`` (default ``Local\``; optional ``Global\`` via ``transport_options::win32_object_namespace``) for kernel object names. Because ``core::unlink`` is a no-op on Windows, processes must choose **new unique names** when a previous mapping may still be referenced.
 
 Windows vs Linux synchronization semantics
 -------------------------------------------

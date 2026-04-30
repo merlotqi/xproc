@@ -8,8 +8,7 @@
 #include <type_traits>
 #include <xproc/protocol/codec_traits.hpp>
 
-namespace xproc {
-namespace protocol {
+namespace xproc::protocol {
 
 template <typename T>
 struct raw_pod_codec {
@@ -91,5 +90,4 @@ struct span_codec {
   }
 };
 
-}  // namespace protocol
-}  // namespace xproc
+}  // namespace protocol::xproc

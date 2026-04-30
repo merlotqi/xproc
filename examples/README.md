@@ -69,6 +69,6 @@ From repository root:
 
 ## Notes
 
-- Examples use unique-ish shared memory paths and call `shm::unlink` at exit.
-- On Windows, `shm::unlink` is a no-op by design; use unique names if rerunning frequently.
+- Examples use unique-ish shared memory paths and call `core::unlink` at exit.
+- On Windows, `core::unlink` is a no-op by design; use unique names if rerunning frequently.
 - `xproc_ping_pong` uses `fork`, so it is Linux-oriented.

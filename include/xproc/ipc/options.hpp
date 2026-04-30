@@ -4,10 +4,9 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <xproc/shm/shm_layout.hpp>
+#include <xproc/core/shm_layout.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 enum class channel_type {
   fixed,
@@ -20,7 +19,7 @@ enum class transport_backend {
 };
 
 constexpr std::size_t infer_existing_shm_size = 0;
-constexpr std::size_t min_shm_size = sizeof(shm::control_block);
+constexpr std::size_t min_shm_size = sizeof(core::control_block);
 
 constexpr std::size_t shm_size_for_data_capacity(std::size_t data_capacity) noexcept {
   return min_shm_size + data_capacity;
@@ -138,5 +137,4 @@ inline void validate_observer_transport_options(const transport_options& opts) {
   }
 }
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace ipc::xproc

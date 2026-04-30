@@ -159,7 +159,7 @@ xproc::ipc::transport_options make_varlen_options(const std::string& path, bool 
   return opts;
 }
 
-void cleanup_shm(const std::string& path) { xproc::shm::shm::unlink(path); }
+void cleanup_shm(const std::string& path) { xproc::core::shm::unlink(path); }
 
 std::string escape_field(const std::string& value) {
   std::string out;

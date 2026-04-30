@@ -21,10 +21,10 @@ struct always_fail_encode_codec {
 
 TEST(ProtocolCodec, CodecExceptionOnEncodeFailure) {
   const std::string path = "/xproc_codec_exc_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 4096;
+  opts.shm_size = sizeof(xproc::core::control_block) + 4096;
   opts.type = xproc::ipc::channel_type::varlen;
   opts.create_if_missing = true;
   bool threw = false;
@@ -39,7 +39,7 @@ TEST(ProtocolCodec, CodecExceptionOnEncodeFailure) {
     EXPECT_EQ(std::string(ec.category().name()), "xproc.codec");
   }
   EXPECT_TRUE(threw);
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 static_assert(xproc::protocol::is_codec_v<xproc::protocol::span_codec<64>>);
@@ -89,11 +89,11 @@ struct point_codec {
 
 TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
   const std::string path = "/xproc_protocol_codec_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
+  opts.shm_size = sizeof(xproc::core::control_block) + 65536;
   opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
@@ -127,16 +127,16 @@ TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
   EXPECT_EQ(received.x, 0x11223344u);
   EXPECT_EQ(received.y, 0x55667788u);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
   const std::string path = "/xproc_protocol_span_codec_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+  opts.shm_size = sizeof(xproc::core::control_block) + 8192;
   opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
@@ -171,15 +171,15 @@ TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
   EXPECT_EQ(received.size(), sizeof(blob));
   EXPECT_EQ(std::memcmp(received.data(), blob, sizeof(blob)), 0);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ProtocolCodec, RawPodAndBoundedBytes) {
   const std::string path = "/xproc_protocol_pod_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+  opts.shm_size = sizeof(xproc::core::control_block) + 8192;
   opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
@@ -207,15 +207,15 @@ TEST(ProtocolCodec, RawPodAndBoundedBytes) {
   consumer_th.join();
   EXPECT_EQ(got, 0xc0dec0dec0deull);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(ProtocolCodec, IdentityIcodecVarlen) {
   const std::string path = "/xproc_protocol_icodec_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 4096;
+  opts.shm_size = sizeof(xproc::core::control_block) + 4096;
   opts.type = xproc::ipc::channel_type::varlen;
 
   std::promise<void> consumer_attached_promise;
@@ -248,7 +248,7 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
   EXPECT_EQ(got.size(), std::strlen(msg));
   EXPECT_EQ(std::memcmp(got.data(), msg, got.size()), 0);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 }  // namespace

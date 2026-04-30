@@ -16,9 +16,9 @@ Error surfaces
 --------------
 
 * ``std::invalid_argument`` / ``std::logic_error`` for API misuse
-* ``xproc::shm::layout_exception`` with ``validate_error code()`` for shared-memory layout failures
+* ``xproc::core::layout_exception`` with ``validate_error code()`` for shared-memory layout failures
 * ``xproc::ipc::codec_exception`` with ``codec_error code()`` for encode/decode failures
-* ``shm::last_os_error()`` after a failed ``shm::open()``
+* ``core::last_os_error()`` after a failed ``core::open()``
 
 Main entry point
 ----------------
