@@ -139,6 +139,9 @@ XPROC_C_API size_t xproc_c_shm_data_capacity_for_size(size_t shm_size);
  * bindings can attach without restating fixed item sizing or other creator-owned
  * metadata.
  *
+ * String members in @p out_options are borrowed from thread-local storage and
+ * remain valid until the next xproc_c API call on the same thread.
+ *
  * @param path Shared-memory object name.
  * @param win32_object_namespace Optional Win32 namespace. Pass NULL to use the default.
  * @param out_options Receives the inferred option view.

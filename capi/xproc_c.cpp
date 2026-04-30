@@ -37,6 +37,12 @@ namespace {
 
 thread_local std::string g_last_error;
 thread_local xproc_c_layout_error g_last_layout_error = XPROC_C_LAYOUT_ERROR_NONE;
+struct owned_option_strings {
+  std::string path;
+  std::string win32_object_namespace;
+  std::string socket_host;
+};
+thread_local owned_option_strings g_read_existing_option_strings;
 
 template <typename Func>
 xproc_c_status catch_status(Func&& func);
@@ -131,6 +137,19 @@ void fill_borrowed_options(const xproc::ipc::transport_options& options, xproc_c
   out->socket_listen = options.socket_listen ? 1 : 0;
   out->socket_connect_retries = options.socket_connect_retries;
   out->socket_connect_retry_ms = options.socket_connect_retry_ms;
+}
+
+void fill_owned_options(const xproc::ipc::transport_options& options, owned_option_strings* storage, xproc_c_options* out) {
+  fill_borrowed_options(options, out);
+
+  storage->path = options.path;
+  storage->win32_object_namespace = options.win32_object_namespace;
+  storage->socket_host = options.socket_host;
+
+  out->path = storage->path.empty() ? nullptr : storage->path.c_str();
+  out->win32_object_namespace =
+      storage->win32_object_namespace.empty() ? nullptr : storage->win32_object_namespace.c_str();
+  out->socket_host = storage->socket_host.empty() ? nullptr : storage->socket_host.c_str();
 }
 
 xproc_c_status validate_endpoint_kind(xproc_c_endpoint_kind kind) {
@@ -320,7 +339,7 @@ xproc_c_status xproc_c_shm_read_existing_options(const char* path, const char* w
     const xproc::ipc::transport_options options =
         xproc::ipc::detail::read_existing_shm_options(path, ns, "xproc_c_shm_read_existing_options: ");
     xproc_c_options_init(out_options);
-    fill_borrowed_options(options, out_options);
+    fill_owned_options(options, &g_read_existing_option_strings, out_options);
     clear_last_error();
     return XPROC_C_STATUS_OK;
   });
