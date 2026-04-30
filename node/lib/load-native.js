@@ -1,11 +1,12 @@
 "use strict";
 
 const fs = require("fs");
-const load = require("node-gyp-build");
 const path = require("path");
 
 module.exports = function loadNative(rootDir) {
+  let lastError = null;
   try {
+    const load = require("node-gyp-build");
     return load(rootDir);
   } catch (packagedError) {
     const buildDir = path.join(rootDir, "..", "build");
@@ -20,7 +21,7 @@ module.exports = function loadNative(rootDir) {
       path.join(buildDir, "Debug", "xproc.node"),
     ];
 
-    let lastError = packagedError;
+    lastError = packagedError;
     for (const candidate of candidates) {
       if (!fs.existsSync(candidate)) {
         continue;

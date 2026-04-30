@@ -97,6 +97,7 @@ class endpoint {
       throw layout_exception("endpoint: ", err);
     }
 
+    opts_.shm_size = shm_size_for_data_capacity(static_cast<std::size_t>(header_->data_capacity));
     opts_.creator_timestamp_ns = header_->creator_timestamp_ns;
     opts_.creator_flags = header_->creator_flags;
 

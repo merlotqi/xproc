@@ -49,7 +49,7 @@ TEST(CApiSmoke, FixedProducerConsumerRoundTrip) {
   EXPECT_EQ(borrowed_consumer.item_size, sizeof(std::uint32_t));
   EXPECT_EQ(borrowed_producer.schema_id, producer_opts.schema_id);
   EXPECT_EQ(borrowed_consumer.schema_id, producer_opts.schema_id);
-  EXPECT_EQ(borrowed_consumer.shm_size, XPROC_C_INFER_EXISTING_SHM_SIZE);
+  EXPECT_EQ(borrowed_consumer.shm_size, producer_opts.shm_size);
 
   const std::uint32_t expected = 0x12345678u;
   ASSERT_EQ(xproc_c_producer_send_fixed_sized(producer, &expected, sizeof(expected)), XPROC_C_STATUS_OK);
@@ -152,7 +152,7 @@ TEST(CApiSmoke, ObserverSnapshotAndPeek) {
   EXPECT_STREQ(borrowed.path, path.c_str());
   EXPECT_EQ(borrowed.channel_type, XPROC_C_CHANNEL_FIXED);
   EXPECT_EQ(borrowed.schema_id, producer_opts.schema_id);
-  EXPECT_EQ(borrowed.shm_size, XPROC_C_INFER_EXISTING_SHM_SIZE);
+  EXPECT_EQ(borrowed.shm_size, producer_opts.shm_size);
 
   std::uint32_t actual = 0;
   std::uint32_t out_len = 0;
@@ -222,8 +222,8 @@ TEST(CApiSmoke, CreatorMetadataDefaultsAndAttachReturnsPersistedValues) {
   EXPECT_EQ(borrowed_consumer.creator_flags, persisted_flags);
   EXPECT_EQ(borrowed_observer.creator_timestamp_ns, persisted_timestamp);
   EXPECT_EQ(borrowed_observer.creator_flags, persisted_flags);
-  EXPECT_EQ(borrowed_consumer.shm_size, XPROC_C_INFER_EXISTING_SHM_SIZE);
-  EXPECT_EQ(borrowed_observer.shm_size, XPROC_C_INFER_EXISTING_SHM_SIZE);
+  EXPECT_EQ(borrowed_consumer.shm_size, producer_opts.shm_size);
+  EXPECT_EQ(borrowed_observer.shm_size, producer_opts.shm_size);
 
   const std::uint32_t expected = 0x13579BDFu;
   ASSERT_EQ(xproc_c_producer_send_fixed_sized(producer, &expected, sizeof(expected)), XPROC_C_STATUS_OK);

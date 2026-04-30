@@ -83,7 +83,8 @@ test("node ts smoke: fixed channel roundtrip with observer and inferred attach s
     assert.equal(consumerOptions.creatorFlags, persistedCreatorFlags);
     assert.equal(observerOptions.creatorTimestampNs, persistedCreatorTimestampNs);
     assert.equal(observerOptions.creatorFlags, persistedCreatorFlags);
-    assert.equal(consumerOptions.shmSize, BigInt(xproc.XPROC_C_INFER_EXISTING_SHM_SIZE));
+    assert.equal(consumerOptions.shmSize, createOptions.shmSize);
+    assert.equal(observerOptions.shmSize, createOptions.shmSize);
   } finally {
     observer?.close();
     consumer?.close();

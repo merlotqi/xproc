@@ -251,7 +251,9 @@ XPROC_C_API void xproc_c_producer_close(xproc_c_producer* producer);
  * @brief Returns the options associated with a producer handle.
  *
  * String members in @p out_options are borrowed from the handle and remain valid
- * until the handle is closed.
+ * until the handle is closed. Shared-memory endpoints report resolved options:
+ * if the handle attached with XPROC_C_INFER_EXISTING_SHM_SIZE, the returned
+ * shm_size is the concrete size inferred from the existing segment.
  *
  * @param producer Producer handle to inspect.
  * @param out_options Receives the borrowed option view.
@@ -330,7 +332,9 @@ XPROC_C_API void xproc_c_consumer_close(xproc_c_consumer* consumer);
  * @brief Returns the options associated with a consumer handle.
  *
  * String members in @p out_options are borrowed from the handle and remain valid
- * until the handle is closed.
+ * until the handle is closed. Shared-memory endpoints report resolved options:
+ * if the handle attached with XPROC_C_INFER_EXISTING_SHM_SIZE, the returned
+ * shm_size is the concrete size inferred from the existing segment.
  *
  * @param consumer Consumer handle to inspect.
  * @param out_options Receives the borrowed option view.
@@ -410,7 +414,9 @@ XPROC_C_API void xproc_c_observer_close(xproc_c_observer* observer);
  * @brief Returns the options associated with an observer handle.
  *
  * String members in @p out_options are borrowed from the handle and remain valid
- * until the handle is closed.
+ * until the handle is closed. Shared-memory endpoints report resolved options:
+ * if the handle attached with XPROC_C_INFER_EXISTING_SHM_SIZE, the returned
+ * shm_size is the concrete size inferred from the existing segment.
  *
  * @param observer Observer handle to inspect.
  * @param out_options Receives the borrowed option view.

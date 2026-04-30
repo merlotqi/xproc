@@ -79,9 +79,15 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
     throw shm::layout_exception(context, shm::validate_error::fixed_item_size_mismatch);
   }
 
+  const std::size_t logical_shm_size =
+      shm_size_for_data_capacity(static_cast<std::size_t>(header->data_capacity));
+
   transport_options opts;
   opts.path = path;
-  opts.shm_size = mapping.size();
+  // Report the creator's logical segment size, not the OS-mapped region size. On Windows the
+  // mapped section can be rounded up to page granularity, which would otherwise break re-attach
+  // validation by overstating the expected data capacity.
+  opts.shm_size = logical_shm_size;
   opts.item_size = (layout_type == 0u) ? fixed_item_size : 0u;
   opts.data_align = data_align;
   opts.schema_id = schema_id;
