@@ -62,7 +62,7 @@ schema / namespace checks yourself.
 
 ### C API
 
-For Node / Python bindings, a stable C-facing wrapper lives in [`capi/xproc_c.h`](capi/xproc_c.h).
+For Node / Python / C# bindings, a stable C-facing wrapper lives in [`capi/xproc_c.h`](capi/xproc_c.h).
 It exposes opaque producer / consumer / observer handles, byte-oriented send / receive helpers,
 borrowed option views, and thread-local error reporting.
 
@@ -160,6 +160,19 @@ By default the `xproc` target is a **static** library. For a **shared** library 
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_SHARED=ON
 cmake --build build
 ```
+
+### C# Binding
+
+`XprocSharp` lives under [`csharp/`](csharp/). Build the native C ABI as a shared library first, then build the
+managed project:
+
+```bash
+cmake -S . -B build -DXPROC_BUILD_CAPI=ON -DXPROC_BUILD_CAPI_SHARED=ON
+cmake --build build --target xproc_c --config Debug
+dotnet build csharp/XprocSharp/XprocSharp.csproj
+```
+
+See [csharp/README.md](csharp/README.md) for the example app and runtime library lookup details.
 
 ### Install and pkg-config
 
@@ -450,6 +463,7 @@ If xproc was built with `-DXPROC_WITH_NLOHMANN_JSON=ON` or `-DXPROC_WITH_PROTOBU
 ## See Also
 
 - [Documentation (reStructuredText)](docs/) — Sphinx sources; build HTML with `sphinx-build -b html docs docs/_build/html` (see [docs/requirements.txt](docs/requirements.txt))
+- [C# binding](csharp/) - `XprocSharp`, a .NET wrapper over `xproc_c`
 - [Examples](examples/) - Usage examples and demonstrations
 - [Tests](tests/) - Comprehensive test suite
 - [Protocol Buffer definitions](proto/) - Message format definitions

@@ -4,9 +4,14 @@ Generated Results
 .. note::
 
    The table below is generated from the most recent local benchmark run.
-   Host: Intel(R) Core(TM) i7-14700KF with 64 GB RAM.
+   Host: PC-MERLOT.
+   Run date: 2026-04-30T14:30:04+08:00.
+   Google Benchmark detected 28 CPUs at roughly 3418 MHz.
    Missing frameworks mean the corresponding optional dependency was not
-   enabled or not available when the benchmark executable was built.
+   enabled, not supported on the current platform, or not available when
+   the benchmark executable was built.
+   OS IPC rows are platform-specific: Windows uses named pipes, while
+   Linux and macOS use Unix domain sockets when that benchmark is built.
 
 Fair Shared-Memory Baseline
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20,31 +25,51 @@ Fair Shared-Memory Baseline
      - Latency
    * - Poco
      - 64 B
-     - 11.000 ns
+     - 11.283 ns
    * - Qt
      - 64 B
-     - 10.700 ns
+     - 11.584 ns
    * - xproc
      - 64 B
-     - 3.770 ns
+     - 3.370 ns
    * - Poco
      - 1024 B
-     - 16.900 ns
+     - 17.559 ns
    * - Qt
      - 1024 B
-     - 17.600 ns
+     - 17.746 ns
    * - xproc
      - 1024 B
-     - 15.000 ns
+     - 12.617 ns
    * - Poco
      - 4096 B
-     - 45.300 ns
+     - 43.755 ns
    * - Qt
      - 4096 B
-     - 42.000 ns
+     - 44.120 ns
    * - xproc
      - 4096 B
-     - 39.600 ns
+     - 43.372 ns
+
+OS IPC Alternatives
+^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 14 18
+
+   * - Framework
+     - Payload
+     - Latency
+   * - Windows named pipe
+     - 64 B
+     - 414.854 ns
+   * - Windows named pipe
+     - 1024 B
+     - 408.887 ns
+   * - Windows named pipe
+     - 4096 B
+     - 881.482 ns
 
 xproc Native Channel
 ^^^^^^^^^^^^^^^^^^^^
@@ -58,19 +83,19 @@ xproc Native Channel
      - Latency
    * - xproc fixed
      - 64 B
-     - 16.700 ns
+     - 17.416 ns
    * - xproc varlen
      - 64 B
-     - 18.400 ns
+     - 18.796 ns
    * - xproc fixed
      - 1024 B
-     - 24.600 ns
+     - 25.497 ns
    * - xproc varlen
      - 1024 B
-     - 31.100 ns
+     - 31.302 ns
    * - xproc fixed
      - 4096 B
-     - 55.800 ns
+     - 56.762 ns
    * - xproc varlen
      - 4096 B
-     - 71.500 ns
+     - 86.052 ns

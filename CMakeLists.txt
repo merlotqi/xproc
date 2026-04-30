@@ -117,6 +117,7 @@ if(XPROC_WITH_PROTOBUF)
 endif()
 
 option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
+option(XPROC_BUILD_CAPI_SHARED "Build xproc_c as a shared library (needed for P/Invoke-style bindings)" ${XPROC_BUILD_SHARED})
 if(XPROC_BUILD_CAPI)
     add_subdirectory(capi)
 endif()

@@ -1,10 +1,11 @@
-IPC Benchmark — Shared Memory Comparison
-========================================
+IPC Benchmark Comparisons
+=========================
 
-This document compares shared-memory IPC benchmark results across **xproc**,
-**Qt**, and **Poco** using the same single-slot handoff protocol where
-possible. The goal is to compare mapping and handoff overhead on the same
-abstraction level, then show `xproc` native channel performance separately.
+This document compares IPC benchmark results across **xproc**, **Qt**,
+**Poco**, and selected OS-native transport alternatives. The goal is to keep
+the shared-memory baseline fair at the raw mapping and handoff layer, then
+show where `xproc` native channels and OS-level stream transports land
+relative to that baseline.
 
 Methodology
 -----------
@@ -15,7 +16,8 @@ The primary comparison uses a fixed layout in shared memory:
 - `length`: payload size in bytes
 - `payload`: raw message bytes
 
-For the fair baseline, all frameworks use their shared-memory primitive only:
+For the fair shared-memory baseline, all frameworks use their shared-memory
+primitive only:
 
 - `xproc`: raw `xproc::shm::shm`
 - `Qt`: `QSharedMemory`
@@ -25,6 +27,12 @@ The benchmark writes through one endpoint mapping and reads through a second
 endpoint mapping of the same segment inside the same benchmark process. This
 keeps the benchmark reproducible under Google Benchmark while still exercising
 framework-specific shared-memory APIs.
+
+OS IPC alternatives are reported separately because they are kernel-managed
+stream transports rather than shared-memory mappings:
+
+- **Windows**: named pipe (`CreateNamedPipe` + `CreateFile`)
+- **Linux / macOS**: Unix domain socket (`socketpair(AF_UNIX, SOCK_STREAM)`)
 
 `xproc` native channel results are reported separately because they measure the
 library's higher-level transport rather than the raw slot protocol.
@@ -64,7 +72,7 @@ Generated Benchmark Table
 Notes
 -----
 
-- Missing frameworks in the generated table mean the dependency was not enabled
-  or not available for that local build.
+- Missing frameworks in the generated table mean the dependency was not enabled,
+  not supported on the current platform, or not available for that local build.
 - Results are machine-dependent and should be interpreted comparatively, not as
   universal constants.
