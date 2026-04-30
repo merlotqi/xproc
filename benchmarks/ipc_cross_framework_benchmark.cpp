@@ -1,5 +1,6 @@
 #include <benchmark/benchmark.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -7,8 +8,19 @@
 #include <cstring>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 #include <xproc/xproc.hpp>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+#if defined(__linux__) || defined(__APPLE__)
+#include <cerrno>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
 
 #ifdef XPROC_BENCH_QT
 #include <QSharedMemory>
@@ -40,6 +52,21 @@ std::string unique_segment_name(const char* prefix, std::size_t payload_len, boo
   const auto base =
       std::string("xproc_bench_") + prefix + "_" + std::to_string(payload_len) + "_" + std::to_string(now);
   return leading_slash ? "/" + base : base;
+}
+
+template <class Stream>
+void run_stream_benchmark(benchmark::State& state, Stream& stream, std::byte fill_byte) {
+  const auto payload_len = static_cast<std::size_t>(state.range(0));
+  std::vector<std::byte> payload(payload_len, fill_byte);
+  std::vector<std::byte> sink(payload_len);
+
+  for (auto _ : state) {
+    stream.write(payload.data(), payload_len);
+    stream.read(sink.data(), payload_len);
+    benchmark::DoNotOptimize(sink.data());
+  }
+
+  state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * payload_len));
 }
 
 template <class Mapping>
@@ -108,6 +135,184 @@ struct xproc_slot_mapping {
   shm_slot_header* writer_header_{nullptr};
   shm_slot_header* reader_header_{nullptr};
 };
+
+#ifdef _WIN32
+struct win32_handle {
+  win32_handle() = default;
+  explicit win32_handle(HANDLE handle) : handle(handle) {}
+  win32_handle(const win32_handle&) = delete;
+  win32_handle& operator=(const win32_handle&) = delete;
+  win32_handle(win32_handle&& other) noexcept : handle(other.handle) { other.handle = INVALID_HANDLE_VALUE; }
+  win32_handle& operator=(win32_handle&& other) noexcept {
+    if (this != &other) {
+      reset();
+      handle = other.handle;
+      other.handle = INVALID_HANDLE_VALUE;
+    }
+    return *this;
+  }
+  ~win32_handle() { reset(); }
+
+  void reset(HANDLE next = INVALID_HANDLE_VALUE) {
+    if (handle != INVALID_HANDLE_VALUE) {
+      CloseHandle(handle);
+    }
+    handle = next;
+  }
+
+  HANDLE get() const { return handle; }
+
+ private:
+  HANDLE handle{INVALID_HANDLE_VALUE};
+};
+
+inline void write_named_pipe_exact(HANDLE pipe, const std::byte* data, std::size_t len) {
+  std::size_t offset = 0;
+  while (offset < len) {
+    DWORD written = 0;
+    const auto chunk = static_cast<DWORD>(len - offset);
+    if (!WriteFile(pipe, data + offset, chunk, &written, nullptr)) {
+      throw std::runtime_error("windows_named_pipe_stream: WriteFile failed");
+    }
+    offset += static_cast<std::size_t>(written);
+  }
+}
+
+inline void read_named_pipe_exact(HANDLE pipe, std::byte* data, std::size_t len) {
+  std::size_t offset = 0;
+  while (offset < len) {
+    DWORD read = 0;
+    const auto chunk = static_cast<DWORD>(len - offset);
+    if (!ReadFile(pipe, data + offset, chunk, &read, nullptr)) {
+      throw std::runtime_error("windows_named_pipe_stream: ReadFile failed");
+    }
+    if (read == 0) {
+      throw std::runtime_error("windows_named_pipe_stream: unexpected end of stream");
+    }
+    offset += static_cast<std::size_t>(read);
+  }
+}
+
+struct windows_named_pipe_stream {
+  explicit windows_named_pipe_stream(std::size_t payload_len)
+      : name_("\\\\.\\pipe\\" + unique_segment_name("windows_named_pipe", payload_len, false)) {
+    const auto buffer_bytes = static_cast<DWORD>((std::max<std::size_t>)(payload_len * 4, 4096));
+    server_.reset(CreateNamedPipeA(name_.c_str(), PIPE_ACCESS_OUTBOUND, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                                   1, buffer_bytes, buffer_bytes, 0, nullptr));
+    if (server_.get() == INVALID_HANDLE_VALUE) {
+      throw std::runtime_error("windows_named_pipe_stream: CreateNamedPipeA failed");
+    }
+
+    HANDLE client_handle = INVALID_HANDLE_VALUE;
+    std::thread client_connector([&] {
+      client_handle = CreateFileA(name_.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                  nullptr);
+    });
+
+    const BOOL connected = ConnectNamedPipe(server_.get(), nullptr);
+    const DWORD connect_error = connected ? ERROR_SUCCESS : GetLastError();
+    client_connector.join();
+
+    if (!connected && connect_error != ERROR_PIPE_CONNECTED) {
+      throw std::runtime_error("windows_named_pipe_stream: ConnectNamedPipe failed");
+    }
+    if (client_handle == INVALID_HANDLE_VALUE) {
+      throw std::runtime_error("windows_named_pipe_stream: CreateFileA client connect failed");
+    }
+    client_.reset(client_handle);
+  }
+
+  void write(const std::byte* data, std::size_t len) { write_named_pipe_exact(server_.get(), data, len); }
+
+  void read(std::byte* data, std::size_t len) { read_named_pipe_exact(client_.get(), data, len); }
+
+ private:
+  std::string name_;
+  win32_handle server_;
+  win32_handle client_;
+};
+#endif
+
+#if defined(__linux__) || defined(__APPLE__)
+struct unix_fd {
+  unix_fd() = default;
+  explicit unix_fd(int value) : value(value) {}
+  unix_fd(const unix_fd&) = delete;
+  unix_fd& operator=(const unix_fd&) = delete;
+  unix_fd(unix_fd&& other) noexcept : value(other.value) { other.value = -1; }
+  unix_fd& operator=(unix_fd&& other) noexcept {
+    if (this != &other) {
+      reset();
+      value = other.value;
+      other.value = -1;
+    }
+    return *this;
+  }
+  ~unix_fd() { reset(); }
+
+  void reset(int next = -1) {
+    if (value >= 0) {
+      close(value);
+    }
+    value = next;
+  }
+
+  int get() const { return value; }
+
+ private:
+  int value{-1};
+};
+
+inline void write_unix_socket_exact(int fd, const std::byte* data, std::size_t len) {
+  std::size_t offset = 0;
+  while (offset < len) {
+    const auto written = ::write(fd, data + offset, len - offset);
+    if (written < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      throw std::runtime_error("unix_domain_socket_stream: write failed");
+    }
+    offset += static_cast<std::size_t>(written);
+  }
+}
+
+inline void read_unix_socket_exact(int fd, std::byte* data, std::size_t len) {
+  std::size_t offset = 0;
+  while (offset < len) {
+    const auto received = ::read(fd, data + offset, len - offset);
+    if (received < 0) {
+      if (errno == EINTR) {
+        continue;
+      }
+      throw std::runtime_error("unix_domain_socket_stream: read failed");
+    }
+    if (received == 0) {
+      throw std::runtime_error("unix_domain_socket_stream: unexpected end of stream");
+    }
+    offset += static_cast<std::size_t>(received);
+  }
+}
+
+struct unix_domain_socket_stream {
+  explicit unix_domain_socket_stream(std::size_t) {
+    int fds[2] = {-1, -1};
+    if (::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) != 0) {
+      throw std::runtime_error("unix_domain_socket_stream: socketpair failed");
+    }
+    writer_.reset(fds[0]);
+    reader_.reset(fds[1]);
+  }
+
+  void write(const std::byte* data, std::size_t len) { write_unix_socket_exact(writer_.get(), data, len); }
+
+  void read(std::byte* data, std::size_t len) { read_unix_socket_exact(reader_.get(), data, len); }
+
+ private:
+  unix_fd writer_;
+  unix_fd reader_;
+};
+#endif
 
 #ifdef XPROC_BENCH_QT
 struct qt_slot_mapping {
@@ -252,6 +457,20 @@ static void BM_xproc_native_varlen(benchmark::State& state) {
   run_native_benchmark(state, xproc::ipc::channel_type::varlen, std::byte{0x42});
 }
 
+#ifdef _WIN32
+static void BM_windows_named_pipe(benchmark::State& state) {
+  windows_named_pipe_stream stream(static_cast<std::size_t>(state.range(0)));
+  run_stream_benchmark(state, stream, std::byte{0x33});
+}
+#endif
+
+#if defined(__linux__) || defined(__APPLE__)
+static void BM_unix_domain_socket(benchmark::State& state) {
+  unix_domain_socket_stream stream(static_cast<std::size_t>(state.range(0)));
+  run_stream_benchmark(state, stream, std::byte{0x33});
+}
+#endif
+
 }  // namespace
 
 BENCHMARK(BM_xproc_shm_slot)->Arg(64)->Arg(1024)->Arg(4096);
@@ -263,3 +482,9 @@ BENCHMARK(BM_poco_shm_slot)->Arg(64)->Arg(1024)->Arg(4096);
 #endif
 BENCHMARK(BM_xproc_native_fixed)->Arg(64)->Arg(1024)->Arg(4096);
 BENCHMARK(BM_xproc_native_varlen)->Arg(64)->Arg(1024)->Arg(4096);
+#ifdef _WIN32
+BENCHMARK(BM_windows_named_pipe)->Arg(64)->Arg(1024)->Arg(4096);
+#endif
+#if defined(__linux__) || defined(__APPLE__)
+BENCHMARK(BM_unix_domain_socket)->Arg(64)->Arg(1024)->Arg(4096);
+#endif
