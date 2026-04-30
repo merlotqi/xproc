@@ -216,7 +216,7 @@ void run_native_benchmark(benchmark::State& state, xproc::ipc::channel_type type
       });
       if (!got) {
         const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+        xproc::sync::atomic_wait<uint32_t>(&consumer.header()->rb_meta.commit_seq, c);
       }
     }
   }

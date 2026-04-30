@@ -5,9 +5,11 @@ const childProcess = require("node:child_process");
 const path = require("node:path");
 
 const packageDir = path.resolve(__dirname, "..");
+const useShell = process.platform === "win32";
 const raw = childProcess.execFileSync("npm", ["pack", "--dry-run", "--json"], {
   cwd: packageDir,
   encoding: "utf8",
+  shell: useShell,
 });
 
 const [packResult] = JSON.parse(raw);

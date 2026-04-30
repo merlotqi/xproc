@@ -9,16 +9,18 @@ const packageDir = path.resolve(__dirname, "..");
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "xproc-pack-"));
 const projectDir = path.join(tempRoot, "project");
 fs.mkdirSync(projectDir, { recursive: true });
+const useShell = process.platform === "win32";
 
 const packOutput = childProcess.execFileSync("npm", ["pack", "--json"], {
   cwd: packageDir,
   encoding: "utf8",
+  shell: useShell,
 });
 const [{ filename }] = JSON.parse(packOutput);
 const tarballPath = path.join(packageDir, filename);
 
-childProcess.execFileSync("npm", ["init", "-y"], { cwd: projectDir, stdio: "ignore" });
-childProcess.execFileSync("npm", ["install", tarballPath], { cwd: projectDir, stdio: "inherit" });
+childProcess.execFileSync("npm", ["init", "-y"], { cwd: projectDir, stdio: "ignore", shell: useShell });
+childProcess.execFileSync("npm", ["install", tarballPath], { cwd: projectDir, stdio: "inherit", shell: useShell });
 childProcess.execFileSync(
   "node",
   [
