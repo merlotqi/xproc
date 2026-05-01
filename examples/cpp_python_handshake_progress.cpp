@@ -9,19 +9,6 @@
 //   1. xproc-based identity confirmation,
 //   2. realtime progress capture.
 
-#if !defined(__linux__) && !defined(_WIN32) && !defined(_WIN64)
-
-#include <iostream>
-
-int main() {
-  std::cout << "cpp_python_handshake_progress_demo: unsupported platform\n";
-  return 0;
-}
-
-#endif
-
-#if defined(__linux__) || defined(_WIN32) || defined(_WIN64)
-
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -86,7 +73,7 @@ std::filesystem::path binary_root() { return std::filesystem::path(XPROC_BINARY_
 std::string current_process_id_string() { return std::to_string(xproc::platform::current_process_id()); }
 
 std::string default_python_binary() {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
   return "python3";
 #elif defined(_WIN32) || defined(_WIN64)
   return "python";
@@ -487,5 +474,3 @@ int main(int argc, char** argv) {
     return 1;
   }
 }
-
-#endif

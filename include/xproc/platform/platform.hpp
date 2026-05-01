@@ -8,7 +8,7 @@
 #define XPROC_OS_NAME "Windows"
 #elif defined(__APPLE__) && defined(__MACH__)
 #define XPROC_PLATFORM_DARWIN 1
-#define XPROC_OS_NAME "macOS"
+#define XPROC_OS_NAME "MacOS"
 #else
 #error "unsupported platform"
 #endif
