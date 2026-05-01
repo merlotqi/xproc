@@ -8,8 +8,8 @@ if(WIN32 AND MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
     endif()
 endif()
 
-if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux")
-    message(FATAL_ERROR "xproc supports Linux and Windows only (found ${CMAKE_SYSTEM_NAME}); see docs/design.md")
+if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    message(FATAL_ERROR "xproc supports Linux, Windows, MacOS only (found ${CMAKE_SYSTEM_NAME}); see docs/design.md")
 endif()
 
 if(WIN32)

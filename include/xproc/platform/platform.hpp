@@ -6,6 +6,9 @@
 #elif defined(_WIN32) || defined(_WIN64)
 #define XPROC_PLATFORM_WINDOWS 1
 #define XPROC_OS_NAME "Windows"
+#elif defined(__APPLE__) && defined(__MACH__)
+#define XPROC_PLATFORM_DARWIN 1
+#define XPROC_OS_NAME "macOS"
 #else
 #error "unsupported platform"
 #endif
@@ -86,6 +89,14 @@ struct platform_info {
 
   static constexpr bool is_windows() {
 #ifdef XPROC_PLATFORM_WINDOWS
+    return true;
+#else
+    return false;
+#endif
+  }
+
+  static constexpr bool is_macos() {
+#ifdef XPROC_PLATFORM_DARWIN
     return true;
 #else
     return false;
