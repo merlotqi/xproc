@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
   opts.data_align = 8;
   opts.create_if_missing = true;
 
-  xproc::shm::shm::unlink(shm_path);
+  xproc::core::shm::unlink(shm_path);
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, shm_path});
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
   }
 
   const int rc = child.wait();
-  xproc::shm::shm::unlink(shm_path);
+  xproc::core::shm::unlink(shm_path);
 
   if (rc != 0) {
     std::cerr << "child failed\n";
