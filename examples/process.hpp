@@ -7,11 +7,15 @@
 #include <utility>
 #include <vector>
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
 
 #elif defined(_WIN32) || defined(_WIN64)
 
@@ -46,6 +50,37 @@ class process {
 
   ~process() { reset(); }
 
+  // Return the path of the currently running executable.
+  static std::string self_exe() {
+#if defined(__linux__)
+    char buf[4096];
+    const ssize_t n = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (n <= 0) {
+      throw std::runtime_error("readlink(/proc/self/exe) failed");
+    }
+    buf[n] = '\0';
+    return buf;
+#elif defined(__APPLE__)
+    uint32_t size = 0;
+    ::_NSGetExecutablePath(nullptr, &size);
+    std::string buf(size, '\0');
+    if (::_NSGetExecutablePath(buf.data(), &size) != 0) {
+      throw std::runtime_error("_NSGetExecutablePath failed");
+    }
+    buf.resize(std::strlen(buf.c_str()));
+    return buf;
+#elif defined(_WIN32) || defined(_WIN64)
+    char buf[MAX_PATH];
+    const DWORD n = ::GetModuleFileNameA(nullptr, buf, sizeof(buf));
+    if (n == 0 || n >= sizeof(buf)) {
+      throw std::runtime_error("GetModuleFileNameA failed");
+    }
+    return std::string(buf, n);
+#else
+    throw std::runtime_error("self_exe: unsupported platform");
+#endif
+  }
+
   static process spawn(const std::vector<std::string>& argv) {
     if (argv.empty()) {
       throw std::invalid_argument("process::spawn requires a non-empty argv");
@@ -53,7 +88,7 @@ class process {
 
     process child;
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     const pid_t pid = ::fork();
     if (pid < 0) {
       throw std::runtime_error("fork failed");
@@ -98,7 +133,7 @@ class process {
   }
 
   std::uint64_t pid() const noexcept {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     return pid_ > 0 ? static_cast<std::uint64_t>(pid_) : 0u;
 #elif defined(_WIN32) || defined(_WIN64)
     return process_info_.dwProcessId != 0 ? static_cast<std::uint64_t>(process_info_.dwProcessId) : 0u;
@@ -108,7 +143,7 @@ class process {
   }
 
   bool valid() const noexcept {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     return pid_ > 0;
 #elif defined(_WIN32) || defined(_WIN64)
     return process_info_.hProcess != nullptr;
@@ -124,7 +159,7 @@ class process {
       return finished_;
     }
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     const pid_t rc = ::waitpid(pid_, &raw_status_, WNOHANG);
     if (rc == pid_) {
       finished_ = true;
@@ -151,7 +186,7 @@ class process {
       return;
     }
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     ::kill(pid_, SIGKILL);
     (void)::waitpid(pid_, &raw_status_, 0);
     finished_ = true;
@@ -168,7 +203,7 @@ class process {
       return 1;
     }
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     if (!finished_) {
       (void)::waitpid(pid_, &raw_status_, 0);
       finished_ = true;
@@ -237,7 +272,7 @@ class process {
   void move_from(process&& other) noexcept {
     finished_ = std::exchange(other.finished_, false);
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     pid_ = std::exchange(other.pid_, -1);
     raw_status_ = std::exchange(other.raw_status_, 0);
 #elif defined(_WIN32) || defined(_WIN64)
@@ -248,7 +283,7 @@ class process {
   }
 
   void reset() noexcept {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
     pid_ = -1;
     raw_status_ = 0;
 #elif defined(_WIN32) || defined(_WIN64)
@@ -267,7 +302,7 @@ class process {
 
   bool finished_{false};
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
   pid_t pid_{-1};
   int raw_status_{0};
 #elif defined(_WIN32) || defined(_WIN64)

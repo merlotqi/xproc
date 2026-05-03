@@ -8,7 +8,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "xproc_c.h"
 

@@ -19,4 +19,6 @@ void atomic_notify_all(const std::atomic<T>* atomic);
 #include <xproc/sync/atomic_wait_futex.hpp>
 #elif defined(_WIN32)
 #include <xproc/sync/atomic_wait_win32.hpp>
+#elif defined(__APPLE__)
+#include <xproc/sync/atomic_wait_darwin.hpp>
 #endif

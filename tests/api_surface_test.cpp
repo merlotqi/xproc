@@ -12,7 +12,6 @@ TEST(ApiSurface, PlatformInfoAndProcessId) {
   EXPECT_NE(xproc::platform::platform_info::os, nullptr);
   EXPECT_NE(xproc::platform::arch_info::name, nullptr);
   EXPECT_GT(xproc::platform::current_process_id(), 0);
-  EXPECT_NE(xproc::platform::platform_info::is_linux(), xproc::platform::platform_info::is_windows());
 }
 
 TEST(ApiSurface, AtomicWaitNotifyOne) {
