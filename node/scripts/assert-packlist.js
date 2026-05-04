@@ -15,7 +15,7 @@ const raw = childProcess.execFileSync("npm", ["pack", "--dry-run", "--json"], {
 const [packResult] = JSON.parse(raw);
 const files = new Set(packResult.files.map((entry) => entry.path));
 
-assert.equal(packResult.name, "@merlot/xproc");
+assert.equal(packResult.name, "@merlotqi/xproc");
 assert.ok([...files].some((file) => file.startsWith("prebuilds/")), "expected packaged prebuilds/");
 assert.ok(files.has("index.js"));
 assert.ok(files.has("index.d.ts"));

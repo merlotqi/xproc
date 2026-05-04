@@ -72,7 +72,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish @merlot/xproc
+    name: Publish @merlotqi/xproc
     needs: build-prebuild
     runs-on: ubuntu-latest
     permissions:

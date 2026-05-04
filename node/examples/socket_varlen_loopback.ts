@@ -25,7 +25,7 @@ async function main(): Promise<void> {
     port: consumer.socketPort(),
   }).openProducer();
 
-  const messages = ["hello", "from", "@merlot/xproc", "socket"];
+  const messages = ["hello", "from", "@merlotqi/xproc", "socket"];
   let received = 0;
 
   try {

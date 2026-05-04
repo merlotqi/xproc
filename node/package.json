@@ -1,5 +1,5 @@
 {
-  "name": "@merlot/xproc",
+  "name": "@merlotqi/xproc",
   "version": "0.1.0",
   "description": "xproc: High-performance Single Producer Single Consumer (SPSC) Inter-Process Communication (IPC) library using ring buffers. Supports both fixed-length frames and variable-length messages.",
   "main": "index.js",

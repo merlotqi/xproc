@@ -1,6 +1,6 @@
-# @merlot/xproc
+# @merlotqi/xproc
 
-`@merlot/xproc` is a Node.js binding for `xproc`, a single-producer single-consumer
+`@merlotqi/xproc` is a Node.js binding for `xproc`, a single-producer single-consumer
 IPC library with shared-memory and socket transports.
 
 The package keeps the raw `Producer` / `Consumer` / `Observer` constructors, and
@@ -9,7 +9,7 @@ also adds higher-level `xproc.shm` and `xproc.socket` helpers for the common pat
 ## Install
 
 ```bash
-npm install @merlot/xproc
+npm install @merlotqi/xproc
 ```
 
 This package is intended to install and load directly from bundled prebuilt
@@ -26,7 +26,7 @@ Node-API binaries on these platforms:
 Fixed-size channel:
 
 ```ts
-const xproc = require("@merlot/xproc");
+const xproc = require("@merlotqi/xproc");
 
 const created = xproc.shm.createFixedChannel({
   path: "/demo-fixed",
@@ -48,7 +48,7 @@ const payload = consumer.pollCopy();
 Variable-length channel:
 
 ```ts
-const xproc = require("@merlot/xproc");
+const xproc = require("@merlotqi/xproc");
 
 const created = xproc.shm.createVarlenChannel({
   path: "/demo-varlen",
@@ -69,7 +69,7 @@ const payload = consumer.pollCopy();
 Fixed-size loopback:
 
 ```ts
-const xproc = require("@merlot/xproc");
+const xproc = require("@merlotqi/xproc");
 
 const listener = xproc.socket.listenFixed({
   host: "127.0.0.1",
@@ -91,7 +91,7 @@ const payload = consumer.pollCopy();
 Variable-length loopback:
 
 ```ts
-const xproc = require("@merlot/xproc");
+const xproc = require("@merlotqi/xproc");
 
 const listener = xproc.socket.listenVarlen({
   host: "127.0.0.1",
@@ -114,7 +114,7 @@ The lower-level constructors are still available when you want direct control
 over transport options:
 
 ```ts
-const xproc = require("@merlot/xproc");
+const xproc = require("@merlotqi/xproc");
 
 const producer = new xproc.Producer({
   path: "/demo-raw",

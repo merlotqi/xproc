@@ -26,7 +26,7 @@ childProcess.execFileSync(
   [
     "-e",
     `
-const xproc = require("@merlot/xproc");
+const xproc = require("@merlotqi/xproc");
 const path = "/xproc_pack_verify_" + process.pid;
 try { xproc.shmUnlink(path); } catch {}
 const created = xproc.shm.createFixedChannel({ path, itemSize: 4, dataCapacity: 4096n });
