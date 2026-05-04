@@ -55,7 +55,7 @@ jobs:
         working-directory: node
         run: npm ci
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_CAPI=ON -DXPROC_BUILD_NODE=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DXPROC_BUILD_CAPI=ON -DXPROC_BUILD_NODE=ON
       - name: Build xproc_node
         run: cmake --build build --target xproc_node --config Release --parallel
       - name: Test Node package
