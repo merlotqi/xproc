@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14...3.24)
-project(xproc VERSION 0.2.0 LANGUAGES CXX)
+project(xproc VERSION 1.0.0 LANGUAGES CXX)
 
 # Visual Studio generator: default to x64 when -A is omitted, avoiding winnt.h C1189 "No Target Architecture".
 if(WIN32 AND MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
