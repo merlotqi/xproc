@@ -1,7 +1,7 @@
 # Install xproc
 
 This file covers installation layout and downstream consumption. For building from
-source, see [BUILD](BUILD).
+source, see [BUILD.md](BUILD.md).
 
 ## What Gets Installed
 

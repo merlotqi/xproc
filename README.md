@@ -47,8 +47,8 @@ For C-facing consumers and language bindings:
 
 ## Build and Install
 
-- Build from source: [BUILD](BUILD)
-- Install layout and downstream usage: [INSTALL](INSTALL)
+- Build from source: [BUILD.md](BUILD.md)
+- Install layout and downstream usage: [INSTALL.md](INSTALL.md)
 - C# binding notes: [csharp/README.md](csharp/README.md)
 - Node binding notes: [node/README.md](node/README.md)
 - Python binding sources: [Python/](Python/)

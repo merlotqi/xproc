@@ -1,7 +1,7 @@
 # Build xproc
 
 This file covers building the project from source. For installation and downstream
-consumption, see [INSTALL](INSTALL).
+consumption, see [INSTALL.md](INSTALL.md).
 
 ## Prerequisites
 
