@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
   }
 
   const int rc = child.wait();
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   if (rc != 0) {
     std::cerr << "child process failed\n";

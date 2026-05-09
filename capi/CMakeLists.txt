@@ -6,7 +6,7 @@ set(XPROC_CAPI_SOURCES
     xproc_c.cpp
 )
 
-if(XPROC_BUILD_CAPI_SHARED)
+if(XPROC_BUILD_SHARED)
     add_library(xproc_c SHARED ${XPROC_CAPI_HEADERS} ${XPROC_CAPI_SOURCES})
     target_compile_definitions(xproc_c PRIVATE XPROC_CAPI_BUILDING XPROC_CAPI_SHARED)
     target_compile_definitions(xproc_c PUBLIC XPROC_CAPI_SHARED)

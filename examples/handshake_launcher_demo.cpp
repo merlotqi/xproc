@@ -240,13 +240,13 @@ int main(int argc, char** argv) {
   }
 
   parent_hs.detach();
-  xproc::shm::shm::unlink(handshake_path);
+  xproc::core::shm::unlink(handshake_path);
   std::cout << "handshake ok: pid " << child.pid() << ", telemetry follows (ipc " << ipc_path << ")\n";
 
   parent_consume_until_child_done(consumer, child);
   const int rc = child.wait();
 
-  xproc::shm::shm::unlink(ipc_path);
+  xproc::core::shm::unlink(ipc_path);
   if (rc != 0) {
     std::cerr << "child process failed\n";
     return 1;

@@ -13,7 +13,7 @@ if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT CMAKE_SYSTEM_NAME
 endif()
 
 if(WIN32)
-    message(STATUS "xproc: Windows build: atomic_wait uses polling (WaitOnAddress does not pair across separate MapViewOfFile views).")
+    message(STATUS "xproc: Windows build: atomic_wait uses WaitOnAddress/WakeByAddress* with short timeout rechecks for cross-process shared memory.")
 endif()
 
 include(GNUInstallDirs)
@@ -117,7 +117,6 @@ if(XPROC_WITH_PROTOBUF)
 endif()
 
 option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
-option(XPROC_BUILD_CAPI_SHARED "Build xproc_c as a shared library (needed for P/Invoke-style bindings)" ${XPROC_BUILD_SHARED})
 if(XPROC_BUILD_CAPI)
     add_subdirectory(capi)
 endif()
