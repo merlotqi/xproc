@@ -52,6 +52,10 @@ inline const wait_api& native_wait_api() {
   return api;
 }
 
+inline constexpr std::uint32_t native_wait_spin_count = 1000;
+inline constexpr std::uint32_t native_wait_yield_count = 10;
+inline constexpr DWORD native_wait_timeout_ms = 1;
+
 inline bool has_native_wait_api() {
   const wait_api& api = native_wait_api();
   return api.wait_on_address != nullptr && api.wake_one != nullptr && api.wake_all != nullptr;
@@ -89,9 +93,9 @@ inline void polling_wait(const std::atomic<T>* atomic, T old) {
 }  // namespace details
 
 // WaitOnAddress / WakeByAddress* are native address-wait primitives, but Microsoft documents them
-// as same-process synchronization. xproc therefore uses a short timed wait loop: same-process
-// waiters wake immediately via WakeByAddress*, while shared-memory waiters in other processes still
-// make progress by timing out, reloading the atomic word, and looping.
+// as same-process synchronization. xproc therefore uses a three-stage wait: spin, yield, then a
+// short timed wait. Nearby same-process hand-offs usually complete in the spin/yield window, and
+// cross-process shared-memory hand-offs avoid falling into a coarse kernel timeout on every round.
 
 template <typename T>
 inline void atomic_wait(const std::atomic<T>* atomic, T old) {
@@ -102,10 +106,21 @@ inline void atomic_wait(const std::atomic<T>* atomic, T old) {
     return;
   }
 
-  constexpr DWORD kWaitTimeoutMs = 1;
   const details::wait_api& api = details::native_wait_api();
   while (atomic->load(std::memory_order_acquire) == old) {
-    (void)api.wait_on_address(details::wait_address(atomic), &old, sizeof(T), kWaitTimeoutMs);
+    for (std::uint32_t spin = 0; spin < details::native_wait_spin_count; ++spin) {
+      XPROC_CPU_PAUSE();
+      if (atomic->load(std::memory_order_acquire) != old) {
+        return;
+      }
+    }
+    for (std::uint32_t yield = 0; yield < details::native_wait_yield_count; ++yield) {
+      ::SwitchToThread();
+      if (atomic->load(std::memory_order_acquire) != old) {
+        return;
+      }
+    }
+    (void)api.wait_on_address(details::wait_address(atomic), &old, sizeof(T), details::native_wait_timeout_ms);
   }
 }
 
