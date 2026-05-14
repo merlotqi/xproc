@@ -1,9 +1,13 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 #include <xproc/xproc.hpp>
 
@@ -103,6 +107,17 @@ void run_fixed_loopback(const std::string& producer_host) {
   }
 }
 
+template <typename Predicate>
+bool spin_until(Predicate&& predicate, int iterations = 4000, int sleep_us = 200) {
+  for (int i = 0; i < iterations; ++i) {
+    if (predicate()) {
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
+  }
+  return false;
+}
+
 }  // namespace
 
 TEST(SocketTransport, VarlenTcpLoopbackIPv4) {
@@ -111,6 +126,113 @@ TEST(SocketTransport, VarlenTcpLoopbackIPv4) {
 
 TEST(SocketTransport, FixedTcpLoopbackIPv6) {
   run_fixed_loopback("::1");
+}
+
+TEST(SocketTransport, VarlenTcpLoopbackIpv6BracketHost) {
+  run_varlen_loopback("[::1]");
+}
+
+TEST(SocketTransport, ReconnectAfterPeerDisconnect) {
+  try {
+    xproc::ipc::transport_options co;
+    co.backend = xproc::ipc::transport_backend::socket;
+    co.socket_listen = true;
+    co.socket_port = 0;
+    co.type = xproc::ipc::channel_type::fixed;
+    co.item_size = sizeof(std::uint32_t);
+    co.socket_host.clear();
+    xproc::ipc::socket_consumer cons(co);
+
+    xproc::ipc::transport_options po;
+    po.backend = xproc::ipc::transport_backend::socket;
+    po.socket_listen = false;
+    po.socket_host = "127.0.0.1";
+    po.socket_port = cons.options().socket_port;
+    po.type = xproc::ipc::channel_type::fixed;
+    po.item_size = sizeof(std::uint32_t);
+
+    {
+      xproc::ipc::socket_producer first(po);
+      const std::uint32_t v1 = 0x11112222u;
+      first.send_fixed_sized(&v1, sizeof(v1));
+    }
+
+    std::vector<std::uint32_t> observed;
+    auto poll_once = [&]() -> bool {
+      return cons.poll([&](void* p, std::uint32_t len) {
+        ASSERT_EQ(len, sizeof(std::uint32_t));
+        std::uint32_t v = 0;
+        std::memcpy(&v, p, sizeof(v));
+        observed.push_back(v);
+      });
+    };
+
+    ASSERT_TRUE(spin_until([&]() { return poll_once(); }));
+    ASSERT_EQ(observed.size(), 1u);
+    EXPECT_EQ(observed[0], 0x11112222u);
+
+    {
+      xproc::ipc::socket_producer second(po);
+      const std::uint32_t v2 = 0x33334444u;
+      second.send_fixed_sized(&v2, sizeof(v2));
+    }
+
+    ASSERT_TRUE(spin_until([&]() { return poll_once(); }));
+    ASSERT_EQ(observed.size(), 2u);
+    EXPECT_EQ(observed[1], 0x33334444u);
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
+TEST(SocketTransport, RuntimeProcessesSocketMessages) {
+  try {
+    xproc::ipc::transport_options co;
+    co.backend = xproc::ipc::transport_backend::socket;
+    co.socket_listen = true;
+    co.socket_port = 0;
+    co.type = xproc::ipc::channel_type::varlen;
+    co.socket_host.clear();
+    xproc::ipc::socket_consumer cons(co);
+
+    xproc::ipc::transport_options po;
+    po.backend = xproc::ipc::transport_backend::socket;
+    po.socket_listen = false;
+    po.socket_host = "127.0.0.1";
+    po.socket_port = cons.options().socket_port;
+    po.type = xproc::ipc::channel_type::varlen;
+    xproc::ipc::socket_producer prod(po);
+
+    xproc::ipc::runtime rt(cons);
+    std::atomic<int> handled{0};
+    std::mutex mu;
+    std::vector<std::string> messages;
+
+    auto executor = [](auto&& task) { task(); };
+    std::thread worker([&] {
+      rt.run(executor, [&](const std::uint8_t* data, std::size_t len) {
+        std::lock_guard<std::mutex> lock(mu);
+        messages.emplace_back(reinterpret_cast<const char*>(data), len);
+        handled.fetch_add(1, std::memory_order_relaxed);
+      });
+    });
+
+    const char* m1 = "runtime-a";
+    const char* m2 = "runtime-b";
+    prod.send_varlen(m1, static_cast<std::uint32_t>(std::strlen(m1)));
+    prod.send_varlen(m2, static_cast<std::uint32_t>(std::strlen(m2)));
+
+    ASSERT_TRUE(spin_until([&]() { return handled.load(std::memory_order_relaxed) >= 2; }, 5000, 200));
+
+    rt.stop();
+    worker.join();
+
+    ASSERT_EQ(messages.size(), 2u);
+    EXPECT_EQ(messages[0], "runtime-a");
+    EXPECT_EQ(messages[1], "runtime-b");
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
 }
 
 TEST(SocketTransport, FactoryCreatesShmAndSocket) {

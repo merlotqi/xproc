@@ -541,6 +541,8 @@ bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>&
     handler(payload.data(), len);
     return true;
   } catch (const std::runtime_error&) {
+    // A closed/reset peer leaves sock_ stale; drop it so the next poll can accept a new connection.
+    close_sock();
     return false;
   }
 }
