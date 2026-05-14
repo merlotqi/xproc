@@ -89,6 +89,15 @@ std::string view_registry_key(const std::string& internal_name, DWORD map_access
          std::to_string(static_cast<unsigned long long>(size_bytes));
 }
 
+std::wstring ascii_to_wide(const std::string& value) {
+  std::wstring out;
+  out.reserve(value.size());
+  for (unsigned char c : value) {
+    out.push_back(static_cast<wchar_t>(c));
+  }
+  return out;
+}
+
 // Map the full section; require VirtualQuery RegionSize >= opts.shm_size when specified.
 // CreateFileMapping may round up; the extra tail bytes are unused but stay mapped for safe access/unmap.
 bool map_and_verify_size(HANDLE h, DWORD map_access, std::size_t expected_bytes, void** out_addr,
@@ -118,7 +127,7 @@ bool query_section_size(HANDLE h, std::size_t* out_size) {
   }
 
   static const NtQuerySectionFn query_section = []() -> NtQuerySectionFn {
-    const HMODULE ntdll = ::GetModuleHandleA("ntdll.dll");
+    const HMODULE ntdll = ::GetModuleHandleW(L"ntdll.dll");
     if (ntdll == nullptr) {
       return nullptr;
     }
@@ -182,6 +191,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
   const DWORD map_access = (mode == shm_open_mode::read) ? FILE_MAP_READ : FILE_MAP_WRITE | FILE_MAP_READ;
   const bool can_reuse_before_map = (size_ != 0);
   const std::string requested_vkey = can_reuse_before_map ? view_registry_key(name_, map_access, size_) : std::string{};
+  const std::wstring wname = ascii_to_wide(name_);
 
   HANDLE h = nullptr;
   bool register_canonical = false;
@@ -201,14 +211,14 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
         return false;
       }
     } else {
-      h = ::OpenFileMappingA(map_access, FALSE, name_.c_str());
+      h = ::OpenFileMappingW(map_access, FALSE, wname.c_str());
       if (!h) {
         last_os_error_ = static_cast<int>(::GetLastError());
         return false;
       }
     }
   } else if (mode == shm_open_mode::open_create) {
-    h = ::OpenFileMappingA(map_access, FALSE, name_.c_str());
+    h = ::OpenFileMappingW(map_access, FALSE, wname.c_str());
     if (!h) {
       if (size_ == 0) {
         last_os_error_ = static_cast<int>(ERROR_INVALID_PARAMETER);
@@ -216,7 +226,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
       }
       const DWORD hi = static_cast<DWORD>((size_ >> 32) & 0xffffffffu);
       const DWORD lo = static_cast<DWORD>(size_ & 0xffffffffu);
-      h = ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, hi, lo, name_.c_str());
+      h = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, hi, lo, wname.c_str());
       if (!h) {
         last_os_error_ = static_cast<int>(::GetLastError());
         return false;
@@ -231,7 +241,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
     }
     const DWORD hi = static_cast<DWORD>((size_ >> 32) & 0xffffffffu);
     const DWORD lo = static_cast<DWORD>(size_ & 0xffffffffu);
-    h = ::CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, hi, lo, name_.c_str());
+    h = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, hi, lo, wname.c_str());
     if (!h) {
       last_os_error_ = static_cast<int>(::GetLastError());
       return false;

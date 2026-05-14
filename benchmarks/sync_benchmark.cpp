@@ -28,6 +28,7 @@ namespace {
 
 #ifdef _WIN32
 constexpr const char* k_win32_child_flag = "--win32-atomic-wait-child";
+constexpr const wchar_t* k_win32_child_flag_w = L"--win32-atomic-wait-child";
 constexpr std::uint32_t k_stop_request = 0xffffffffu;
 
 struct cross_process_wait_block {
@@ -85,26 +86,45 @@ std::string unique_path(const char* prefix) {
          std::to_string(now);
 }
 
-std::string current_executable_path() {
-  char exe_path[MAX_PATH];
-  const DWORD len = ::GetModuleFileNameA(nullptr, exe_path, MAX_PATH);
-  if (len == 0 || len == MAX_PATH) {
-    throw std::runtime_error("current_executable_path: GetModuleFileNameA failed");
+std::wstring utf8_to_wide(const std::string& value) {
+  if (value.empty()) {
+    return std::wstring{};
   }
-  return std::string(exe_path, exe_path + len);
+  const int needed = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(),
+                                            static_cast<int>(value.size()), nullptr, 0);
+  if (needed <= 0) {
+    throw std::runtime_error("utf8_to_wide: MultiByteToWideChar size failed");
+  }
+  std::wstring out(static_cast<std::size_t>(needed), L'\0');
+  const int written =
+      ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), out.data(), needed);
+  if (written != needed) {
+    throw std::runtime_error("utf8_to_wide: MultiByteToWideChar conversion failed");
+  }
+  return out;
+}
+
+std::wstring current_executable_path() {
+  wchar_t exe_path[MAX_PATH];
+  const DWORD len = ::GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+  if (len == 0 || len == MAX_PATH) {
+    throw std::runtime_error("current_executable_path: GetModuleFileNameW failed");
+  }
+  return std::wstring(exe_path, exe_path + len);
 }
 
 win32_process spawn_wait_child(const std::string& shm_path) {
-  const std::string exe_path = current_executable_path();
-  std::string cmdline = std::string("\"") + exe_path + "\" " + k_win32_child_flag + " \"" + shm_path + "\"";
-  std::vector<char> cmd_mut(cmdline.begin(), cmdline.end());
-  cmd_mut.push_back('\0');
+  const std::wstring exe_path = current_executable_path();
+  const std::wstring shm_path_w = utf8_to_wide(shm_path);
+  std::wstring cmdline = std::wstring(L"\"") + exe_path + L"\" " + k_win32_child_flag_w + L" \"" + shm_path_w + L"\"";
+  std::vector<wchar_t> cmd_mut(cmdline.begin(), cmdline.end());
+  cmd_mut.push_back(L'\0');
 
-  STARTUPINFOA si{};
+  STARTUPINFOW si{};
   si.cb = sizeof(si);
   PROCESS_INFORMATION pi{};
-  if (!::CreateProcessA(exe_path.c_str(), cmd_mut.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
-    throw std::runtime_error("spawn_wait_child: CreateProcessA failed");
+  if (!::CreateProcessW(exe_path.c_str(), cmd_mut.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+    throw std::runtime_error("spawn_wait_child: CreateProcessW failed");
   }
 
   win32_process child;
@@ -137,6 +157,37 @@ int run_cross_process_wait_child(const char* shm_path) {
     block->response.store(next, std::memory_order_release);
     xproc::sync::atomic_notify_one(&block->response);
   }
+}
+
+void publish_wait_delta_counters(benchmark::State& state, const xproc::sync::atomic_wait_win32_stats& before,
+                                 const xproc::sync::atomic_wait_win32_stats& after) {
+  const std::uint64_t wait_calls = after.wait_calls - before.wait_calls;
+  const std::uint64_t polling_wait_calls = after.polling_wait_calls - before.polling_wait_calls;
+  const std::uint64_t native_wait_calls = after.native_wait_calls - before.native_wait_calls;
+  const std::uint64_t native_timeout_count = after.native_timeout_count - before.native_timeout_count;
+  const std::uint64_t spin_iterations = after.spin_iterations - before.spin_iterations;
+  const std::uint64_t yield_iterations = after.yield_iterations - before.yield_iterations;
+  const std::uint64_t polling_sleep_calls = after.polling_sleep_calls - before.polling_sleep_calls;
+  const std::uint64_t notify_one_calls = after.notify_one_calls - before.notify_one_calls;
+  const std::uint64_t notify_all_calls = after.notify_all_calls - before.notify_all_calls;
+
+  const double ops = state.iterations() > 0 ? static_cast<double>(state.iterations()) : 1.0;
+
+  state.counters["win32_wait_calls"] = static_cast<double>(wait_calls);
+  state.counters["win32_polling_wait_calls"] = static_cast<double>(polling_wait_calls);
+  state.counters["win32_native_wait_calls"] = static_cast<double>(native_wait_calls);
+  state.counters["win32_native_timeout_count"] = static_cast<double>(native_timeout_count);
+  state.counters["win32_spin_iterations"] = static_cast<double>(spin_iterations);
+  state.counters["win32_yield_iterations"] = static_cast<double>(yield_iterations);
+  state.counters["win32_polling_sleep_calls"] = static_cast<double>(polling_sleep_calls);
+  state.counters["win32_notify_one_calls"] = static_cast<double>(notify_one_calls);
+  state.counters["win32_notify_all_calls"] = static_cast<double>(notify_all_calls);
+
+  state.counters["win32_wait_calls_per_op"] = static_cast<double>(wait_calls) / ops;
+  state.counters["win32_native_wait_calls_per_op"] = static_cast<double>(native_wait_calls) / ops;
+  state.counters["win32_native_timeout_per_op"] = static_cast<double>(native_timeout_count) / ops;
+  state.counters["win32_spin_iterations_per_op"] = static_cast<double>(spin_iterations) / ops;
+  state.counters["win32_yield_iterations_per_op"] = static_cast<double>(yield_iterations) / ops;
 }
 #endif
 
@@ -181,6 +232,10 @@ static void BM_AtomicWaitThreadPingPong(benchmark::State& state) {
     }
   });
 
+#ifdef _WIN32
+  const xproc::sync::atomic_wait_win32_stats wait_stats_before = xproc::sync::atomic_wait_win32_get_stats();
+#endif
+
   for (auto _ : state) {
     const std::uint32_t next = request.load(std::memory_order_relaxed) + 1;
     request.store(next, std::memory_order_release);
@@ -201,6 +256,11 @@ static void BM_AtomicWaitThreadPingPong(benchmark::State& state) {
   waiter.join();
 
   state.SetItemsProcessed(state.iterations());
+
+#ifdef _WIN32
+  const xproc::sync::atomic_wait_win32_stats wait_stats_after = xproc::sync::atomic_wait_win32_get_stats();
+  publish_wait_delta_counters(state, wait_stats_before, wait_stats_after);
+#endif
 }
 
 #ifdef _WIN32
@@ -227,6 +287,8 @@ static void BM_AtomicWaitCrossProcessPingPong(benchmark::State& state) {
   while (block->ready.load(std::memory_order_acquire) == 0u) {
     xproc::sync::atomic_wait(&block->ready, 0u);
   }
+
+  const xproc::sync::atomic_wait_win32_stats wait_stats_before = xproc::sync::atomic_wait_win32_get_stats();
 
   std::uint32_t next = 0;
   for (auto _ : state) {
@@ -259,6 +321,8 @@ static void BM_AtomicWaitCrossProcessPingPong(benchmark::State& state) {
   }
 
   state.SetItemsProcessed(state.iterations());
+  const xproc::sync::atomic_wait_win32_stats wait_stats_after = xproc::sync::atomic_wait_win32_get_stats();
+  publish_wait_delta_counters(state, wait_stats_before, wait_stats_after);
 }
 #endif
 
