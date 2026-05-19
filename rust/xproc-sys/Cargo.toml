@@ -1,0 +1,9 @@
+[package]
+name = "xproc-sys"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+
+[lib]
+path = "src/lib.rs"
