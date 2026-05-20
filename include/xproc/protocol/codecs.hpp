@@ -90,4 +90,4 @@ struct span_codec {
   }
 };
 
-}  // namespace protocol::xproc
+}  // namespace xproc::protocol

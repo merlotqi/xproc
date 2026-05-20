@@ -151,7 +151,7 @@ bool shm::open(const std::string& name, size_t size, shm_open_mode mode, const s
       return close_and_fail(errno);
     }
   } else {
-    struct stat st{};
+    struct stat st {};
     if (fstat(fd_, &st) == -1) {
       return close_and_fail(errno);
     }

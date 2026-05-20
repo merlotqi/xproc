@@ -97,4 +97,4 @@ class shm_consumer final : public consumer_channel_interface {
   consumer ch_;
 };
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc

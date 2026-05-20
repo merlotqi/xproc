@@ -48,4 +48,4 @@ struct XPROC_ALIGNAS_CACHE_LINE control_block {
   uint64_t reserved[1];
 };
 
-}  // namespace core::xproc
+}  // namespace xproc::core

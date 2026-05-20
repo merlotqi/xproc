@@ -63,4 +63,4 @@ constexpr void assert_codec() noexcept {
                 "Codec must provide message_type, max_encoded_size(), encode, decode per codec_traits.hpp");
 }
 
-}  // namespace protocol::xproc
+}  // namespace xproc::protocol

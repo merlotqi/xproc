@@ -104,4 +104,4 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
   std::unique_ptr<ringbuffer::varlen_reader> varlen_reader_;
 };
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc

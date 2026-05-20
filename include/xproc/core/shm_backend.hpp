@@ -35,4 +35,4 @@ class default_shm_backend final : public IShmBackend {
   shm impl_;
 };
 
-}  // namespace core::xproc
+}  // namespace xproc::core

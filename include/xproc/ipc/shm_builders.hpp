@@ -342,4 +342,4 @@ inline varlen_channel_attacher attach_varlen_channel(std::string path) {
   return varlen_channel_attacher(std::move(path));
 }
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc

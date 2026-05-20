@@ -20,4 +20,4 @@ class layout_exception : public std::runtime_error {
   validate_error code_;
 };
 
-}  // namespace core::xproc
+}  // namespace xproc::core

@@ -200,4 +200,4 @@ inline void send_encoded(producer_channel_interface& ch, const protocol::IByteCo
   }
 }
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc

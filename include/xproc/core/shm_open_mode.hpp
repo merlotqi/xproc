@@ -9,4 +9,4 @@ enum class shm_open_mode {
   read
 };
 
-}  // namespace core::xproc
+}  // namespace xproc::core

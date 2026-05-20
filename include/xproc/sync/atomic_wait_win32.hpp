@@ -271,6 +271,6 @@ template void atomic_wait<uint32_t>(const std::atomic<uint32_t>*, uint32_t);
 template void atomic_notify_one<uint32_t>(const std::atomic<uint32_t>*);
 template void atomic_notify_all<uint32_t>(const std::atomic<uint32_t>*);
 
-}  // namespace sync::xproc
+}  // namespace xproc::sync
 
 #endif

@@ -50,7 +50,7 @@ class codec_exception : public std::runtime_error {
   codec_error code_;
 };
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc
 
 namespace std {
 template <>

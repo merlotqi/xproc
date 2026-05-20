@@ -42,6 +42,6 @@ struct nlohmann_json_codec {
   }
 };
 
-}  // namespace protocol::xproc
+}  // namespace xproc::protocol
 
 #endif  // XPROC_WITH_NLOHMANN_JSON

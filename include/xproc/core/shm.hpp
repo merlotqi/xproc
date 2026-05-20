@@ -46,4 +46,4 @@ class shm {
   std::string name_;
 };
 
-}  // namespace core::xproc
+}  // namespace xproc::core

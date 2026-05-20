@@ -137,4 +137,4 @@ inline void validate_observer_transport_options(const transport_options& opts) {
   }
 }
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc

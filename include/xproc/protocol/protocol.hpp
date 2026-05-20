@@ -44,4 +44,4 @@ class identity_byte_codec final : public IByteCodec {
   }
 };
 
-}  // namespace protocol::xproc
+}  // namespace xproc::protocol

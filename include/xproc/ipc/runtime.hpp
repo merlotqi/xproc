@@ -75,4 +75,4 @@ class runtime {
   std::atomic_bool running_{false};
 };
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc

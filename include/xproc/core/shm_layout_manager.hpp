@@ -120,7 +120,7 @@ class layout_manager {
                            std::uint64_t creator_flags);
 };
 
-}  // namespace core::xproc
+}  // namespace xproc::core
 
 namespace std {
 template <>

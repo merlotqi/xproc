@@ -45,6 +45,6 @@ struct protobuf_message_codec {
   }
 };
 
-}  // namespace protocol::xproc
+}  // namespace xproc::protocol
 
 #endif  // XPROC_WITH_PROTOBUF

@@ -142,4 +142,4 @@ class consumer : private channel {
   const channel& as_channel() const noexcept { return static_cast<const channel&>(*this); }
 };
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc
