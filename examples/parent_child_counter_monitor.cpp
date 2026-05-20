@@ -13,22 +13,16 @@
 #include <xproc/xproc.hpp>
 
 #include "process.hpp"
+#include "xproc/platform/process.hpp"
 
 namespace {
 
 constexpr const char* kChildFlag = "--pc-counter-child";
 constexpr std::size_t kDataCapacity = 16384;
-constexpr std::size_t kShmSize = xproc::ipc::shm_size_for_data_capacity(kDataCapacity);
 
 int run_child_writer(const std::string& shm_path) {
-  xproc::ipc::transport_options child_opts;
-  child_opts.path = shm_path;
-  child_opts.shm_size = xproc::ipc::infer_existing_shm_size;
-  child_opts.type = xproc::ipc::channel_type::fixed;
-  child_opts.item_size = sizeof(std::uint32_t);
-  child_opts.create_if_missing = false;
-
-  xproc::ipc::producer producer(child_opts);
+  xproc::ipc::producer producer =
+      xproc::ipc::attach_fixed_channel(shm_path).open_producer();
 
   std::thread writer([&] {
     for (std::uint32_t v = 0; v <= 100; ++v) {
@@ -48,22 +42,13 @@ int main(int argc, char** argv) {
     return run_child_writer(std::string(argv[2]));
   }
 
-#if defined(_WIN32) || defined(_WIN64)
-  const auto my_pid = static_cast<std::uint64_t>(::GetCurrentProcessId());
-#else
-  const auto my_pid = static_cast<std::uint64_t>(::getpid());
-#endif
+  const auto my_pid = xproc::platform::current_process_id();
   const std::string path = "/xproc_example_parent_child_counter_" + std::to_string(my_pid);
 
   xproc::core::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = kShmSize;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.create_if_missing = true;
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(kDataCapacity);
+  xproc::ipc::consumer consumer = channel.open_consumer();
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, path});

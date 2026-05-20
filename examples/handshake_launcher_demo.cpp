@@ -37,7 +37,6 @@ struct alignas(64) handshake_region {
 
 constexpr std::size_t kHandshakeShmBytes = sizeof(handshake_region);
 constexpr std::size_t kIpcDataCapacity = 32768;
-constexpr std::size_t kIpcShmSize = xproc::ipc::shm_size_for_data_capacity(kIpcDataCapacity);
 
 struct telemetry_packet {
   char message[256];
@@ -81,14 +80,8 @@ std::uint64_t current_pid() {
 }
 
 int run_child_data_writer(const std::string& ipc_path) {
-  xproc::ipc::transport_options opts;
-  opts.path = ipc_path;
-  opts.shm_size = xproc::ipc::infer_existing_shm_size;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(telemetry_packet);
-  opts.create_if_missing = false;
-
-  xproc::ipc::producer producer(opts);
+  xproc::ipc::producer producer =
+      xproc::ipc::attach_fixed_channel(ipc_path).open_producer();
 
   std::thread writer([&] {
     for (int i = 0; i <= 100; ++i) {
@@ -203,13 +196,8 @@ int main(int argc, char** argv) {
   h->token.store(token, std::memory_order_relaxed);
   h->valid.store(1u, std::memory_order_release);
 
-  xproc::ipc::transport_options ipc_opts;
-  ipc_opts.path = ipc_path;
-  ipc_opts.shm_size = kIpcShmSize;
-  ipc_opts.type = xproc::ipc::channel_type::fixed;
-  ipc_opts.item_size = sizeof(telemetry_packet);
-  ipc_opts.create_if_missing = true;
-  xproc::ipc::consumer consumer(ipc_opts);
+  const auto ipc_channel = xproc::ipc::make_fixed_channel(ipc_path, sizeof(telemetry_packet)).create(kIpcDataCapacity);
+  xproc::ipc::consumer consumer = ipc_channel.open_consumer();
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, handshake_path, hex, ipc_path});

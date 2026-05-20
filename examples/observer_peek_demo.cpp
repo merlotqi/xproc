@@ -10,16 +10,10 @@ int main() {
   const std::string path = "/xproc_example_observer";
   xproc::core::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = xproc::ipc::shm_size_for_data_capacity(16384);
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.create_if_missing = true;
-
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
-  xproc::ipc::observer observer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(16384);
+  xproc::ipc::producer producer = channel.open_producer();
+  xproc::ipc::consumer consumer = channel.open_consumer();
+  xproc::ipc::observer observer = channel.open_observer();
 
   producer.send_fixed<std::uint32_t>(0x42u);
 

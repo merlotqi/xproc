@@ -138,17 +138,13 @@ int main() {
             << "  bridge_rx thread: sole consumer.poll(), pushes to downstream mutex queue.\n"
             << "  drainers:         " << kBridgeDrainers << " threads pop downstream queue.\n\n";
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = sizeof(xproc::core::control_block) + 128 * 1024;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.create_if_missing = true;
+  constexpr std::size_t kDataCapacity = 128 * 1024;
 
-  std::cout << "  shm_size (Part B): " << opts.shm_size << " bytes\n\n";
+  std::cout << "  shm_size (Part B): " << xproc::ipc::shm_size_for_data_capacity(kDataCapacity) << " bytes\n\n";
 
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(kDataCapacity);
+  xproc::ipc::producer producer = channel.open_producer();
+  xproc::ipc::consumer consumer = channel.open_consumer();
 
   std::mutex out_mu;
   std::condition_variable out_cv;

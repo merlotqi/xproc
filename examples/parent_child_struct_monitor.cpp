@@ -18,7 +18,6 @@ namespace {
 
 constexpr const char* kChildFlag = "--pc-struct-child";
 constexpr std::size_t kDataCapacity = 32768;
-constexpr std::size_t kShmSize = xproc::ipc::shm_size_for_data_capacity(kDataCapacity);
 
 struct telemetry_packet {
   char message[256];
@@ -27,14 +26,8 @@ struct telemetry_packet {
 };
 
 int run_child_writer(const std::string& shm_path) {
-  xproc::ipc::transport_options opts;
-  opts.path = shm_path;
-  opts.shm_size = xproc::ipc::infer_existing_shm_size;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(telemetry_packet);
-  opts.create_if_missing = false;
-
-  xproc::ipc::producer producer(opts);
+  xproc::ipc::producer producer =
+      xproc::ipc::attach_fixed_channel(shm_path).open_producer();
 
   std::thread writer([&] {
     for (int i = 0; i <= 100; ++i) {
@@ -67,13 +60,8 @@ int main(int argc, char** argv) {
 
   xproc::core::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = kShmSize;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(telemetry_packet);
-  opts.create_if_missing = true;
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(telemetry_packet)).create(kDataCapacity);
+  xproc::ipc::consumer consumer = channel.open_consumer();
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, path});

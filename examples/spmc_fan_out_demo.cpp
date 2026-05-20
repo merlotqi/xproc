@@ -27,24 +27,20 @@ int main() {
 
   xproc::shm::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = sizeof(xproc::core::control_block) + 256 * 1024;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.create_if_missing = true;
+  constexpr std::size_t kDataCapacity = 256 * 1024;
 
   std::cout << "Transport (shared memory):\n"
-            << "  path:         " << opts.path << "\n"
-            << "  shm_size:     " << opts.shm_size << " bytes\n"
+            << "  path:         " << path << "\n"
+            << "  shm_size:     " << xproc::ipc::shm_size_for_data_capacity(kDataCapacity) << " bytes\n"
             << "  channel_type: fixed\n"
-            << "  item_size:    " << opts.item_size << " bytes\n"
+            << "  item_size:    " << sizeof(std::uint32_t) << " bytes\n"
             << "Workload:\n"
             << "  messages:     " << kMessages << " (payloads 1.." << kMessages << ")\n"
             << "  worker_pool:  " << kWorkerThreads << " threads dequeue from shared work queue\n\n";
 
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(kDataCapacity);
+  xproc::ipc::producer producer = channel.open_producer();
+  xproc::ipc::consumer consumer = channel.open_consumer();
 
   std::mutex work_mu;
   std::condition_variable work_cv;

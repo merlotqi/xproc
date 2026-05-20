@@ -52,15 +52,9 @@ int main() {
   const std::string path = "/xproc_ipc_taskflow_pipe_" + std::to_string(xproc::platform::current_process_id());
   xproc::core::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = xproc::ipc::shm_size_for_data_capacity(65536);
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.create_if_missing = true;
-
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(65536);
+  xproc::ipc::producer producer = channel.open_producer();
+  xproc::ipc::consumer consumer = channel.open_consumer();
   xproc::ipc::runtime runtime(consumer);
 
   constexpr int k_expected_msgs = 5;
