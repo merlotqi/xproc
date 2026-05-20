@@ -1,12 +1,12 @@
 file(GLOB_RECURSE XPROC_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/../include/*.hpp")
 file(GLOB_RECURSE XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 list(REMOVE_ITEM XPROC_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/shm/shm_posix.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/shm/shm_win32.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/core/shm_posix.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/core/shm_win32.cpp")
 if(WIN32)
-    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shm/shm_win32.cpp")
+    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/core/shm_win32.cpp")
 else()
-    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shm/shm_posix.cpp")
+    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/core/shm_posix.cpp")
 endif()
 
 # Windows + DLL: place xproc.dll next to test/example/benchmark executables so GoogleTest

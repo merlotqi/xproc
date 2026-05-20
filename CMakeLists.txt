@@ -28,17 +28,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     find_package(Threads REQUIRED)
 endif()
 
-file(GLOB_RECURSE XPROC_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
-file(GLOB_RECURSE XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-list(REMOVE_ITEM XPROC_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shm_posix.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shm_win32.cpp")
-if(WIN32)
-    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shm_win32.cpp")
-else()
-    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/core/shm_posix.cpp")
-endif()
-
 option(XPROC_BUILD_SHARED "Build libxproc as a shared library" OFF)
 option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
 option(XPROC_BUILD_TESTS "Build unit tests" ON)
