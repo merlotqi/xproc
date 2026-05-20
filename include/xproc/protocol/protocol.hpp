@@ -4,7 +4,6 @@
 #include <cstring>
 
 namespace xproc::protocol {
-namespace xproc::protocol {
 
 // Runtime-polymorphic byte framing (optional). Prefer template codecs in codecs.hpp + ipc_messaging.hpp
 // for zero overhead and custom serialization without virtual calls.

@@ -14,7 +14,6 @@
 #include <xproc/platform/process.hpp>
 
 namespace xproc::ipc {
-namespace xproc::ipc {
 
 class endpoint {
  public:
@@ -109,4 +108,4 @@ class endpoint {
   }
 };
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc

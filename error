@@ -1,0 +1,1215 @@
+[main] Building folder: d:/01code/cxx/xproc/build all
+[build] Starting build
+[proc] Executing command: "C:\Program Files\CMake\bin\cmake.EXE" --build d:/01code/cxx/xproc/build --config Debug --target ALL_BUILD -j 28 --
+[build] 适用于 .NET Framework MSBuild 版本 17.14.18+a338add32
+[build] 
+[build]   1>Checking Build System
+[build]   Building Custom Rule D:/01code/cxx/xproc/src/CMakeLists.txt
+[build]   shm_layout_manager.cpp
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(24,18): error C2039: "fabs": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(28,18): error C2039: "fabsf": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(32,18): error C2039: "fabsl": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(38,25): error C2039: "div_t": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(38,13): error C2873: “div_t”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(39,25): error C2039: "ldiv_t": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(39,13): error C2873: “ldiv_t”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(40,25): error C2039: "abort": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(40,13): error C2873: “abort”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(41,25): error C2039: "abs": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(41,13): error C2873: “abs”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(43,25): error C2039: "atof": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(43,13): error C2873: “atof”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(44,25): error C2039: "atoi": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(44,13): error C2873: “atoi”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(45,25): error C2039: "atol": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(45,13): error C2873: “atol”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(46,25): error C2039: "bsearch": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(46,13): error C2873: “bsearch”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(48,25): error C2039: "div": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(48,13): error C2873: “div”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(49,25): error C2039: "exit": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(49,13): error C2873: “exit”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(51,25): error C2039: "labs": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(51,13): error C2873: “labs”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(52,25): error C2039: "ldiv": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(52,13): error C2873: “ldiv”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(54,25): error C2039: "mblen": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(54,13): error C2873: “mblen”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(55,25): error C2039: "mbstowcs": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(55,13): error C2873: “mbstowcs”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(56,25): error C2039: "mbtowc": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(56,13): error C2873: “mbtowc”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(57,25): error C2039: "qsort": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(57,13): error C2873: “qsort”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(58,25): error C2039: "rand": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(58,13): error C2873: “rand”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(60,25): error C2039: "srand": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(60,13): error C2873: “srand”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(61,25): error C2039: "strtod": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(61,13): error C2873: “strtod”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(62,25): error C2039: "strtol": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(62,13): error C2873: “strtol”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(63,25): error C2039: "strtoul": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(63,13): error C2873: “strtoul”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(64,25): error C2039: "wcstombs": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(64,13): error C2873: “wcstombs”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(65,25): error C2039: "wctomb": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(65,13): error C2873: “wctomb”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(67,25): error C2039: "lldiv_t": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(67,13): error C2873: “lldiv_t”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(69,25): error C2039: "getenv": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(69,13): error C2873: “getenv”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(70,25): error C2039: "system": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(70,13): error C2873: “system”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(72,25): error C2039: "atoll": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(72,13): error C2873: “atoll”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(73,25): error C2039: "llabs": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(73,13): error C2873: “llabs”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(74,25): error C2039: "lldiv": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(74,13): error C2873: “lldiv”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(75,25): error C2039: "strtof": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(75,13): error C2873: “strtof”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(76,25): error C2039: "strtold": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(76,13): error C2873: “strtold”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(77,25): error C2039: "strtoll": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(77,13): error C2873: “strtoll”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(78,25): error C2039: "strtoull": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(78,13): error C2873: “strtoull”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(80,25): error C2039: "_Exit": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(80,13): error C2873: “_Exit”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(81,25): error C2039: "at_quick_exit": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(81,13): error C2873: “at_quick_exit”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(82,25): error C2039: "quick_exit": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdlib(82,13): error C2873: “quick_exit”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(38,21): error C2039: "terminate": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(38,13): error C2873: “terminate”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(41,21): error C2039: "set_terminate": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(41,13): error C2873: “set_terminate”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(42,21): error C2039: "terminate_handler": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(42,13): error C2873: “terminate_handler”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(336,45): error C2039: "current_exception": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(238,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(344,18): error C2039: "rethrow_exception": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(238,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\exception(346,18): error C2039: "terminate": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(238,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(36,25): error C2039: "fpos_t": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(36,13): error C2873: “fpos_t”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(37,25): error C2039: "FILE": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(37,13): error C2873: “FILE”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(38,25): error C2039: "clearerr": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(38,13): error C2873: “clearerr”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(39,25): error C2039: "fclose": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(39,13): error C2873: “fclose”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(40,25): error C2039: "feof": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(40,13): error C2873: “feof”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(41,25): error C2039: "ferror": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(41,13): error C2873: “ferror”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(42,25): error C2039: "fflush": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(42,13): error C2873: “fflush”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(43,25): error C2039: "fgetc": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(43,13): error C2873: “fgetc”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(44,25): error C2039: "fgetpos": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cstdio(44,25): error C1003: 错误计数超过 100；正在停止编译 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_layout_manager.cpp”)
+[build]   
+[build]   channel_interface.cpp
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(95,32): error C2061: 语法错误: 标识符“shm” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(100,32): error C2061: 语法错误: 标识符“shm” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(100,25): error C2535: “xproc::platform::xproc::core::control_block *xproc::platform::xproc::core::layout_manager::format(void)”: 已经定义或声明成员函数 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(95,25):
+[build]       参见“xproc::platform::xproc::core::layout_manager::format”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(102,19): error C2065: “sm”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(102,23): error C2065: “capacity”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(102,33): error C2065: “is_creator”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(102,45): error C2065: “layout_type”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(102,58): error C2065: “data_alignment”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(102,74): error C2065: “fixed_item_size”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(102,91): error C2065: “expected_schema_id”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(103,19): error C2065: “behavior”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(127,26): error C3856: “is_error_code_enum”: 符号不是 模板 类 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(127,40): error C2143: 语法错误: 缺少“;”(在“xproc::platform::xproc::core::validate_error”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(127,8): error C2913: 显式专用化；“xproc::platform::std::is_error_code_enum”不是类模板的专用化 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(127,54): error C2059: 语法错误:“>” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(127,58): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(11,38): error C2039: "runtime_error": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(11,38): error C2504: “runtime_error”: 未定义基类 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(13,34): error C2039: "string": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(13,34): error C2061: 语法错误: 标识符“string” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(17,8): error C2039: "error_code": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(17,19): error C3646: “ec”: 未知重写说明符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(17,21): error C2059: 语法错误:“(” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(17,39): error C2334: “{”的前面有意外标记；跳过明显的函数体 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(14,14): error C2039: "runtime_error": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(14,28): error C2065: “prefix”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(14,67): error C3867: “xproc::platform::xproc::core::layout_exception::code”: 非标准语法；请使用 "&" 来创建指向成员的指针 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(14,81): error C3867: “xproc::platform::xproc::core::layout_exception::code”: 非标准语法；请使用 "&" 来创建指向成员的指针 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(14,14): error C2614: “xproc::platform::xproc::core::layout_exception”: 非法的成员初始化:“runtime_error”不是基或成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(22,16): error C2039: "size_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(23,16): error C2039: "size_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(25,16): error C2039: "size_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(25,55): error C2039: "size_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(29,16): error C2039: "size_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(29,55): error C2039: "size_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(35,8): error C2039: "string": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(35,15): error C3646: “path”: 未知重写说明符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(35,8): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(43,8): error C2039: "uint64_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(45,8): error C2039: "uint64_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(47,8): error C2039: "uint64_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(52,8): error C2039: "string": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(52,15): error C3646: “win32_object_namespace”: 未知重写说明符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(52,38): error C2059: 语法错误:“=” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(52,47): error C2238: 意外的标记位于“;”之前 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(54,8): error C2039: "string": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(54,15): error C3646: “socket_host”: 未知重写说明符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(54,27): error C2059: 语法错误:“=” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(54,40): error C2238: 意外的标记位于“;”之前 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(55,8): error C2039: "uint16_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(67,16): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(67,16): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(72,18): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(72,18): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(76,12): error C2039: "win32_object_namespace": 不是 "xproc::platform::xproc::ipc::xproc::ipc::transport_options" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(33,8):
+[build]       参见“xproc::platform::xproc::ipc::xproc::ipc::transport_options”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(76,54): error C2039: "win32_object_namespace": 不是 "xproc::platform::xproc::ipc::xproc::ipc::transport_options" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(33,8):
+[build]       参见“xproc::platform::xproc::ipc::xproc::ipc::transport_options”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(77,16): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(77,16): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(82,14): error C2039: "path": 不是 "xproc::platform::xproc::ipc::xproc::ipc::transport_options" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(33,8):
+[build]       参见“xproc::platform::xproc::ipc::xproc::ipc::transport_options”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(83,18): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(83,18): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(86,18): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(86,18): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(93,18): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(93,18): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(96,18): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(96,18): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(98,37): error C2039: "socket_host": 不是 "xproc::platform::xproc::ipc::xproc::ipc::transport_options" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(33,8):
+[build]       参见“xproc::platform::xproc::ipc::xproc::ipc::transport_options”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(99,18): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(99,18): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(102,18): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(102,18): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(112,16): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(112,16): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(117,16): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(117,16): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(125,16): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(125,16): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(130,16): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(130,16): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(137,16): error C2039: "invalid_argument": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\options.hpp(137,16): error C3861: “invalid_argument”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\platform\process.hpp(22,13): error C2039: "int32_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\platform\process.hpp(26,27): error C2039: "int32_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\platform\process.hpp(26,38): error C2039: "GetCurrentProcessId": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(27,21): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(27,44): error C2143: 语法错误: 缺少“,”(在“&”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(41,3): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(41,26): error C2143: 语法错误: 缺少“;”(在“&”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(41,44): error C2334: “{”的前面有意外标记；跳过明显的函数体 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(45,9): error C2039: "shm": 不是 "xproc::platform::xproc::core" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\layout_exception.hpp(8,11):
+[build]       参见“xproc::platform::xproc::core”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(45,13): error C3646: “shm_”: 未知重写说明符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(45,9): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(47,3): error C2327: “xproc::platform::xproc::ipc::xproc::platform::xproc::ipc::xproc::ipc::endpoint::transport_options”: 不是类型名称、静态或枚举数 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(47,3):
+[build]       参见“xproc::platform::xproc::ipc::xproc::platform::xproc::ipc::xproc::ipc::endpoint::transport_options”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(47,21): error C3646: “opts_”: 未知重写说明符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(47,3): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(27,70): error C2065: “rle”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(27,82): error C2065: “opts”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(27,88): error C2789: “xproc::platform::xproc::ipc::xproc::platform::xproc::ipc::xproc::ipc::endpoint::transport_options”: 必须初始化常量限定类型的对象 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(41,9):
+[build]       参见“xproc::platform::xproc::ipc::xproc::platform::xproc::ipc::xproc::ipc::endpoint::transport_options”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(27,76): error C2614: “xproc::platform::xproc::ipc::xproc::platform::xproc::ipc::xproc::ipc::endpoint”: 非法的成员初始化:“opts_”不是基或成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(31,47): error C2039: "memory_order_acq_rel": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(31,47): error C2065: “memory_order_acq_rel”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(51,26): error C2039: "underlying_type_t": 不是 "xproc::platform::std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]       D:\01code\cxx\xproc\include\xproc\core\shm_layout_manager.hpp(125,11):
+[build]       参见“xproc::platform::std”的声明
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(51,26): error C2061: 语法错误: 标识符“underlying_type_t” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(53,15): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(53,15): error C2737: “role_ut”: 必须初始化 constexpr 对象 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build] D:\01code\cxx\xproc\include\xproc\ipc\endpoint.hpp(53,15): error C1003: 错误计数超过 100；正在停止编译 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/channel_interface.cpp”)
+[build]   
+[build]   socket_channel.cpp
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(559,30): error C2061: 语法错误: 标识符“conditional_t” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(572,17): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(572,37): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(572,37): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(572,37): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(572,49): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(573,72): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(573,72): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(585,6): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(585,26): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(585,26): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(585,26): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(585,111): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(585,111): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(836,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(836,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(836,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(836,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(836,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(836,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(863,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(863,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(863,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(863,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(863,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(863,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(865,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(865,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(865,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(865,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(865,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(865,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(881,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(881,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(881,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(881,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(881,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(881,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(882,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(882,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(882,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(882,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(882,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(882,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(884,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(884,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(884,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(884,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(884,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(884,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(886,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(886,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(886,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(886,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(886,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(886,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(888,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(888,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(888,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(888,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(888,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(888,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(889,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(889,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(889,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(889,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(889,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(889,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(890,1): error C2039: "_Common_float_type_t": 不是 "std" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\thread(37,1):
+[build]       参见“std”的声明
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(890,1): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(890,1): error C2143: 语法错误: 缺少“;”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(890,1): error C2059: 语法错误:“<” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(890,1): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(890,1): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1166,12): error C3861: “__std_smf_assoc_laguerre”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1171,12): error C3861: “__std_smf_assoc_laguerref”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1176,12): error C3861: “__std_smf_assoc_laguerre”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1181,12): error C3861: “__std_smf_assoc_legendre”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1186,12): error C3861: “__std_smf_assoc_legendref”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1191,12): error C3861: “__std_smf_assoc_legendre”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1195,12): error C3861: “__std_smf_beta”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1199,12): error C3861: “__std_smf_betaf”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1204,12): error C3861: “__std_smf_beta”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1208,12): error C3861: “__std_smf_comp_ellint_1”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1212,12): error C3861: “__std_smf_comp_ellint_1f”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1216,12): error C3861: “__std_smf_comp_ellint_1”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1220,12): error C3861: “__std_smf_comp_ellint_2”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1224,12): error C3861: “__std_smf_comp_ellint_2f”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1228,12): error C3861: “__std_smf_comp_ellint_2”: 找不到标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\cmath(1228,12): error C1003: 错误计数超过 100；正在停止编译 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/ipc/socket_channel.cpp”)
+[build]   
+[build]   shm_win32.cpp
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(21,25): error C2039: "clock_t": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(21,13): error C2873: “clock_t”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(25,25): error C2039: "asctime": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(25,13): error C2873: “asctime”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(26,25): error C2039: "clock": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(26,13): error C2873: “clock”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(27,25): error C2039: "strftime": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(27,13): error C2873: “strftime”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(29,25): error C2039: "timespec": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(29,13): error C2873: “timespec”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(79,25): error C2039: "ctime": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(79,13): error C2873: “ctime”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(80,25): error C2039: "difftime": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(80,13): error C2873: “difftime”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(81,25): error C2039: "gmtime": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(81,13): error C2873: “gmtime”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(82,25): error C2039: "localtime": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(82,13): error C2873: “localtime”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(83,25): error C2039: "mktime": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(83,13): error C2873: “mktime”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(84,25): error C2039: "time": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(84,13): error C2873: “time”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(86,25): error C2039: "timespec_get": 不是 "`global namespace'" 的成员 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ctime(86,13): error C2873: “timespec_get”: 符号不能用在 using 声明中 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(27,38): error C2143: 语法错误: 缺少“,”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(27,38):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(27,8):
+[build]           在编译类模板“xproc::platform::std::_Safe_mult”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(139,5): error C2065: “void_t”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(139,12): error C2226: 语法错误: 意外的“xproc::platform::std::_Ratio_multiply<_Rx1,_Rx2>::_Num::type”类型 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(138,8): error C2332: “struct”: 缺少标记名 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(138,8): error C3306: “xproc::platform::std::<unnamed-tag>”: 不允许存在未命名的类 模板 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(140,57): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(140,57): error C2143: 语法错误: 缺少“;”(在“>”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(140,57): error C2059: 语法错误:“>” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(140,60): error C2143: 语法错误: 缺少“;”(在“{”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(140,60): error C2447: “{”: 缺少函数标题(是否是老式的形式表?) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(165,35): error C2143: 语法错误: 缺少“,”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(165,35):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(165,8):
+[build]           在编译类模板“xproc::platform::std::ratio_equal”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(173,39): error C2143: 语法错误: 缺少“,”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(173,39):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(173,8):
+[build]           在编译类模板“xproc::platform::std::ratio_not_equal”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(229,34): error C2143: 语法错误: 缺少“,”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(229,34):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(229,8):
+[build]           在编译类模板“xproc::platform::std::ratio_less”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(237,40): error C2143: 语法错误: 缺少“,”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(237,40):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(237,8):
+[build]           在编译类模板“xproc::platform::std::ratio_less_equal”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(254,43): error C2143: 语法错误: 缺少“,”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(254,43):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\ratio(254,8):
+[build]           在编译类模板“xproc::platform::std::ratio_greater_equal”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(31,55): error C2143: 语法错误: 缺少“,”(在“<”的前面) [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(31,55):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(31,12):
+[build]           在编译类模板“xproc::platform::std::chrono::treat_as_floating_point”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(75,29): error C2065: “void_t”: 未声明的标识符 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(75,36): error C2226: 语法错误: 意外的“_Clock::rep”类型 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(75,9): error C2062: 意外的类型“<error type>”  [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(86,65): error C2061: 语法错误: 标识符“enable_if_t” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(86,96): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(86,96): error C2059: 语法错误:“,” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(103,13): error C2061: 语法错误: 标识符“enable_if_t” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]       C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(103,13):
+[build]       模板实例化上下文(最早的实例化上下文)为
+[build]           C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(91,11):
+[build]           在编译类模板“xproc::platform::std::chrono::duration”时
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(104,29): error C2988: 不可识别的模板声明/定义 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(104,29): error C2059: 语法错误:“&&” [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(108,13): error C2334: “:”的前面有意外标记；跳过明显的函数体 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build] C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\__msvc_chrono.hpp(29,18): error C1075: “{”: 未找到匹配令牌 [D:\01code\cxx\xproc\build\src\xproc.vcxproj]
+[build]   (编译源文件“../../src/core/shm_win32.cpp”)
+[build]   
+[build]   正在生成代码...
+[proc] The command: "C:\Program Files\CMake\bin\cmake.EXE" --build d:/01code/cxx/xproc/build --config Debug --target ALL_BUILD -j 28 -- exited with code: 1
+[driver] Build completed: 00:00:01.560
+[build] Build finished with exit code 1

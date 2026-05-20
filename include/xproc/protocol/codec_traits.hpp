@@ -4,7 +4,6 @@
 #include <type_traits>
 
 namespace xproc::protocol {
-namespace xproc::protocol {
 
 namespace codec_traits_detail {
 

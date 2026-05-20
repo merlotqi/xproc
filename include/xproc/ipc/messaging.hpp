@@ -12,7 +12,6 @@
 #include <xproc/protocol/protocol.hpp>
 
 namespace xproc::ipc {
-namespace xproc::ipc {
 
 namespace detail {
 

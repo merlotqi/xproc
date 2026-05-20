@@ -49,7 +49,7 @@ int main() {
 
   xproc::ipc::transport_options channel_opts;
   channel_opts.path = shm_path;
-  channel_opts.shm_size = sizeof(xproc::shm::control_block) + 128 * 1024;
+  channel_opts.shm_size = sizeof(xproc::core::control_block) + 128 * 1024;
   channel_opts.type = xproc::ipc::channel_type::fixed;
   channel_opts.item_size = kSlotBytes;
   channel_opts.create_if_missing = true;

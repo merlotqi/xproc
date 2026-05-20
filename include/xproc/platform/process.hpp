@@ -17,7 +17,6 @@
 #endif
 
 namespace xproc::platform {
-namespace xproc::platform {
 
 inline std::int32_t current_process_id() noexcept {
 #if defined(XPROC_PLATFORM_LINUX) || defined(XPROC_PLATFORM_DARWIN)
@@ -29,4 +28,4 @@ inline std::int32_t current_process_id() noexcept {
 #endif
 }
 
-}  // namespace platform::xproc
+}  // namespace xproc::platform

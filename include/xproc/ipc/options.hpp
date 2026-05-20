@@ -7,7 +7,6 @@
 #include <xproc/core/shm_layout.hpp>
 
 namespace xproc::ipc {
-namespace xproc::ipc {
 
 enum class channel_type {
   fixed,

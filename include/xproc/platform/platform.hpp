@@ -74,7 +74,6 @@
 #define XPROC_ALIGNAS_CACHE_LINE alignas(XPROC_CACHE_LINE_SIZE)
 
 namespace xproc::platform {
-namespace xproc::platform {
 
 struct platform_info {
   static constexpr const char* os = XPROC_OS_NAME;
@@ -124,4 +123,4 @@ struct arch_info {
   }
 };
 
-}  // namespace platform::xproc
+}  // namespace xproc::platform

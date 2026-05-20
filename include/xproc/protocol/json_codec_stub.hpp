@@ -10,7 +10,6 @@
 #include <string>
 
 namespace xproc::protocol {
-namespace xproc::protocol {
 
 // UTF-8 JSON text on the wire (no extra framing; ring varlen/fixed carries the byte length).
 template <std::size_t MaxWire>

@@ -14,7 +14,6 @@
 #include <xproc/ringbuffer/varlen_reader.hpp>
 
 namespace xproc::ipc {
-namespace xproc::ipc {
 
 // Read-only attach: does not advance read_pos. Uses readonly: does not bump attach_count; attach_count()
 // in the control block only reflects producer/consumer writable mappings. attach_count_view_interface here is a

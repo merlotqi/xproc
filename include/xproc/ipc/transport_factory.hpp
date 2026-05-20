@@ -7,7 +7,6 @@
 #include <xproc/ipc/socket_channel.hpp>
 
 namespace xproc::ipc {
-namespace xproc::ipc {
 
 inline std::unique_ptr<producer_channel_interface> create_producer_transport(transport_options opts) {
   validate_producer_transport_options(opts);
@@ -31,4 +30,4 @@ inline std::unique_ptr<consumer_channel_interface> create_consumer_transport(tra
   throw std::logic_error("create_consumer_transport: unknown backend");
 }
 
-}  // namespace ipc::xproc
+}  // namespace xproc::ipc
