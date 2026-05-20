@@ -1,0 +1,56 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "xproc"
+description = "Python bindings for xproc"
+dynamic = ["version"]
+readme = "Python/README.md"
+requires-python = ">=3.10"
+authors = [{ name = "xproc contributors" }]
+license = { text = "MIT" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: C++",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: Microsoft :: Windows",
+]
+
+[tool.scikit-build]
+cmake.source-dir = "."
+wheel.packages = []
+sdist.include = [
+  "CMakeLists.txt",
+  "Python",
+  "capi",
+  "include",
+  "src",
+  "cmake",
+  "LICENSE",
+  "README.md",
+]
+sdist.exclude = [
+  "build",
+  "dist",
+  "*.egg-info",
+  "**/__pycache__",
+]
+
+[tool.scikit-build.cmake.define]
+XPROC_BUILD_CAPI = "ON"
+XPROC_BUILD_PYTHON = "ON"
+XPROC_BUILD_NODE = "OFF"
+XPROC_BUILD_EXAMPLES = "OFF"
+XPROC_BUILD_BENCHMARKS = "OFF"
+XPROC_BUILD_TESTS = "OFF"
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "CMakeLists.txt"
+regex = '''(?im)^project\(xproc\s+VERSION\s+(?P<value>\d+\.\d+\.\d+)'''

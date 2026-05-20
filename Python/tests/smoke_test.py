@@ -7,8 +7,12 @@ import time
 import uuid
 from pathlib import Path
 
+if not __debug__:
+    raise RuntimeError("smoke tests must not run with python -O")
+
 
 def make_fixed_options(
+    xproc: object,
     path: str,
     item_size: int,
     schema_id: int,
@@ -16,9 +20,7 @@ def make_fixed_options(
     create_if_missing: bool,
     creator_timestamp_ns: int = 0,
     creator_flags: int = 0,
-) -> "xproc.TransportOptions":
-    import xproc
-
+) -> object:
     options = xproc.TransportOptions()
     options.path = path
     options.shm_size = xproc.shm_size_for_data_capacity(4096)
@@ -31,15 +33,7 @@ def make_fixed_options(
     return options
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--module-dir", required=True)
-    args = parser.parse_args()
-
-    sys.path.insert(0, str(Path(args.module_dir).resolve()))
-
-    import xproc
-
+def run_smoke_checks(xproc: object) -> None:
     assert xproc.version_string()
     assert xproc.status_string(xproc.Status.OK) == "ok"
     assert xproc.layout_error_string(xproc.LayoutError.NONE) == "none"
@@ -54,6 +48,7 @@ def main() -> int:
     persisted_creator_timestamp_ns = 0x1122334455667788
     persisted_creator_flags = 0x8877665544332211
     create_options = make_fixed_options(
+        xproc,
         shm_path,
         len(payload),
         0,
@@ -63,6 +58,7 @@ def main() -> int:
     )
 
     attach_options = make_fixed_options(
+        xproc,
         shm_path,
         len(payload),
         0,
@@ -75,11 +71,14 @@ def main() -> int:
     xproc.validate_options_for(xproc.EndpointKind.CONSUMER, create_options)
     xproc.validate_options_for(xproc.EndpointKind.PRODUCER, attach_options)
 
-    consumer = xproc.Consumer(create_options)
-    observer = xproc.Observer(attach_options)
-    producer = xproc.Producer(attach_options)
+    consumer = None
+    observer = None
+    producer = None
 
     try:
+        consumer = xproc.Consumer(create_options)
+        observer = xproc.Observer(attach_options)
+        producer = xproc.Producer(attach_options)
         producer.send_fixed_sized(payload)
 
         observed = None
@@ -112,20 +111,32 @@ def main() -> int:
         assert observer_borrowed.creator_timestamp_ns == persisted_creator_timestamp_ns
         assert observer_borrowed.creator_flags == persisted_creator_flags
     finally:
-        producer.close()
-        observer.close()
-        consumer.close()
-        xproc.shm_unlink(shm_path)
+        if producer is not None:
+            producer.close()
+        if observer is not None:
+            observer.close()
+        if consumer is not None:
+            consumer.close()
+        try:
+            xproc.shm_unlink(shm_path)
+        except xproc.XprocError:
+            pass
 
     mismatch_path = f"/xproc_py_schema_mismatch_{os.getpid()}_{uuid.uuid4().hex}"
-    producer_options = make_fixed_options(mismatch_path, 4, 7, create_if_missing=True)
-    consumer_options = make_fixed_options(mismatch_path, 4, 8, create_if_missing=False)
+    producer_options = make_fixed_options(
+        xproc, mismatch_path, 4, 7, create_if_missing=True
+    )
+    consumer_options = make_fixed_options(
+        xproc, mismatch_path, 4, 8, create_if_missing=False
+    )
     consumer_options.shm_size = xproc.INFER_EXISTING_SHM_SIZE
 
-    producer = xproc.Producer(producer_options)
+    producer = None
+    consumer = None
     try:
+        producer = xproc.Producer(producer_options)
         try:
-            xproc.Consumer(consumer_options)
+            consumer = xproc.Consumer(consumer_options)
         except xproc.XprocError as exc:
             assert exc.status == xproc.Status.LAYOUT_ERROR
             assert exc.layout_error == xproc.LayoutError.SCHEMA_ID_MISMATCH
@@ -133,8 +144,32 @@ def main() -> int:
         else:
             raise AssertionError("expected schema mismatch to raise XprocError")
     finally:
-        producer.close()
-        xproc.shm_unlink(mismatch_path)
+        if consumer is not None:
+            consumer.close()
+        if producer is not None:
+            producer.close()
+        try:
+            xproc.shm_unlink(mismatch_path)
+        except xproc.XprocError:
+            pass
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--module-dir", required=True)
+    args = parser.parse_args()
+
+    module_dir = Path(args.module_dir).resolve()
+    sys.path.insert(0, str(module_dir))
+
+    import xproc
+
+    module_file = Path(xproc.__file__).resolve()
+    assert module_file.is_relative_to(module_dir), (
+        f"expected xproc to load from {module_dir}, got {module_file}"
+    )
+
+    run_smoke_checks(xproc)
 
     return 0
 
