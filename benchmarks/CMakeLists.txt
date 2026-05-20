@@ -28,7 +28,11 @@ xproc_add_benchmark(ipc_poll_copy ipc_poll_copy_benchmark.cpp)
 xproc_add_benchmark(ipc_cross_framework ipc_cross_framework_benchmark.cpp)
 xproc_add_benchmark(ringbuffer ringbuffer_benchmark.cpp)
 xproc_add_benchmark(shm_layout shm_layout_benchmark.cpp)
-xproc_add_benchmark(sync sync_benchmark.cpp)
+add_executable(xproc_bench_sync sync_benchmark.cpp)
+target_link_libraries(xproc_bench_sync PRIVATE xproc benchmark::benchmark)
+set_target_properties(xproc_bench_sync PROPERTIES FOLDER "Benchmarks")
+add_test(NAME xproc.bench.sync COMMAND xproc_bench_sync)
+set_tests_properties(xproc.bench.sync PROPERTIES LABELS "xproc_benchmark")
 
 if(CMAKE_CONFIGURATION_TYPES)
   set(_xproc_ctest_config_arg "-C" "$<CONFIG>")
@@ -79,6 +83,8 @@ endif()
 
 set(XPROC_IPC_BENCHMARK_JSON "${CMAKE_BINARY_DIR}/ipc-cross-framework.json")
 set(XPROC_IPC_BENCHMARK_RST "${CMAKE_SOURCE_DIR}/docs/_generated/ipc_benchmark_table.rst")
+set(XPROC_SYNC_BENCHMARK_JSON "${CMAKE_BINARY_DIR}/sync-win32-wait.json")
+set(XPROC_SYNC_BENCHMARK_RST "${CMAKE_SOURCE_DIR}/docs/_generated/sync_win32_wait_table.rst")
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
@@ -97,3 +103,21 @@ add_custom_target(
   USES_TERMINAL
   COMMENT "Generate IPC benchmark JSON and RST table"
 )
+
+if(WIN32)
+  add_custom_target(
+    xproc_generate_sync_benchmark_docs
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/docs/_generated"
+    COMMAND $<TARGET_FILE:xproc_bench_sync>
+            --benchmark_format=json
+            --benchmark_out=${XPROC_SYNC_BENCHMARK_JSON}
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/generate_sync_wait_benchmark_table.py
+            --input ${XPROC_SYNC_BENCHMARK_JSON}
+            --output ${XPROC_SYNC_BENCHMARK_RST}
+    DEPENDS xproc_bench_sync
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    USES_TERMINAL
+    COMMENT "Generate sync benchmark Win32 wait-counter JSON and RST table"
+  )
+endif()

@@ -64,6 +64,25 @@ Generate the Table
 This target writes benchmark JSON to `build/ipc-cross-framework.json` and
 regenerates the documentation fragment at `docs/_generated/ipc_benchmark_table.rst`.
 
+Windows Sync Wait Counters
+--------------------------
+
+On Windows, `xproc_bench_sync` now reports per-operation wait counters from
+`atomic_wait_win32` so tuning changes (spin/yield/timeout) can be compared
+without guessing from total latency alone.
+
+Generate the Windows table:
+
+.. code-block:: powershell
+
+   cmake -S . -B build -DXPROC_BUILD_BENCHMARKS=ON
+   cmake --build build --target xproc_generate_sync_benchmark_docs
+
+The target writes benchmark JSON to `build/sync-win32-wait.json` and refreshes
+`docs/_generated/sync_win32_wait_table.rst`.
+
+.. include:: _generated/sync_win32_wait_table.rst
+
 Generated Benchmark Table
 -------------------------
 
