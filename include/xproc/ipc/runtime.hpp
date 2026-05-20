@@ -8,6 +8,7 @@
 #include <xproc/sync/atomic_wait.hpp>
 
 namespace xproc::ipc {
+namespace xproc::ipc {
 
 // Blocking consumer loop: polls the channel, copies each message, and submits work to Executor.
 //

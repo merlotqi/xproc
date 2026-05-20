@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <utility>
-#include <xproc/ringbuffer/details/varlen_header.hpp>
+#include <xproc/ringbuffer/detail/varlen_header.hpp>
 #include <xproc/ringbuffer/ringbuffer_view.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
@@ -21,13 +21,13 @@ class varlen_reader : public ringbuffer_view {
       return false;
     }
 
-    auto* h = reinterpret_cast<details::varlen_message_header*>(get_ptr(curr_read));
+    auto* h = reinterpret_cast<detail::varlen_message_header*>(get_ptr(curr_read));
     uint32_t status = h->status.load(std::memory_order_acquire);
 
     if (status == 1) {
-      handler(get_ptr(curr_read + sizeof(details::varlen_message_header)), h->length);
+      handler(get_ptr(curr_read + sizeof(detail::varlen_message_header)), h->length);
 
-      uint32_t total_len = align_size(h->length + sizeof(details::varlen_message_header));
+      uint32_t total_len = align_size(h->length + sizeof(detail::varlen_message_header));
       header_->rb_meta.read_pos.store(curr_read + total_len, std::memory_order_release);
       header_->rb_meta.read_wake_seq.fetch_add(1, std::memory_order_release);
       sync::atomic_notify_one(&header_->rb_meta.read_wake_seq);
@@ -51,11 +51,11 @@ class varlen_reader : public ringbuffer_view {
     const uint64_t write_end = header_->rb_meta.write_pos.load(std::memory_order_acquire);
 
     while (r != write_end) {
-      const auto* h = reinterpret_cast<const details::varlen_message_header*>(get_ptr(r));
+      const auto* h = reinterpret_cast<const detail::varlen_message_header*>(get_ptr(r));
       const uint32_t status = h->status.load(std::memory_order_acquire);
 
       if (status == 1) {
-        std::forward<F>(handler)(static_cast<const void*>(get_ptr(r + sizeof(details::varlen_message_header))),
+        std::forward<F>(handler)(static_cast<const void*>(get_ptr(r + sizeof(detail::varlen_message_header))),
                                  h->length);
         return true;
       }

@@ -3,6 +3,7 @@
 #include <atomic>
 
 namespace xproc::sync {
+namespace xproc::sync {
 
 template <typename T>
 void atomic_wait(const std::atomic<T>* atomic, T old);

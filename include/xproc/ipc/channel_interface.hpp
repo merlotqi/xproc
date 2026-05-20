@@ -9,6 +9,7 @@
 #include <xproc/ipc/options.hpp>
 
 namespace xproc::ipc {
+namespace xproc::ipc {
 
 // Abstract producer side: fixed / varlen sends (shared memory, TCP, RDMA backends).
 class producer_channel_interface {

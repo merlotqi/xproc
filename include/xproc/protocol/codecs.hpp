@@ -9,6 +9,7 @@
 #include <xproc/protocol/codec_traits.hpp>
 
 namespace xproc::protocol {
+namespace xproc::protocol {
 
 template <typename T>
 struct raw_pod_codec {

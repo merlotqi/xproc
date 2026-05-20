@@ -12,6 +12,7 @@
 #include <type_traits>
 
 namespace xproc::protocol {
+namespace xproc::protocol {
 
 // Wire format is Message::SerializeToArray bytes (no extra length prefix; ring supplies length).
 template <typename MessageType, std::size_t MaxWire>

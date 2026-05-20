@@ -17,9 +17,12 @@ function(xproc_add_benchmark short_name source_file)
   set(tgt xproc_bench_${short_name})
   add_executable(${tgt} ${source_file})
   target_link_libraries(${tgt} PRIVATE xproc benchmark::benchmark_main)
-    set_target_properties(${tgt} PROPERTIES FOLDER "Benchmarks")
+  set_target_properties(${tgt} PROPERTIES FOLDER "Benchmarks")
   add_test(NAME xproc.bench.${short_name} COMMAND ${tgt})
-  set_tests_properties(xproc.bench.${short_name} PROPERTIES LABELS "xproc_benchmark")
+  set_tests_properties(xproc.bench.${short_name} PROPERTIES 
+    LABELS "xproc_benchmark"
+    TIMEOUT 120
+  )
 endfunction()
 
 xproc_add_benchmark(ipc ipc_benchmark.cpp)
@@ -49,6 +52,7 @@ add_custom_target(
   USES_TERMINAL
   COMMENT "Running all xproc benchmarks via CTest (label: xproc_benchmark)"
 )
+set_target_properties(xproc_run_benchmarks PROPERTIES FOLDER "Benchmarks")
 add_dependencies(
   xproc_run_benchmarks
   xproc_bench_ipc

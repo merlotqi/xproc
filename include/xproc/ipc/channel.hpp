@@ -11,6 +11,7 @@
 #include <xproc/ringbuffer/varlen_writer.hpp>
 
 namespace xproc::ipc {
+namespace xproc::ipc {
 
 class channel : public endpoint {
  public:

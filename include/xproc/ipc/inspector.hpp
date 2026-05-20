@@ -3,6 +3,7 @@
 #include <cstdint>
 
 namespace xproc::ipc {
+namespace xproc::ipc {
 
 // Read-only snapshot of ring control fields (shared with producer/consumer).
 struct ring_snapshot {

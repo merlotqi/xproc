@@ -7,6 +7,7 @@
 #include <xproc/ipc/socket_channel.hpp>
 
 namespace xproc::ipc {
+namespace xproc::ipc {
 
 inline std::unique_ptr<producer_channel_interface> create_producer_transport(transport_options opts) {
   validate_producer_transport_options(opts);

@@ -4,6 +4,7 @@
 #include <xproc/ipc/channel_interface.hpp>
 
 namespace xproc::ipc {
+namespace xproc::ipc {
 
 // TCP framing: fixed channel sends exactly item_size bytes per message; variable sends uint32_t LE len + payload.
 // Producer connect resolves IPv4 / IPv6 via getaddrinfo(AF_UNSPEC). Consumer listen prefers an IPv6 socket with

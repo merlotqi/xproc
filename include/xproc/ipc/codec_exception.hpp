@@ -5,6 +5,7 @@
 #include <system_error>
 
 namespace xproc::ipc {
+namespace xproc::ipc {
 
 enum class codec_error {
   encode_failed,
