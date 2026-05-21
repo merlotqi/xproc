@@ -1,8 +1,8 @@
-type XprocModule = typeof import("./index");
-type TransportOptions = import("./index").TransportOptions;
-type ResolvedTransportOptions = import("./index").ResolvedTransportOptions;
-type Snapshot = import("./index").Snapshot;
-type XprocError = import("./index").XprocError;
-type Producer = import("./index").Producer;
-type Consumer = import("./index").Consumer;
-type Observer = import("./index").Observer;
+type XprocModule = typeof import("@merlotqi/xproc");
+type TransportOptions = import("@merlotqi/xproc").TransportOptions;
+type ResolvedTransportOptions = import("@merlotqi/xproc").ResolvedTransportOptions;
+type Snapshot = import("@merlotqi/xproc").Snapshot;
+type XprocError = import("@merlotqi/xproc").XprocError;
+type Producer = import("@merlotqi/xproc").Producer;
+type Consumer = import("@merlotqi/xproc").Consumer;
+type Observer = import("@merlotqi/xproc").Observer;
