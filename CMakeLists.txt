@@ -23,6 +23,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(XPROC_SKBUILD_WHEEL_INSTALL FALSE)
+if(SKBUILD
+   AND DEFINED SKBUILD_STATE AND SKBUILD_STATE
+   AND DEFINED SKBUILD_PLATLIB_DIR AND SKBUILD_PLATLIB_DIR
+   AND CMAKE_INSTALL_PREFIX STREQUAL SKBUILD_PLATLIB_DIR)
+    set(XPROC_SKBUILD_WHEEL_INSTALL TRUE)
+endif()
+
+function(xproc_add_subdirectory path)
+    if(XPROC_SKBUILD_WHEEL_INSTALL)
+        set(CMAKE_SKIP_INSTALL_RULES TRUE)
+    endif()
+    add_subdirectory("${path}")
+    if(XPROC_SKBUILD_WHEEL_INSTALL)
+        file(GENERATE
+            OUTPUT "${CMAKE_BINARY_DIR}/${path}/cmake_install.cmake"
+            CONTENT "# Install rules skipped for wheel build in ${path}\n"
+        )
+    endif()
+endfunction()
+
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     find_library(LIB_RT rt)
     find_package(Threads REQUIRED)
@@ -35,10 +56,10 @@ option(XPROC_BUILD_EXAMPLES "Build examples" ON)
 option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
 option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
 
-add_subdirectory(src)
+xproc_add_subdirectory(src)
 
 if(XPROC_BUILD_CAPI)
-    add_subdirectory(capi)
+    xproc_add_subdirectory(capi)
 endif()
 
 if(XPROC_BUILD_TESTS)
@@ -101,23 +122,25 @@ configure_file(
     @ONLY
 )
 
-install(
-    TARGETS xproc
-    EXPORT xprocTargets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xproc.pc" DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/xprocConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/xprocConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
-)
-install(EXPORT xprocTargets
-    FILE xprocTargets.cmake
-    NAMESPACE xproc::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
-)
+if(NOT XPROC_SKBUILD_WHEEL_INSTALL)
+    install(
+        TARGETS xproc
+        EXPORT xprocTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xproc.pc" DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/xprocConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/xprocConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
+    )
+    install(EXPORT xprocTargets
+        FILE xprocTargets.cmake
+        NAMESPACE xproc::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
+    )
+endif()
