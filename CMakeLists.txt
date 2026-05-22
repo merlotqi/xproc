@@ -23,12 +23,46 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# scikit-build-core can pass equivalent Windows paths with different slash styles
+# or drive-letter casing; normalize before comparing wheel install destinations.
+function(xproc_normalize_path out_var input_path)
+    if("${input_path}" STREQUAL "")
+        set(${out_var} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    get_filename_component(_xproc_path_abs "${input_path}" ABSOLUTE)
+    file(TO_CMAKE_PATH "${_xproc_path_abs}" _xproc_path_norm)
+    string(REGEX REPLACE "/+$" "" _xproc_path_norm "${_xproc_path_norm}")
+    if(WIN32)
+        string(TOLOWER "${_xproc_path_norm}" _xproc_path_norm)
+    endif()
+
+    set(${out_var} "${_xproc_path_norm}" PARENT_SCOPE)
+endfunction()
+
+function(xproc_paths_equal out_var lhs rhs)
+    xproc_normalize_path(_xproc_lhs "${lhs}")
+    xproc_normalize_path(_xproc_rhs "${rhs}")
+
+    if(_xproc_lhs STREQUAL _xproc_rhs)
+        set(${out_var} TRUE PARENT_SCOPE)
+    else()
+        set(${out_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
 set(XPROC_SKBUILD_WHEEL_INSTALL FALSE)
 if(SKBUILD
    AND DEFINED SKBUILD_STATE AND SKBUILD_STATE
-   AND DEFINED SKBUILD_PLATLIB_DIR AND SKBUILD_PLATLIB_DIR
-   AND CMAKE_INSTALL_PREFIX STREQUAL SKBUILD_PLATLIB_DIR)
-    set(XPROC_SKBUILD_WHEEL_INSTALL TRUE)
+   AND DEFINED SKBUILD_PLATLIB_DIR AND SKBUILD_PLATLIB_DIR)
+    xproc_paths_equal(_xproc_is_skbuild_wheel_install
+        "${CMAKE_INSTALL_PREFIX}"
+        "${SKBUILD_PLATLIB_DIR}"
+    )
+    if(_xproc_is_skbuild_wheel_install)
+        set(XPROC_SKBUILD_WHEEL_INSTALL TRUE)
+    endif()
 endif()
 
 function(xproc_add_subdirectory path)
