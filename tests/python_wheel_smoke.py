@@ -5,6 +5,7 @@ import hashlib
 import importlib.metadata
 import importlib.util
 import json
+import re
 import site
 import sysconfig
 from pathlib import Path
@@ -13,6 +14,9 @@ from urllib.request import url2pathname
 
 if not __debug__:
     raise RuntimeError("smoke tests must not run with python -O")
+
+PACKAGE_IMPORT_NAME = "xproc"
+DISTRIBUTION_NAME = "xproc-bindings"
 
 
 def _installed_library_dirs() -> list[Path]:
@@ -52,7 +56,11 @@ def _load_smoke_helper():
     return module
 
 
-def _expected_wheel_version(expected_wheel: Path) -> str:
+def _canonicalize_distribution_name(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _expected_wheel_info(expected_wheel: Path) -> tuple[str, str]:
     filename = expected_wheel.name
     if not filename.endswith(".whl"):
         raise AssertionError(f"expected a wheel path, got {expected_wheel}")
@@ -60,7 +68,7 @@ def _expected_wheel_version(expected_wheel: Path) -> str:
     parts = stem.split("-")
     if len(parts) < 5:
         raise AssertionError(f"unexpected wheel filename format: {filename}")
-    return parts[1]
+    return parts[0], parts[1]
 
 
 def _file_sha256(path: Path) -> str:
@@ -145,40 +153,48 @@ def main() -> int:
     args = parser.parse_args()
 
     expected_wheel = None
+    expected_distribution_stem = None
     expected_version = None
     if args.expected_wheel is not None:
         expected_wheel = Path(args.expected_wheel).resolve()
         assert expected_wheel.is_file(), f"expected wheel file at {expected_wheel}"
-        expected_version = _expected_wheel_version(expected_wheel)
+        expected_distribution_stem, expected_version = _expected_wheel_info(expected_wheel)
+        assert _canonicalize_distribution_name(expected_distribution_stem) == (
+            _canonicalize_distribution_name(DISTRIBUTION_NAME)
+        ), (
+            f"expected wheel distribution {expected_distribution_stem} did not match "
+            f"{DISTRIBUTION_NAME}"
+        )
 
     smoke_test = _load_smoke_helper()
-    import xproc
+    package = __import__(PACKAGE_IMPORT_NAME)
 
-    package_file = Path(xproc.__file__).resolve()
+    package_file = Path(package.__file__).resolve()
     library_dirs = _installed_library_dirs()
     assert any(package_file.is_relative_to(path) for path in library_dirs), (
         f"expected installed wheel import under one of {library_dirs}, got {package_file}"
     )
 
-    distribution_files = importlib.metadata.files("xproc")
+    distribution_files = importlib.metadata.files(DISTRIBUTION_NAME)
     assert distribution_files is not None
     assert all(Path(entry).name != "xproc.pth" for entry in distribution_files), (
         "installed wheel should not include xproc.pth"
     )
     if expected_version is not None and expected_wheel is not None:
-        distribution = importlib.metadata.distribution("xproc")
+        distribution = importlib.metadata.distribution(DISTRIBUTION_NAME)
         _verify_direct_url(distribution, expected_wheel)
-        installed_version = importlib.metadata.version("xproc")
+        installed_version = importlib.metadata.version(DISTRIBUTION_NAME)
         assert installed_version == expected_version, (
-            f"installed xproc version {installed_version} did not match {expected_version} "
-            f"from {expected_wheel.name}"
+            f"installed {DISTRIBUTION_NAME} version {installed_version} did not match "
+            f"{expected_version} from {expected_wheel.name}"
         )
-        expected_dist_info_dir = f"xproc-{expected_version}.dist-info"
+        assert expected_distribution_stem is not None
+        expected_dist_info_dir = f"{expected_distribution_stem}-{expected_version}.dist-info"
         assert any(Path(entry).parts[0] == expected_dist_info_dir for entry in distribution_files), (
             f"installed wheel metadata did not match {expected_dist_info_dir}"
         )
 
-    smoke_test.run_smoke_checks(xproc)
+    smoke_test.run_smoke_checks(package)
     return 0
 
 

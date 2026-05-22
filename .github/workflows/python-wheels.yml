@@ -17,8 +17,6 @@ on:
       - "tests/python_wheel_smoke.py"
   push:
     branches: [main, master]
-    tags:
-      - "python-v*"
     paths:
       - ".github/workflows/python-wheels.yml"
       - "CMakeLists.txt"

@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.10", "pybind11>=2.12"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "xproc"
+name = "xproc-bindings"
 description = "Python bindings for xproc"
 dynamic = ["version"]
 readme = "Python/README.md"

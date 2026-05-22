@@ -3,6 +3,15 @@
 This package exposes the `xproc` C API to Python through a pybind11 module plus
 the `xproc` package facade staged under `build/Python/stage`.
 
+The published distribution name is `xproc-bindings`, while the Python import
+name remains `xproc`.
+
+Once published, install it from the package index with:
+
+```bash
+python3 -m pip install xproc-bindings
+```
+
 ## Wheel Build and Install
 
 From the repository root:
@@ -10,7 +19,7 @@ From the repository root:
 ```bash
 python3 -m pip install build
 python3 -m build
-python3 -m pip install dist/xproc-*.whl
+python3 -m pip install dist/xproc_bindings-*.whl
 ```
 
 `python3 -m build` uses the PyPA `build` frontend, so that command requires the
@@ -30,8 +39,30 @@ GitHub Actions builds Python release artifacts in
 - The Linux runner also builds a source distribution with
   `python -m build --sdist`.
 - The workflow uploads the produced wheels and sdist as GitHub Actions
-  artifacts, and tag pushes matching `python-v*` provide the same artifact set
-  for release-oriented runs.
+  artifacts for CI validation.
+
+## Publishing to TestPyPI and PyPI
+
+GitHub Actions publishes Python release artifacts through
+`.github/workflows/python-publish.yml`.
+
+- `workflow_dispatch` publishes to either `testpypi` or `pypi`, selected by
+  the `repository` input.
+- Pushing a tag matching `python-v*` publishes to PyPI automatically.
+- The publish workflow rebuilds the wheels and sdist, uploads them as GitHub
+  Actions artifacts, and then publishes those artifacts with Trusted
+  Publishing.
+
+Before the first publish, configure Trusted Publishers for this repository:
+
+- TestPyPI: owner `merlotqi`, repository `xproc`, workflow
+  `.github/workflows/python-publish.yml`, environment `testpypi`
+- PyPI: owner `merlotqi`, repository `xproc`, workflow
+  `.github/workflows/python-publish.yml`, environment `pypi`
+
+Create matching GitHub repository environments named `testpypi` and `pypi`.
+It is a good idea to require approval on the `pypi` environment before
+releasing publicly.
 
 To reproduce the release artifacts locally from the repository root:
 
@@ -44,7 +75,7 @@ print(f"cp{sys.version_info.major}{sys.version_info.minor}-*")
 PY
 )" python3 -m cibuildwheel --output-dir wheelhouse
 python3 -m build --sdist
-mapfile -t wheels < <(find wheelhouse -maxdepth 1 -type f -name 'xproc-*.whl' | sort)
+mapfile -t wheels < <(find wheelhouse -maxdepth 1 -type f -name 'xproc_bindings-*.whl' | sort)
 if [ "${#wheels[@]}" -ne 1 ]; then
   printf 'expected exactly one local wheel, found %s\n' "${#wheels[@]}" >&2
   exit 1
