@@ -303,8 +303,12 @@ declare namespace xproc {
     pendingLen(): number;
     /** Polls for a payload and returns `null` when the channel is currently empty. */
     pollCopy(): Uint8Array | null;
-    /** Blocks until data is available or the underlying transport wakes the consumer. */
+    /** Polls for a payload into a caller-owned buffer and returns copied bytes, or `null` when empty. */
+    pollCopyInto(buffer: Buffer | Uint8Array | ArrayBuffer): number | null;
+    /** Blocks the calling thread until data is available or the underlying transport wakes the consumer. */
     wait(): void;
+    /** Waits on a native worker thread so the JavaScript event loop can continue running. */
+    waitAsync(): Promise<void>;
     /** Returns the bound or connected socket port for socket-backed consumers. */
     socketPort(): number;
   }
@@ -321,6 +325,8 @@ declare namespace xproc {
     snapshot(): Snapshot;
     /** Returns the latest visible payload without consuming it, or `null` when empty. */
     peekCopy(): Uint8Array | null;
+    /** Peeks into a caller-owned buffer and returns copied bytes, or `null` when empty. */
+    peekCopyInto(buffer: Buffer | Uint8Array | ArrayBuffer): number | null;
   }
 
   /** Converts requested payload capacity into the shared-memory size expected by xproc. */

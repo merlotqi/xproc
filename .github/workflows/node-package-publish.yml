@@ -118,7 +118,7 @@ jobs:
           path: node/prebuilds/win32-x64
       - name: Assert packaged file list
         working-directory: node
-        run: npm run assert:packlist
+        run: npm run assert:packlist -- --require-all-prebuilds
       - name: Verify packed install
         working-directory: node
         run: npm run verify:pack

@@ -72,6 +72,14 @@ bool throw_xproc_status(Napi::Env env, xproc_c_status status, const char* contex
   return false;
 }
 
+bool throw_xproc_status_with_required_len(Napi::Env env, xproc_c_status status, const char* context,
+                                          std::uint32_t required_len) {
+  Napi::Error error = make_xproc_error(env, status, context);
+  error.Value().Set("requiredLength", Napi::Number::New(env, required_len));
+  error.ThrowAsJavaScriptException();
+  return false;
+}
+
 bool parse_uint64(Napi::Env env, const Napi::Value& value, const char* field_name, std::uint64_t* out) {
   if (value.IsBigInt()) {
     bool lossless = false;
@@ -599,7 +607,9 @@ class consumer_wrap final : public Napi::ObjectWrap<consumer_wrap> {
                            InstanceMethod("options", &consumer_wrap::options),
                            InstanceMethod("pendingLen", &consumer_wrap::pending_len),
                            InstanceMethod("pollCopy", &consumer_wrap::poll_copy),
+                           InstanceMethod("pollCopyInto", &consumer_wrap::poll_copy_into),
                            InstanceMethod("wait", &consumer_wrap::wait),
+                           InstanceMethod("waitAsync", &consumer_wrap::wait_async),
                            InstanceMethod("socketPort", &consumer_wrap::socket_port),
                        });
   }
@@ -629,6 +639,10 @@ class consumer_wrap final : public Napi::ObjectWrap<consumer_wrap> {
   }
 
   Napi::Value close(const Napi::CallbackInfo& info) {
+    if (active_waits_ > 0u) {
+      throw_type_error(info.Env(), "Consumer.close cannot be called while waitAsync is pending");
+      return info.Env().Undefined();
+    }
     reset();
     return info.Env().Undefined();
   }
@@ -692,6 +706,38 @@ class consumer_wrap final : public Napi::ObjectWrap<consumer_wrap> {
     return buffer;
   }
 
+  Napi::Value poll_copy_into(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+    if (info.Length() < 1) {
+      throw_type_error(env, "Consumer.pollCopyInto requires one Buffer, TypedArray, or ArrayBuffer argument");
+      return env.Undefined();
+    }
+
+    byte_span bytes;
+    if (!byte_span_from_js(env, info[0], "buffer", &bytes)) {
+      return env.Undefined();
+    }
+
+    std::uint32_t out_len = 0;
+    const xproc_c_status status = xproc_c_consumer_poll_copy(
+        handle_, bytes.len == 0u ? nullptr : const_cast<void*>(bytes.data), bytes.len, &out_len);
+    if (status == XPROC_C_STATUS_AGAIN) {
+      return env.Null();
+    }
+    if (status == XPROC_C_STATUS_BUFFER_TOO_SMALL) {
+      throw_xproc_status_with_required_len(env, status, "Consumer.pollCopyInto", out_len);
+      return env.Undefined();
+    }
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "Consumer.pollCopyInto");
+      return env.Undefined();
+    }
+    return Napi::Number::New(env, out_len);
+  }
+
   Napi::Value wait(const Napi::CallbackInfo& info) {
     Napi::Env env = info.Env();
     if (!ensure_open(env, handle_)) {
@@ -703,6 +749,69 @@ class consumer_wrap final : public Napi::ObjectWrap<consumer_wrap> {
       throw_xproc_status(env, status, "Consumer.wait");
     }
     return env.Undefined();
+  }
+
+  class wait_worker final : public Napi::AsyncWorker {
+   public:
+    wait_worker(Napi::Env env, xproc_c_consumer* handle, Napi::Object self)
+      : Napi::AsyncWorker(env),
+        deferred_(Napi::Promise::Deferred::New(env)),
+        self_(Napi::Persistent(self)),
+        handle_(handle) {}
+
+    void Execute() override {
+      status_ = xproc_c_consumer_wait(handle_);
+      if (status_ != XPROC_C_STATUS_OK) {
+        SetError(xproc_c_status_string(status_));
+      }
+    }
+
+    void OnOK() override {
+      complete_wait();
+      deferred_.Resolve(Env().Undefined());
+    }
+
+    void OnError(const Napi::Error& error) override {
+      complete_wait();
+      Napi::Error wrapped = make_xproc_error(Env(), status_, "Consumer.waitAsync");
+      if (std::string(wrapped.Message()).empty()) {
+        wrapped = error;
+      }
+      deferred_.Reject(wrapped.Value());
+    }
+
+    Napi::Promise promise() const { return deferred_.Promise(); }
+
+   private:
+    void complete_wait() {
+      auto* self = Napi::ObjectWrap<consumer_wrap>::Unwrap(self_.Value());
+      if (self != nullptr && self->active_waits_ > 0u) {
+        --self->active_waits_;
+      }
+      self_.Reset();
+    }
+
+    Napi::Promise::Deferred deferred_;
+    Napi::ObjectReference self_;
+    xproc_c_consumer* handle_{nullptr};
+    xproc_c_status status_{XPROC_C_STATUS_INTERNAL_ERROR};
+  };
+
+  Napi::Value wait_async(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+    if (active_waits_ > 0u) {
+      throw_type_error(env, "Consumer.waitAsync cannot be called while another waitAsync is pending");
+      return env.Undefined();
+    }
+
+    ++active_waits_;
+    auto* worker = new wait_worker(env, handle_, info.This().As<Napi::Object>());
+    Napi::Promise promise = worker->promise();
+    worker->Queue();
+    return promise;
   }
 
   Napi::Value socket_port(const Napi::CallbackInfo& info) {
@@ -721,6 +830,7 @@ class consumer_wrap final : public Napi::ObjectWrap<consumer_wrap> {
   }
 
   xproc_c_consumer* handle_{nullptr};
+  std::uint32_t active_waits_{0};
 };
 
 class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
@@ -732,6 +842,7 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
                            InstanceMethod("options", &observer_wrap::options),
                            InstanceMethod("snapshot", &observer_wrap::snapshot),
                            InstanceMethod("peekCopy", &observer_wrap::peek_copy),
+                           InstanceMethod("peekCopyInto", &observer_wrap::peek_copy_into),
                        });
   }
 
@@ -821,6 +932,38 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
       return env.Undefined();
     }
     return buffer;
+  }
+
+  Napi::Value peek_copy_into(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+    if (info.Length() < 1) {
+      throw_type_error(env, "Observer.peekCopyInto requires one Buffer, TypedArray, or ArrayBuffer argument");
+      return env.Undefined();
+    }
+
+    byte_span bytes;
+    if (!byte_span_from_js(env, info[0], "buffer", &bytes)) {
+      return env.Undefined();
+    }
+
+    std::uint32_t out_len = 0;
+    const xproc_c_status status = xproc_c_observer_peek_copy(
+        handle_, bytes.len == 0u ? nullptr : const_cast<void*>(bytes.data), bytes.len, &out_len);
+    if (status == XPROC_C_STATUS_AGAIN) {
+      return env.Null();
+    }
+    if (status == XPROC_C_STATUS_BUFFER_TOO_SMALL) {
+      throw_xproc_status_with_required_len(env, status, "Observer.peekCopyInto", out_len);
+      return env.Undefined();
+    }
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "Observer.peekCopyInto");
+      return env.Undefined();
+    }
+    return Napi::Number::New(env, out_len);
   }
 
   xproc_c_observer* handle_{nullptr};

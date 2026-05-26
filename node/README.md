@@ -108,6 +108,12 @@ producer.sendVarlen("hello-socket");
 const payload = consumer.pollCopy();
 ```
 
+## Runtime semantics
+
+- `consumer.wait()` is a low-level synchronous wait and blocks the calling JavaScript thread. Use `await consumer.waitAsync()` when the wait may happen on the Node main thread.
+- `consumer.pollCopy()` and `observer.peekCopy()` return newly allocated payload copies. Use `pollCopyInto(buffer)` or `peekCopyInto(buffer)` when you want to reuse caller-owned buffers and avoid the extra allocation.
+- `Observer` is supported for shared-memory channels. Socket transports expose producer / consumer endpoints only.
+
 ## Raw API
 
 The lower-level constructors are still available when you want direct control
