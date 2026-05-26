@@ -81,21 +81,40 @@ def run_smoke_checks(xproc: object) -> None:
         producer = xproc.Producer(attach_options)
         producer.send_fixed_sized(payload)
 
+        into_buffer = bytearray(len(payload))
         observed = None
         for _ in range(100):
-            observed = observer.peek_copy()
-            if observed is not None:
+            bytes_written = observer.peek_copy_into(into_buffer)
+            if bytes_written is not None:
+                observed = bytes(into_buffer[:bytes_written])
                 break
             time.sleep(0.01)
         assert observed == payload
+        try:
+            observer.peek_copy_into(bytearray(len(payload) - 1))
+        except ValueError as exc:
+            assert "buffer is too small" in str(exc).lower()
+        else:
+            raise AssertionError("expected small observer buffer to raise ValueError")
 
+        into_buffer = bytearray(len(payload))
         received = None
         for _ in range(100):
-            received = consumer.poll_copy()
-            if received is not None:
+            bytes_written = consumer.poll_copy_into(into_buffer)
+            if bytes_written is not None:
+                received = bytes(into_buffer[:bytes_written])
                 break
             time.sleep(0.01)
         assert received == payload
+        assert consumer.poll_copy_into(into_buffer) is None
+        producer.send_fixed_sized(payload)
+        try:
+            consumer.poll_copy_into(bytearray(len(payload) - 1))
+        except ValueError as exc:
+            assert "buffer is too small" in str(exc).lower()
+        else:
+            raise AssertionError("expected small consumer buffer to raise ValueError")
+        assert consumer.poll_copy_into(into_buffer) == len(payload)
 
         snapshot = observer.snapshot()
         assert snapshot.attach_count >= 2

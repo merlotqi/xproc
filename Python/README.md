@@ -144,6 +144,12 @@ cmake --build build --target xproc_cpp_python_handshake_progress_demo xproc_pyth
 If you build into a non-default directory, pass `--module-dir /path/to/Python/stage`
 or set `XPROC_PYTHON_MODULE_DIR=/path/to/Python/stage`.
 
+## Runtime semantics
+
+- `Consumer.wait()` blocks the calling Python thread but releases the GIL while waiting, so other Python threads can continue to run.
+- `Consumer.poll_copy()` and `Observer.peek_copy()` allocate and return new `bytes` objects. Use `poll_copy_into(buffer)` or `peek_copy_into(buffer)` with a mutable buffer when you want to reuse storage.
+- `Observer` attaches to shared-memory channels for read-only snapshots and peeking; socket transports expose producer / consumer endpoints only.
+
 ## What each example shows
 
 - `examples/fixed_channel_inprocess.py`
