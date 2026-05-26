@@ -180,15 +180,16 @@ Current benchmarks cover shared-memory behavior well enough to guide low-level w
 
 ## Bindings and API parity
 
-### 10. Bring C / Node bindings closer to feature parity
+### 10. Bring binding ergonomics closer to C++ parity
 
-The C++ core is significantly more complete than the binding layers.
+The C++ core still has the most ergonomic builder / codec surface, but the binding layers now cover the core transport
+and manifest features.
 
 Suggested steps:
 
-- Add C API helpers for SHM size calculation and attach semantics
-- Mirror new manifest / builder ergonomics in the C layer
-- Expand the Node binding beyond constants into real producer / consumer / observer objects
+- Add higher-level C API helpers that mirror `make_fixed_channel`, `make_varlen_channel`, and attach flows without
+      requiring callers to fill every `xproc_c_options` field manually
+- Mirror more builder-style ergonomics in Python and C#
 - Add binding-level examples and smoke tests
 
 ## Documentation

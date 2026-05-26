@@ -65,4 +65,4 @@ dotnet run --project csharp/benchmarks/IpcTransportComparison/IpcTransportCompar
 If native library discovery ever needs help, set:
 
 - Windows PowerShell: `$env:XPROC_CSHARP_NATIVE_DIR = "$PWD\\build\\capi\\Release"`
-- Linux shell: `export XPROC_CSHARP_NATIVE_DIR="$PWD/build/capi/Release"`
+- Linux/macOS shell: `export XPROC_CSHARP_NATIVE_DIR="$PWD/build/capi/Release"`
