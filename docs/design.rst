@@ -18,10 +18,12 @@ Windows naming and lifetime
 
 Paths are hashed and prefixed under ``<namespace>\`` (default ``Local\``; optional ``Global\`` via ``transport_options::win32_object_namespace``) for kernel object names. Because ``core::unlink`` is a no-op on Windows, processes must choose **new unique names** when a previous mapping may still be referenced.
 
-Windows vs Linux synchronization semantics
--------------------------------------------
+Platform synchronization semantics
+-----------------------------------
 
 On Linux, futex wait/wake is tied to the **shared memory page** backing the atomic, so producer and consumer (or two processes) coordinate correctly even when each has its own virtual address for the mapping.
+
+On macOS, Darwin ``atomic_wait`` uses ``os_sync_wait_on_address`` / ``os_sync_wake_by_address`` with shared-memory wake support on macOS 14.4+ targets. Older targets use ``__ulock_wait`` / ``__ulock_wake`` with timeout re-checks so cross-process shared-memory channels continue to make progress.
 
 On Windows, ``WaitOnAddress`` / ``WakeByAddress*`` coordinate on a **specific virtual address** in a process. Separate ``MapViewOfFile`` calls (and mappings in different processes) use **different** virtual addresses for the same file offset, so address-based wake does **not** pair across typical producer/consumer attachments. xproc therefore uses a **hybrid wait** on Windows: ``atomic_wait`` first spins and yields briefly, then calls ``WaitOnAddress`` with a short timeout before re-checking the atomic word. Same-process waiters wake promptly via ``WakeByAddress*``; hot cross-process shared-memory hand-offs often complete in the spin / yield window; idle cross-process waiters still make progress on timeout. Correctness continues to rely on coherent loads of ``commit_seq`` and ``read_wake_seq``.
 

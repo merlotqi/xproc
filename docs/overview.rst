@@ -5,10 +5,11 @@ Features
 --------
 
 * Lock-free SPSC communication with low latency
-* Linux and Windows only (other platforms are rejected at CMake configure time)
+* Linux, macOS, and Windows support (other platforms are rejected at CMake configure time)
 * Fixed-length and variable-length channel modes
 * Variable-length payloads can avoid extra copies; pointers are valid only for the duration of ``poll`` / ``peek`` callbacks
 * Read-only observer attach (``ipc_observer``) for snapshots and ``peek`` without advancing ``read_pos`` (weak consistency if a consumer runs concurrently)
+* Builder / attacher APIs with optional schema checks for shared-memory layout compatibility
 * Built-in codecs; optional JSON (nlohmann/json) and Protocol Buffers behind CMake options
 * Cache-line–aligned control block to reduce false sharing
 

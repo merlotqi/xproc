@@ -8,6 +8,13 @@ Linux
 * **Synchronization**: futex (``FUTEX_WAIT`` / ``FUTEX_WAKE``)
 * **Requirements**: working POSIX shared memory (``/dev/shm`` or equivalent)
 
+macOS
+-----
+
+* **Shared memory**: POSIX ``shm_open`` + ``mmap``
+* **Synchronization**: Darwin ``atomic_wait`` uses ``os_sync_wait_on_address`` / ``os_sync_wake_by_address`` on macOS 14.4+ with shared-memory wake support. Older deployment targets fall back to ``__ulock_wait`` / ``__ulock_wake`` with timeout re-checks for cross-process shared memory.
+* **Requirements**: POSIX shared memory support and a C++17-capable Clang toolchain.
+
 Windows
 -------
 
@@ -21,7 +28,7 @@ Windows
 Unsupported platforms
 ---------------------
 
-CMake fails configuration on non-Linux, non-Windows hosts with an explicit error (see ``CMakeLists.txt``).
+CMake fails configuration on non-Linux, non-macOS, non-Windows hosts with an explicit error (see ``CMakeLists.txt``).
 
 Windows tests
 -------------

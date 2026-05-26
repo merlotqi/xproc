@@ -5,6 +5,7 @@ shared-memory ring buffers, with support for both fixed-size frames and
 variable-length messages.
 
 **Linux**: POSIX shared memory + futex  
+**macOS**: POSIX shared memory + Darwin wait primitives  
 **Windows**: named file mapping + polling/backoff in `atomic_wait`
 
 ## Features
@@ -12,6 +13,7 @@ variable-length messages.
 - Lock-free SPSC communication with low-latency shared-memory transport
 - Fixed-length and variable-length message modes
 - Read-only observer attach for snapshots and peeking
+- Builder/attacher APIs with schema validation and platform-specific namespace options
 - Stable C API for Node, Python, and C# bindings
 - Optional JSON and Protobuf codec integration
 - CMake package export and `pkg-config` support
@@ -23,10 +25,14 @@ variable-length messages.
 
 int main() {
     const std::string path = "/my_ipc_channel";
-    auto channel = xproc::ipc::make_fixed_channel(path, 256).create(1024 * 1024);
+    auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t))
+        .with_schema_id(1)
+        .create(1024 * 1024);
 
     auto producer = channel.open_producer();
-    auto consumer = xproc::ipc::attach_fixed_channel(path).open_consumer();
+    auto consumer = xproc::ipc::attach_fixed_channel(path)
+        .with_schema_id(1)
+        .open_consumer();
 
     std::uint32_t value = 42;
     producer.send_fixed_bytes(reinterpret_cast<const std::byte*>(&value), sizeof(value));
