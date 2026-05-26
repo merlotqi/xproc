@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 
-from _common import cleanup_shm, load_xproc, module_dir_for_child, non_negative_int
+from _common import XprocModule, cleanup_shm, load_xproc, module_dir_for_child, non_negative_int
 
 
 CHILD_FLAG = "--pc-struct-child"
@@ -18,7 +18,7 @@ DATA_CAPACITY = 32_768
 POLL_INTERVAL_MS = 100
 
 
-def create_producer_options(xproc, shm_path: str):
+def create_producer_options(xproc: XprocModule, shm_path: str):
     options = xproc.TransportOptions()
     options.path = shm_path
     options.shm_size = xproc.INFER_EXISTING_SHM_SIZE
@@ -28,7 +28,7 @@ def create_producer_options(xproc, shm_path: str):
     return options
 
 
-def create_consumer_options(xproc, shm_path: str):
+def create_consumer_options(xproc: XprocModule, shm_path: str):
     options = xproc.TransportOptions()
     options.path = shm_path
     options.shm_size = xproc.shm_size_for_data_capacity(DATA_CAPACITY)
@@ -66,7 +66,7 @@ def drain_consumer(consumer, on_packet) -> None:
         on_packet(payload)
 
 
-def run_child_writer(xproc, shm_path: str, ticks: int, interval_ms: int) -> None:
+def run_child_writer(xproc: XprocModule, shm_path: str, ticks: int, interval_ms: int) -> None:
     producer = xproc.Producer(create_producer_options(xproc, shm_path))
     try:
         for index in range(ticks + 1):
@@ -76,7 +76,7 @@ def run_child_writer(xproc, shm_path: str, ticks: int, interval_ms: int) -> None
         producer.close()
 
 
-def run_parent(xproc, ticks: int, interval_ms: int) -> None:
+def run_parent(xproc: XprocModule, ticks: int, interval_ms: int) -> None:
     shm_path = f"/xproc_example_parent_child_struct_{os.getpid()}"
     cleanup_shm(xproc, shm_path)
 
