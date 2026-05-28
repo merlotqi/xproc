@@ -10,6 +10,7 @@
 #include <xproc/ipc/observer.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/ipc/runtime.hpp>
+#include <xproc/ipc/send_result.hpp>
 #include <xproc/ipc/shm_builders.hpp>
 #include <xproc/ipc/socket_channel.hpp>
 #include <xproc/ipc/transport_factory.hpp>
@@ -30,6 +31,7 @@
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/iringbuffer.hpp>
 #include <xproc/ringbuffer/ringbuffer_error.hpp>
+#include <xproc/ringbuffer/reserve_result.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
 
