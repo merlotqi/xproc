@@ -27,6 +27,7 @@ set(XPROC_GTEST_TEST_FILES_COMMON
     ipc_observer_attach_test.cpp
     protocol_codec_test.cpp
     socket_transport_test.cpp
+    runtime_allocation_test.cpp
 )
 
 # Linux-only (fork, pipe, POSIX paths). Not built on Windows or other OSes.
