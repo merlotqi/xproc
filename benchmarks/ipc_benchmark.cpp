@@ -122,8 +122,88 @@ static void BM_SendEncodedRawPod(benchmark::State& state) {
   xproc::core::shm::unlink(path);
 }
 
+static void BM_FixedTrySendPoll(benchmark::State& state) {
+  const std::size_t payload_len = static_cast<std::size_t>(state.range(0));
+  if (payload_len == 0 || payload_len > 1024) {
+    state.SkipWithError("payload_len out of expected bounds");
+    return;
+  }
+
+  const std::string path = unique_path("fixed_try", static_cast<int>(payload_len));
+  xproc::core::shm::unlink(path);
+
+  xproc::ipc::transport_options opts;
+  opts.path = path;
+  opts.shm_size = sizeof(xproc::core::control_block) + 1 * 1024 * 1024;
+  opts.type = xproc::ipc::channel_type::fixed;
+  opts.item_size = static_cast<std::uint32_t>(payload_len);
+  opts.create_if_missing = true;
+
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
+  std::vector<std::byte> payload(payload_len, std::byte{0x5a});
+
+  for (auto _ : state) {
+    const auto sent = producer.try_send_fixed_bytes(payload.data(), static_cast<std::uint32_t>(payload_len));
+    if (sent != xproc::ipc::send_result::ok) {
+      state.SkipWithError("try_send unexpectedly failed");
+      break;
+    }
+    bool got = false;
+    while (!got) {
+      got = consumer.poll([&](void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
+      if (!got) {
+        const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
+        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+      }
+    }
+  }
+
+  state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * payload_len));
+  xproc::core::shm::unlink(path);
+}
+
+static void BM_FixedTrySendFull(benchmark::State& state) {
+  const std::size_t payload_len = static_cast<std::size_t>(state.range(0));
+  if (payload_len == 0 || payload_len > 1024) {
+    state.SkipWithError("payload_len out of expected bounds");
+    return;
+  }
+
+  const std::string path = unique_path("fixed_try_full", static_cast<int>(payload_len));
+  xproc::core::shm::unlink(path);
+
+  xproc::ipc::transport_options opts;
+  opts.path = path;
+  opts.shm_size = sizeof(xproc::core::control_block) + 64;
+  opts.type = xproc::ipc::channel_type::fixed;
+  opts.item_size = static_cast<std::uint32_t>(payload_len);
+  opts.create_if_missing = true;
+
+  xproc::ipc::producer producer(opts);
+  std::vector<std::byte> payload(payload_len, std::byte{0x5a});
+  while (producer.try_send_fixed_bytes(payload.data(), static_cast<std::uint32_t>(payload_len)) ==
+         xproc::ipc::send_result::ok) {
+  }
+
+  for (auto _ : state) {
+    const auto sent = producer.try_send_fixed_bytes(payload.data(), static_cast<std::uint32_t>(payload_len));
+    benchmark::DoNotOptimize(sent);
+    if (sent != xproc::ipc::send_result::full &&
+        sent != xproc::ipc::send_result::message_too_large) {
+      state.SkipWithError("expected full or oversized result");
+      break;
+    }
+  }
+
+  state.SetItemsProcessed(state.iterations());
+  xproc::core::shm::unlink(path);
+}
+
 }  // namespace
 
 BENCHMARK(BM_FixedSendPoll)->Arg(16)->Arg(64)->Arg(256)->Unit(benchmark::kMicrosecond);
 BENCHMARK(BM_VarlenSendPoll)->Arg(32)->Arg(128)->Arg(1024)->Unit(benchmark::kMicrosecond);
 BENCHMARK(BM_SendEncodedRawPod)->Unit(benchmark::kMicrosecond);
+BENCHMARK(BM_FixedTrySendPoll)->Arg(16)->Arg(64)->Arg(256)->Unit(benchmark::kNanosecond);
+BENCHMARK(BM_FixedTrySendFull)->Arg(16)->Arg(32)->Unit(benchmark::kNanosecond);

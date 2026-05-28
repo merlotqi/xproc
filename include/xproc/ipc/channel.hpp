@@ -178,6 +178,53 @@ class channel : public endpoint {
     return send_fixed_sized_for(&data, static_cast<std::uint32_t>(sizeof(T)), timeout);
   }
 
+  send_result try_send_fixed_bytes(const void* data, std::uint32_t payload_len) {
+    return try_send_fixed_sized(data, payload_len);
+  }
+
+  template <typename Rep, typename Period>
+  send_result send_fixed_bytes_for(const void* data, std::uint32_t payload_len,
+                                   const std::chrono::duration<Rep, Period>& timeout) {
+    return send_fixed_sized_for(data, payload_len, timeout);
+  }
+
+  // ---- non-blocking and bounded-time varlen send ----
+
+  send_result try_send_varlen(const void* data, std::uint32_t len) {
+    if (get_role() != role::producer) {
+      throw std::logic_error("channel::try_send_varlen requires producer role");
+    }
+    if (opts_.type != channel_type::varlen) {
+      throw std::logic_error("channel::try_send_varlen requires variable channel");
+    }
+    auto* vw = static_cast<ringbuffer::varlen_writer*>(writer_.get());
+    auto rr = vw->try_reserve(len);
+    if (!rr) {
+      return map_reserve_status(rr.status);
+    }
+    std::memcpy(rr.payload, data, len);
+    vw->commit(rr.position);
+    return send_result::ok;
+  }
+
+  template <typename Rep, typename Period>
+  send_result send_varlen_for(const void* data, std::uint32_t len, const std::chrono::duration<Rep, Period>& timeout) {
+    if (get_role() != role::producer) {
+      throw std::logic_error("channel::send_varlen_for requires producer role");
+    }
+    if (opts_.type != channel_type::varlen) {
+      throw std::logic_error("channel::send_varlen_for requires variable channel");
+    }
+    auto* vw = static_cast<ringbuffer::varlen_writer*>(writer_.get());
+    auto rr = vw->reserve_for(len, timeout);
+    if (!rr) {
+      return map_reserve_status(rr.status);
+    }
+    std::memcpy(rr.payload, data, len);
+    vw->commit(rr.position);
+    return send_result::ok;
+  }
+
   // Handler receives (payload_ptr, length). For fixed channels, length is always opts_.item_size.
   template <typename F>
   bool poll(F&& handler) {
@@ -228,12 +275,16 @@ class producer : private channel {
   using channel::options;
   using channel::send_fixed;
   using channel::send_fixed_bytes;
+  using channel::send_fixed_bytes_for;
   using channel::send_fixed_for;
   using channel::send_fixed_sized;
   using channel::send_fixed_sized_for;
   using channel::send_varlen;
+  using channel::send_varlen_for;
   using channel::try_send_fixed;
+  using channel::try_send_fixed_bytes;
   using channel::try_send_fixed_sized;
+  using channel::try_send_varlen;
   using channel::used_bytes;
 
   channel& as_channel() noexcept { return static_cast<channel&>(*this); }

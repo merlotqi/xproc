@@ -93,11 +93,11 @@ else()
 endif()
 
 add_custom_target(xproc_run_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} --output-on-failure
+    COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} -LE xproc_benchmark --output-on-failure
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     USES_TERMINAL
     VERBATIM
-    COMMENT "Running all xproc tests"
+    COMMENT "Running all xproc tests (excluding benchmarks — use xproc_run_benchmarks for those)"
 )
 
 if(XPROC_ALL_TEST_TARGETS)
