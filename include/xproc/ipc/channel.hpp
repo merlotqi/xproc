@@ -33,6 +33,33 @@ class channel : public endpoint {
   }
 
  public:
+  std::size_t capacity_bytes() const {
+    return header_ ? static_cast<std::size_t>(header_->data_capacity) : 0u;
+  }
+
+  std::size_t used_bytes() const {
+    if (!header_) {
+      return 0u;
+    }
+    const auto write = header_->rb_meta.write_pos.load(std::memory_order_acquire);
+    const auto read = header_->rb_meta.read_pos.load(std::memory_order_acquire);
+    const auto used = write >= read ? (write - read) : 0;
+    const auto cap = static_cast<std::uint64_t>(header_->data_capacity);
+    return static_cast<std::size_t>(used > cap ? cap : used);
+  }
+
+  std::size_t available_bytes() const {
+    return capacity_bytes() - used_bytes();
+  }
+
+  double fill_ratio() const {
+    const auto cap = capacity_bytes();
+    if (cap == 0) {
+      return 0.0;
+    }
+    return static_cast<double>(used_bytes()) / static_cast<double>(cap);
+  }
+
   template <typename T>
   void send_fixed(const T& data) {
     send_fixed_sized(&data, static_cast<std::uint32_t>(sizeof(T)));
@@ -114,11 +141,15 @@ class producer : private channel {
  public:
   explicit producer(const transport_options& opts) : channel(opts, role::producer) {}
 
+  using channel::available_bytes;
+  using channel::capacity_bytes;
+  using channel::fill_ratio;
   using channel::get_role;
   using channel::header;
   using channel::is_connected;
   using channel::options;
   using channel::send_fixed;
+  using channel::used_bytes;
   using channel::send_fixed_bytes;
   using channel::send_fixed_sized;
   using channel::send_varlen;
@@ -132,10 +163,14 @@ class consumer : private channel {
  public:
   explicit consumer(const transport_options& opts) : channel(opts, role::consumer) {}
 
+  using channel::available_bytes;
+  using channel::capacity_bytes;
+  using channel::fill_ratio;
   using channel::get_role;
   using channel::header;
   using channel::is_connected;
   using channel::options;
+  using channel::used_bytes;
   using channel::poll;
 
   channel& as_channel() noexcept { return static_cast<channel&>(*this); }
