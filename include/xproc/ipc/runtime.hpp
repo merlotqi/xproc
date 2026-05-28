@@ -136,6 +136,7 @@ class runtime {
   void stop() {
     running_.store(false, std::memory_order_release);
     if (shm_ != nullptr && shm_->header() != nullptr) {
+      shm_->header()->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
       sync::atomic_notify_all(&shm_->header()->rb_meta.commit_seq);
     }
   }
