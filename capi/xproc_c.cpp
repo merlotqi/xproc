@@ -11,9 +11,10 @@
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/observer.hpp>
 #include <xproc/ipc/options.hpp>
+#include <xproc/ipc/shm_builders.hpp>
 #include <xproc/ipc/transport_factory.hpp>
 #include <xproc/platform/process.hpp>
-#include <xproc/shm/layout_exception.hpp>
+#include <xproc/core/layout_exception.hpp>
 
 #ifndef XPROC_CAPI_PROJECT_VERSION
 #define XPROC_CAPI_PROJECT_VERSION "0.0.0"
@@ -36,6 +37,12 @@ namespace {
 
 thread_local std::string g_last_error;
 thread_local xproc_c_layout_error g_last_layout_error = XPROC_C_LAYOUT_ERROR_NONE;
+struct owned_option_strings {
+  std::string path;
+  std::string win32_object_namespace;
+  std::string socket_host;
+};
+thread_local owned_option_strings g_read_existing_option_strings;
 
 template <typename Func>
 xproc_c_status catch_status(Func&& func);
@@ -50,29 +57,29 @@ void clear_last_error() {
   g_last_layout_error = XPROC_C_LAYOUT_ERROR_NONE;
 }
 
-xproc_c_layout_error to_c_layout_error(xproc::shm::validate_error error) {
+xproc_c_layout_error to_c_layout_error(xproc::core::validate_error error) {
   switch (error) {
-    case xproc::shm::validate_error::ok:
+    case xproc::core::validate_error::ok:
       return XPROC_C_LAYOUT_ERROR_NONE;
-    case xproc::shm::validate_error::not_attached:
+    case xproc::core::validate_error::not_attached:
       return XPROC_C_LAYOUT_ERROR_NOT_ATTACHED;
-    case xproc::shm::validate_error::bad_magic:
+    case xproc::core::validate_error::bad_magic:
       return XPROC_C_LAYOUT_ERROR_BAD_MAGIC;
-    case xproc::shm::validate_error::not_ready_timeout:
+    case xproc::core::validate_error::not_ready_timeout:
       return XPROC_C_LAYOUT_ERROR_NOT_READY_TIMEOUT;
-    case xproc::shm::validate_error::version_mismatch:
+    case xproc::core::validate_error::version_mismatch:
       return XPROC_C_LAYOUT_ERROR_VERSION_MISMATCH;
-    case xproc::shm::validate_error::header_size_mismatch:
+    case xproc::core::validate_error::header_size_mismatch:
       return XPROC_C_LAYOUT_ERROR_HEADER_SIZE_MISMATCH;
-    case xproc::shm::validate_error::layout_type_mismatch:
+    case xproc::core::validate_error::layout_type_mismatch:
       return XPROC_C_LAYOUT_ERROR_LAYOUT_TYPE_MISMATCH;
-    case xproc::shm::validate_error::fixed_item_size_mismatch:
+    case xproc::core::validate_error::fixed_item_size_mismatch:
       return XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_MISMATCH;
-    case xproc::shm::validate_error::schema_id_mismatch:
+    case xproc::core::validate_error::schema_id_mismatch:
       return XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH;
-    case xproc::shm::validate_error::alignment_invalid:
+    case xproc::core::validate_error::alignment_invalid:
       return XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID;
-    case xproc::shm::validate_error::capacity_insufficient:
+    case xproc::core::validate_error::capacity_insufficient:
       return XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT;
   }
   return XPROC_C_LAYOUT_ERROR_NONE;
@@ -96,6 +103,8 @@ xproc::ipc::transport_options to_cpp_options(const xproc_c_options& options) {
   out.item_size = options.item_size;
   out.data_align = options.data_align;
   out.schema_id = options.schema_id;
+  out.creator_timestamp_ns = options.creator_timestamp_ns;
+  out.creator_flags = options.creator_flags;
   out.create_if_missing = (options.create_if_missing != 0);
   out.type = (options.channel_type == XPROC_C_CHANNEL_VARLEN) ? xproc::ipc::channel_type::varlen
                                                               : xproc::ipc::channel_type::fixed;
@@ -116,6 +125,8 @@ void fill_borrowed_options(const xproc::ipc::transport_options& options, xproc_c
   out->item_size = options.item_size;
   out->data_align = options.data_align;
   out->schema_id = options.schema_id;
+  out->creator_timestamp_ns = options.creator_timestamp_ns;
+  out->creator_flags = options.creator_flags;
   out->create_if_missing = options.create_if_missing ? 1 : 0;
   out->channel_type =
       (options.type == xproc::ipc::channel_type::varlen) ? XPROC_C_CHANNEL_VARLEN : XPROC_C_CHANNEL_FIXED;
@@ -126,6 +137,19 @@ void fill_borrowed_options(const xproc::ipc::transport_options& options, xproc_c
   out->socket_listen = options.socket_listen ? 1 : 0;
   out->socket_connect_retries = options.socket_connect_retries;
   out->socket_connect_retry_ms = options.socket_connect_retry_ms;
+}
+
+void fill_owned_options(const xproc::ipc::transport_options& options, owned_option_strings* storage, xproc_c_options* out) {
+  fill_borrowed_options(options, out);
+
+  storage->path = options.path;
+  storage->win32_object_namespace = options.win32_object_namespace;
+  storage->socket_host = options.socket_host;
+
+  out->path = storage->path.empty() ? nullptr : storage->path.c_str();
+  out->win32_object_namespace =
+      storage->win32_object_namespace.empty() ? nullptr : storage->win32_object_namespace.c_str();
+  out->socket_host = storage->socket_host.empty() ? nullptr : storage->socket_host.c_str();
 }
 
 xproc_c_status validate_endpoint_kind(xproc_c_endpoint_kind kind) {
@@ -212,7 +236,7 @@ template <typename Func>
 xproc_c_status catch_status(Func&& func) {
   try {
     return std::forward<Func>(func)();
-  } catch (const xproc::shm::layout_exception& ex) {
+  } catch (const xproc::core::layout_exception& ex) {
     return set_last_error(XPROC_C_STATUS_LAYOUT_ERROR, ex.what(), to_c_layout_error(ex.code()));
   } catch (const std::invalid_argument& ex) {
     return set_last_error(XPROC_C_STATUS_INVALID_ARGUMENT, ex.what());
@@ -281,6 +305,8 @@ void xproc_c_options_init(xproc_c_options* options) {
   options->item_size = 0;
   options->data_align = 0;
   options->schema_id = 0;
+  options->creator_timestamp_ns = 0;
+  options->creator_flags = 0;
   options->create_if_missing = 1;
   options->channel_type = XPROC_C_CHANNEL_FIXED;
   options->win32_object_namespace = "Local";
@@ -297,6 +323,26 @@ std::size_t xproc_c_shm_size_for_data_capacity(std::size_t data_capacity) {
 
 std::size_t xproc_c_shm_data_capacity_for_size(std::size_t shm_size) {
   return xproc::ipc::shm_data_capacity_for_size(shm_size);
+}
+
+xproc_c_status xproc_c_shm_read_existing_options(const char* path, const char* win32_object_namespace,
+                                                 xproc_c_options* out_options) {
+  if (path == nullptr) {
+    return invalid_argument("xproc_c_shm_read_existing_options: path must not be null");
+  }
+  if (out_options == nullptr) {
+    return invalid_argument("xproc_c_shm_read_existing_options: out_options must not be null");
+  }
+
+  return catch_status([&]() -> xproc_c_status {
+    const std::string ns = (win32_object_namespace != nullptr) ? win32_object_namespace : "Local";
+    const xproc::ipc::transport_options options =
+        xproc::ipc::detail::read_existing_shm_options(path, ns, "xproc_c_shm_read_existing_options: ");
+    xproc_c_options_init(out_options);
+    fill_owned_options(options, &g_read_existing_option_strings, out_options);
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
 }
 
 const char* xproc_c_status_string(xproc_c_status status) {
@@ -365,7 +411,7 @@ xproc_c_status xproc_c_shm_unlink(const char* path) {
   if (path == nullptr) {
     return invalid_argument("xproc_c_shm_unlink: path must not be null");
   }
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   clear_last_error();
   return XPROC_C_STATUS_OK;
 }

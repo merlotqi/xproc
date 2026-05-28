@@ -8,7 +8,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "xproc_c.h"
 
@@ -34,6 +33,8 @@ struct transport_options {
     item_size = defaults.item_size;
     data_align = defaults.data_align;
     schema_id = defaults.schema_id;
+    creator_timestamp_ns = defaults.creator_timestamp_ns;
+    creator_flags = defaults.creator_flags;
     create_if_missing = (defaults.create_if_missing != 0);
     channel_type = defaults.channel_type;
     if (defaults.win32_object_namespace != nullptr) {
@@ -54,6 +55,8 @@ struct transport_options {
   std::uint32_t item_size{};
   std::uint32_t data_align{};
   std::uint64_t schema_id{};
+  std::uint64_t creator_timestamp_ns{};
+  std::uint64_t creator_flags{};
   bool create_if_missing{};
   xproc_c_channel_type channel_type{};
   std::optional<std::string> win32_object_namespace;
@@ -81,6 +84,8 @@ struct marshalled_options {
     value.item_size = options.item_size;
     value.data_align = options.data_align;
     value.schema_id = options.schema_id;
+    value.creator_timestamp_ns = options.creator_timestamp_ns;
+    value.creator_flags = options.creator_flags;
     value.create_if_missing = options.create_if_missing ? 1 : 0;
     value.channel_type = options.channel_type;
     value.socket_port = options.socket_port;
@@ -128,6 +133,8 @@ transport_options make_transport_options(const xproc_c_options& options) {
   out.item_size = options.item_size;
   out.data_align = options.data_align;
   out.schema_id = options.schema_id;
+  out.creator_timestamp_ns = options.creator_timestamp_ns;
+  out.creator_flags = options.creator_flags;
   out.create_if_missing = (options.create_if_missing != 0);
   out.channel_type = options.channel_type;
   if (options.win32_object_namespace != nullptr) {
@@ -250,6 +257,36 @@ py::object peek_copy_impl(xproc_c_observer* handle, const char* context) {
   require_status_ok(context, status);
   payload.resize(required_len);
   return py::bytes(payload);
+}
+
+py::object copy_status_to_python(xproc_c_status status, std::uint32_t bytes_written, const char* context) {
+  if (status == XPROC_C_STATUS_AGAIN) {
+    return py::none();
+  }
+  if (status == XPROC_C_STATUS_BUFFER_TOO_SMALL) {
+    throw py::value_error(std::string(context) + ": destination buffer is too small; required at least " +
+                          std::to_string(bytes_written) + " bytes");
+  }
+  require_status_ok(context, status);
+  return py::int_(bytes_written);
+}
+
+py::object poll_copy_into_impl(xproc_c_consumer* handle, py::buffer buffer, const char* context) {
+  py::buffer_info info = buffer.request(true);
+  const std::size_t capacity = static_cast<std::size_t>(info.size) * static_cast<std::size_t>(info.itemsize);
+  std::uint32_t bytes_written = 0;
+  const xproc_c_status status = xproc_c_consumer_poll_copy(
+      handle, capacity == 0 ? nullptr : info.ptr, narrow_size(capacity, context), &bytes_written);
+  return copy_status_to_python(status, bytes_written, context);
+}
+
+py::object peek_copy_into_impl(xproc_c_observer* handle, py::buffer buffer, const char* context) {
+  py::buffer_info info = buffer.request(true);
+  const std::size_t capacity = static_cast<std::size_t>(info.size) * static_cast<std::size_t>(info.itemsize);
+  std::uint32_t bytes_written = 0;
+  const xproc_c_status status = xproc_c_observer_peek_copy(
+      handle, capacity == 0 ? nullptr : info.ptr, narrow_size(capacity, context), &bytes_written);
+  return copy_status_to_python(status, bytes_written, context);
 }
 
 const char* backend_name(xproc_c_backend backend) {
@@ -387,6 +424,11 @@ class consumer {
     return poll_copy_impl(handle_, "Consumer.poll_copy");
   }
 
+  py::object poll_copy_into(py::buffer buffer) {
+    require_open("Consumer.poll_copy_into");
+    return poll_copy_into_impl(handle_, buffer, "Consumer.poll_copy_into");
+  }
+
   void wait() {
     require_open("Consumer.wait");
     py::gil_scoped_release release;
@@ -463,6 +505,11 @@ class observer {
     return peek_copy_impl(handle_, "Observer.peek_copy");
   }
 
+  py::object peek_copy_into(py::buffer buffer) {
+    require_open("Observer.peek_copy_into");
+    return peek_copy_into_impl(handle_, buffer, "Observer.peek_copy_into");
+  }
+
  private:
   void require_open(const char* context) const {
     if (handle_ == nullptr) {
@@ -481,6 +528,8 @@ std::string repr_transport_options(const transport_options& options) {
   repr += ", item_size=" + std::to_string(options.item_size);
   repr += ", data_align=" + std::to_string(options.data_align);
   repr += ", schema_id=" + std::to_string(options.schema_id);
+  repr += ", creator_timestamp_ns=" + std::to_string(options.creator_timestamp_ns);
+  repr += ", creator_flags=" + std::to_string(options.creator_flags);
   repr += ", create_if_missing=" + std::string(options.create_if_missing ? "True" : "False");
   repr += ", channel_type=" + std::string(channel_type_name(options.channel_type));
   repr += ")";
@@ -498,6 +547,19 @@ std::string repr_snapshot(const snapshot& value) {
 
 PYBIND11_MODULE(_xproc_pybind, m) {
   py::register_exception<status_error>(m, "XprocError");
+  py::register_exception_translator([](std::exception_ptr p) {
+    try {
+      if (p) {
+        std::rethrow_exception(p);
+      }
+    } catch (const status_error& err) {
+      py::object exc_type = py::module_::import("xproc._xproc_pybind").attr("XprocError");
+      py::object exc = exc_type(err.what());
+      exc.attr("status") = py::cast(err.status);
+      exc.attr("layout_error") = py::cast(err.layout_error);
+      PyErr_SetObject(exc_type.ptr(), exc.ptr());
+    }
+  });
 
   py::enum_<xproc_c_status>(m, "Status")
       .value("OK", XPROC_C_STATUS_OK)
@@ -549,6 +611,8 @@ PYBIND11_MODULE(_xproc_pybind, m) {
       .def_readwrite("item_size", &transport_options::item_size)
       .def_readwrite("data_align", &transport_options::data_align)
       .def_readwrite("schema_id", &transport_options::schema_id)
+      .def_readwrite("creator_timestamp_ns", &transport_options::creator_timestamp_ns)
+      .def_readwrite("creator_flags", &transport_options::creator_flags)
       .def_readwrite("create_if_missing", &transport_options::create_if_missing)
       .def_readwrite("channel_type", &transport_options::channel_type)
       .def_readwrite("win32_object_namespace", &transport_options::win32_object_namespace)
@@ -586,6 +650,7 @@ PYBIND11_MODULE(_xproc_pybind, m) {
       .def("options", &consumer::options)
       .def("pending_len", &consumer::pending_len)
       .def("poll_copy", &consumer::poll_copy)
+      .def("poll_copy_into", &consumer::poll_copy_into)
       .def("wait", &consumer::wait)
       .def("socket_port", &consumer::socket_port)
       .def(
@@ -598,6 +663,7 @@ PYBIND11_MODULE(_xproc_pybind, m) {
       .def("options", &observer::options)
       .def("snapshot", &observer::get_snapshot)
       .def("peek_copy", &observer::peek_copy)
+      .def("peek_copy_into", &observer::peek_copy_into)
       .def(
           "__enter__", [](observer& self) -> observer& { return self; }, py::return_value_policy::reference_internal)
       .def("__exit__", [](observer& self, py::object, py::object, py::object) { self.close(); });

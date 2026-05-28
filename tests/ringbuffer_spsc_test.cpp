@@ -9,12 +9,13 @@
 
 namespace {
 
-void init_header(xproc::shm::control_block& h, std::uint64_t cap, std::uint32_t layout_type, std::uint32_t data_align) {
-  using xproc::shm::layout_manager;
+void init_header(xproc::core::control_block& h, std::uint64_t cap, std::uint32_t layout_type,
+                 std::uint32_t data_align) {
+  using xproc::core::layout_manager;
   h.magic = layout_manager::expected_magic;
   h.version_major = layout_manager::version_major;
   h.version_minor = layout_manager::version_minor;
-  h.header_size = sizeof(xproc::shm::control_block);
+  h.header_size = sizeof(xproc::core::control_block);
   h.layout_type = layout_type;
   h.rb_meta.write_pos.store(0, std::memory_order_relaxed);
   h.rb_meta.read_pos.store(0, std::memory_order_relaxed);
@@ -30,7 +31,7 @@ void init_header(xproc::shm::control_block& h, std::uint64_t cap, std::uint32_t 
 }  // namespace
 
 template <std::size_t N>
-struct alignas(xproc::shm::control_block) ring_arena {
+struct alignas(xproc::core::control_block) ring_arena {
   std::array<std::uint8_t, N> bytes{};
 };
 
@@ -39,10 +40,10 @@ TEST(RingbufferSpsc, FixedSpsc) {
   // With a small capacity, a full ring can wedge: the producer waits on read_wake_seq while the
   // consumer waits on commit_seq for progress that cannot happen until space is freed.
   constexpr std::uint64_t cap = 65536;
-  constexpr std::size_t total = sizeof(xproc::shm::control_block) + static_cast<std::size_t>(cap);
+  constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::shm::control_block*>(arena.bytes.data());
-  new (hdr) xproc::shm::control_block{};
+  auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
+  new (hdr) xproc::core::control_block{};
   init_header(*hdr, cap, 0, 8);
 
   xproc::ringbuffer::fixed_writer w(hdr);
@@ -78,10 +79,10 @@ TEST(RingbufferSpsc, FixedSpsc) {
 
 TEST(RingbufferSpsc, VarlenSpscWrap) {
   constexpr std::uint64_t cap = 128;
-  constexpr std::size_t total = sizeof(xproc::shm::control_block) + static_cast<std::size_t>(cap);
+  constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::shm::control_block*>(arena.bytes.data());
-  new (hdr) xproc::shm::control_block{};
+  auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
+  new (hdr) xproc::core::control_block{};
   init_header(*hdr, cap, 1, 8);
 
   xproc::ringbuffer::varlen_writer w(hdr);

@@ -22,11 +22,11 @@ static void BM_FixedPollCopyLikeRuntime(benchmark::State& state) {
   }
 
   const std::string path = unique_path("rtcopy", static_cast<int>(payload_len));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 512 * 1024;
+  opts.shm_size = sizeof(xproc::core::control_block) + 512 * 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = static_cast<std::uint32_t>(payload_len);
   opts.create_if_missing = true;
@@ -52,7 +52,7 @@ static void BM_FixedPollCopyLikeRuntime(benchmark::State& state) {
   }
 
   state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * payload_len));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 }  // namespace

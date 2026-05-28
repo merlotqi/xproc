@@ -4,12 +4,11 @@
 #include <cstdint>
 #include <functional>
 #include <stdexcept>
+#include <xproc/core/shm_layout.hpp>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/options.hpp>
-#include <xproc/shm/shm_layout.hpp>
 
-namespace xproc {
-namespace ipc {
+namespace xproc::ipc {
 
 // Abstract producer side: fixed / varlen sends (shared memory, TCP, RDMA backends).
 class producer_channel_interface {
@@ -19,8 +18,8 @@ class producer_channel_interface {
   virtual const transport_options& options() const noexcept = 0;
 
   /// SHM ring control block; nullptr when not applicable (e.g. socket backend).
-  virtual shm::control_block* shared_header() noexcept { return nullptr; }
-  virtual const shm::control_block* shared_header() const noexcept { return nullptr; }
+  virtual core::control_block* shared_header() noexcept { return nullptr; }
+  virtual const core::control_block* shared_header() const noexcept { return nullptr; }
 
   virtual void send_fixed_bytes(const void* data, std::uint32_t payload_len) = 0;
   /// Fixed channel: one ring slot of byte_length bytes (matches channel::send_fixed_sized).
@@ -46,8 +45,8 @@ class consumer_channel_interface {
 
   virtual const transport_options& options() const noexcept = 0;
 
-  virtual shm::control_block* shared_header() noexcept { return nullptr; }
-  virtual const shm::control_block* shared_header() const noexcept { return nullptr; }
+  virtual core::control_block* shared_header() noexcept { return nullptr; }
+  virtual const core::control_block* shared_header() const noexcept { return nullptr; }
 
   template <typename F>
   bool poll(F&& handler) {
@@ -66,8 +65,8 @@ class shm_producer final : public producer_channel_interface {
  public:
   explicit shm_producer(const transport_options& opts);
   const transport_options& options() const noexcept override { return ch_.options(); }
-  shm::control_block* shared_header() noexcept override { return ch_.header(); }
-  const shm::control_block* shared_header() const noexcept override { return ch_.header(); }
+  core::control_block* shared_header() noexcept override { return ch_.header(); }
+  const core::control_block* shared_header() const noexcept override { return ch_.header(); }
   void send_fixed_bytes(const void* data, std::uint32_t payload_len) override;
   void send_fixed_sized(const void* data, std::uint32_t byte_length) override;
   void send_varlen(const void* data, std::uint32_t len) override;
@@ -84,8 +83,8 @@ class shm_consumer final : public consumer_channel_interface {
  public:
   explicit shm_consumer(const transport_options& opts);
   const transport_options& options() const noexcept override { return ch_.options(); }
-  shm::control_block* shared_header() noexcept override { return ch_.header(); }
-  const shm::control_block* shared_header() const noexcept override { return ch_.header(); }
+  core::control_block* shared_header() noexcept override { return ch_.header(); }
+  const core::control_block* shared_header() const noexcept override { return ch_.header(); }
   void wait() override;
 
   consumer& native() noexcept { return ch_; }
@@ -98,5 +97,4 @@ class shm_consumer final : public consumer_channel_interface {
   consumer ch_;
 };
 
-}  // namespace ipc
-}  // namespace xproc
+}  // namespace xproc::ipc

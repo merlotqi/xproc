@@ -21,6 +21,8 @@ function cleanupShm(path: string): void {
 test("node ts smoke: fixed channel roundtrip with observer and inferred attach size", () => {
   const path = uniqueShmPath("roundtrip");
   cleanupShm(path);
+  const persistedCreatorTimestampNs = 0x1122334455667788n;
+  const persistedCreatorFlags = 0x8877665544332211n;
 
   const createOptions: TransportOptions = {
     path,
@@ -28,12 +30,16 @@ test("node ts smoke: fixed channel roundtrip with observer and inferred attach s
     channelType: xproc.CHANNEL_TYPE.fixed,
     itemSize: 4,
     schemaId: 0x1234n,
+    creatorTimestampNs: persistedCreatorTimestampNs,
+    creatorFlags: persistedCreatorFlags,
   };
 
   const attachOptions: TransportOptions = {
     ...createOptions,
     shmSize: xproc.XPROC_C_INFER_EXISTING_SHM_SIZE,
     createIfMissing: false,
+    creatorTimestampNs: 0x0102030405060708n,
+    creatorFlags: 0xAABBCCDDEEFF0011n,
   };
 
   let producer: InstanceType<typeof xproc.Producer> | null = null;
@@ -65,12 +71,20 @@ test("node ts smoke: fixed channel roundtrip with observer and inferred attach s
 
     assert.equal(consumer.pollCopy(), null);
 
-    const producerOptions = producer.options() as { schemaId?: bigint; type?: number };
-    const consumerOptions = consumer.options() as { schemaId?: bigint; shmSize?: bigint | number };
+    const producerOptions = producer.options();
+    const consumerOptions = consumer.options();
+    const observerOptions = observer.options();
     assert.equal(producerOptions.schemaId, 0x1234n);
+    assert.equal(producerOptions.creatorTimestampNs, persistedCreatorTimestampNs);
+    assert.equal(producerOptions.creatorFlags, persistedCreatorFlags);
     assert.equal(producerOptions.type, xproc.CHANNEL_TYPE.fixed);
     assert.equal(consumerOptions.schemaId, 0x1234n);
-    assert.equal(consumerOptions.shmSize, BigInt(xproc.XPROC_C_INFER_EXISTING_SHM_SIZE));
+    assert.equal(consumerOptions.creatorTimestampNs, persistedCreatorTimestampNs);
+    assert.equal(consumerOptions.creatorFlags, persistedCreatorFlags);
+    assert.equal(observerOptions.creatorTimestampNs, persistedCreatorTimestampNs);
+    assert.equal(observerOptions.creatorFlags, persistedCreatorFlags);
+    assert.equal(consumerOptions.shmSize, createOptions.shmSize);
+    assert.equal(observerOptions.shmSize, createOptions.shmSize);
   } finally {
     observer?.close();
     consumer?.close();

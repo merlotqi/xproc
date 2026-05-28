@@ -10,6 +10,7 @@
 #include <xproc/ipc/observer.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/ipc/runtime.hpp>
+#include <xproc/ipc/send_result.hpp>
 #include <xproc/ipc/shm_builders.hpp>
 #include <xproc/ipc/socket_channel.hpp>
 #include <xproc/ipc/transport_factory.hpp>
@@ -29,17 +30,18 @@
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/iringbuffer.hpp>
+#include <xproc/ringbuffer/reserve_result.hpp>
 #include <xproc/ringbuffer/ringbuffer_error.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
 
 // shm include files.
-#include <xproc/shm/layout_exception.hpp>
-#include <xproc/shm/shm.hpp>
-#include <xproc/shm/shm_backend.hpp>
-#include <xproc/shm/shm_layout.hpp>
-#include <xproc/shm/shm_layout_manager.hpp>
-#include <xproc/shm/shm_open_mode.hpp>
+#include <xproc/core/layout_exception.hpp>
+#include <xproc/core/shm.hpp>
+#include <xproc/core/shm_backend.hpp>
+#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/shm_layout_manager.hpp>
+#include <xproc/core/shm_open_mode.hpp>
 
 // sync include files.
 #include <xproc/sync/atomic_backoff.hpp>
@@ -51,7 +53,7 @@ using namespace ipc;
 using namespace platform;
 using namespace protocol;
 using namespace ringbuffer;
-using namespace shm;
+using namespace core;
 using namespace sync;
 
 }  // namespace xproc

@@ -89,16 +89,9 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  xproc::ipc::transport_options opts;
-  opts.path = cli.shm_path;
-  opts.shm_size = xproc::ipc::infer_existing_shm_size;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(telemetry_packet);
-  opts.schema_id = kSchemaId;
-  opts.create_if_missing = false;
-
   try {
-    xproc::ipc::producer producer(opts);
+    xproc::ipc::producer producer =
+        xproc::ipc::attach_fixed_channel(cli.shm_path).with_schema_id(kSchemaId).open_producer();
     for (int i = 0; i <= cli.ticks; ++i) {
       telemetry_packet packet{};
       std::snprintf(packet.message, sizeof(packet.message), "tick-%d", i);

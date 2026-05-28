@@ -9,7 +9,7 @@ Thanks for contributing.
 - C++17 compiler
 - CMake 3.14+
 - Ninja or Make
-- Linux or Windows
+- Linux, macOS, or Windows
 
 Optional:
 
@@ -36,12 +36,6 @@ cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
 
-For the focused Phase 1 shared-memory regression suite:
-
-```bash
-cmake --build build --target xproc_run_phase1_tests
-```
-
 On **Windows**, parallel `ctest` (`-j` greater than 1) can run multiple executables that reuse similar shared-memory object names, or leave test binaries locked while another job links (LNK1168). Prefer a single job when debugging SHM-related failures:
 
 ```powershell
@@ -61,7 +55,7 @@ cmake --build build --target xproc_run_benchmarks
 
 - Keep changes focused and minimal.
 - Add or update tests for behavior changes.
-- Preserve Linux and Windows compatibility.
+- Preserve Linux, macOS, and Windows compatibility.
 - Update docs (`README.md`, `docs/*.rst`) when APIs or build flags change.
 - Keep benchmark changes reproducible and avoid noisy environmental assumptions.
 
@@ -70,7 +64,6 @@ cmake --build build --target xproc_run_benchmarks
 - [ ] Project configures successfully (`cmake -S . -B build`)
 - [ ] Build passes (`cmake --build build`)
 - [ ] Tests pass (`ctest --test-dir build --output-on-failure`)
-- [ ] API coverage gate remains clean when applicable
 - [ ] Documentation updated for user-facing changes
 - [ ] Changelog updated for notable changes
 
@@ -91,7 +84,7 @@ The current codebase already covers the core SPSC shared-memory path, read-only 
 ## Shared Memory Path Guidance
 
 Use unique `transport_options::path` values in tests and long-running integrations.
-On Windows, `shm::unlink` does not remove mapping names, so uniqueness helps avoid stale-name collisions.
+On Windows, `core::unlink` does not remove mapping names, so uniqueness helps avoid stale-name collisions.
 
 ## Reporting Issues
 

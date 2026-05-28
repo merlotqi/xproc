@@ -1,13 +1,14 @@
 #pragma once
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 // Lightweight status for tests and upper layers; hot-path writers/readers may ignore it.
 enum class ringbuffer_error {
   ok = 0,
   empty,
   full,
+  timeout,
+  message_too_large,
   incomplete,  // e.g. slot reserved but not yet committed (status != published)
   invalid_argument
 };
@@ -20,6 +21,10 @@ inline const char* ringbuffer_error_cstr(ringbuffer_error e) noexcept {
       return "empty";
     case ringbuffer_error::full:
       return "full";
+    case ringbuffer_error::timeout:
+      return "timeout";
+    case ringbuffer_error::message_too_large:
+      return "message_too_large";
     case ringbuffer_error::incomplete:
       return "incomplete";
     case ringbuffer_error::invalid_argument:
@@ -29,5 +34,4 @@ inline const char* ringbuffer_error_cstr(ringbuffer_error e) noexcept {
   }
 }
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

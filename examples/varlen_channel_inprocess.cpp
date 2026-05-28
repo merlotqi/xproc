@@ -11,7 +11,7 @@
 
 int main() {
   const std::string path = "/xproc_example_varlen_inprocess";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   const auto created = xproc::ipc::make_varlen_channel(path).create(32768);
   xproc::ipc::producer producer = created.open_producer();
@@ -43,6 +43,6 @@ int main() {
   }
 
   t.join();
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   return (recv_count.load() == msgs.size()) ? 0 : 1;
 }

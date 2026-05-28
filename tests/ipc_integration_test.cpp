@@ -15,7 +15,7 @@
 TEST(IpcIntegration, FixedItemSizeZeroRejected) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_test_item_zero";
-  opts.shm_size = sizeof(xproc::shm::control_block) + 1024;
+  opts.shm_size = sizeof(xproc::core::control_block) + 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 0;
   EXPECT_THROW((void)xproc::ipc::channel(opts, xproc::ipc::endpoint::role::producer), std::invalid_argument);
@@ -24,7 +24,7 @@ TEST(IpcIntegration, FixedItemSizeZeroRejected) {
 TEST(IpcIntegration, ObserverEndpointRejected) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_test_observer";
-  opts.shm_size = sizeof(xproc::shm::control_block) + 1024;
+  opts.shm_size = sizeof(xproc::core::control_block) + 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 4;
   bool threw = false;
@@ -57,14 +57,14 @@ TEST(IpcIntegration, ObserverEndpointRejected) {
 
 TEST(IpcIntegration, ConsumerLayoutErrorIncludesReason) {
   const char* path = "/xproc_test_layout_msg";
-  xproc::shm::shm::unlink(path);
-  xproc::shm::shm sm;
-  ASSERT_TRUE(sm.open(path, sizeof(xproc::shm::control_block) + 512, xproc::shm::shm_open_mode::open_create));
+  xproc::core::shm::unlink(path);
+  xproc::core::shm sm;
+  ASSERT_TRUE(sm.open(path, sizeof(xproc::core::control_block) + 512, xproc::core::shm_open_mode::open_create));
   sm.detach();
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 512;
+  opts.shm_size = sizeof(xproc::core::control_block) + 512;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = 4;
   opts.create_if_missing = false;
@@ -72,11 +72,11 @@ TEST(IpcIntegration, ConsumerLayoutErrorIncludesReason) {
   try {
     (void)xproc::ipc::channel(opts, xproc::ipc::endpoint::role::consumer);
     FAIL() << "expected layout_exception";
-  } catch (const xproc::shm::layout_exception& e) {
-    EXPECT_EQ(e.code(), xproc::shm::validate_error::bad_magic);
+  } catch (const xproc::core::layout_exception& e) {
+    EXPECT_EQ(e.code(), xproc::core::validate_error::bad_magic);
     EXPECT_NE(std::string(e.what()).find("bad magic"), std::string::npos);
   }
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 TEST(IpcIntegration, ShmSizeRejected) {
@@ -89,12 +89,12 @@ TEST(IpcIntegration, ShmSizeRejected) {
 }
 
 TEST(IpcIntegration, ValidateLayoutMismatch) {
-  xproc::shm::control_block h{};
-  using lm = xproc::shm::layout_manager;
+  xproc::core::control_block h{};
+  using lm = xproc::core::layout_manager;
   h.magic = lm::expected_magic;
   h.version_major = lm::version_major;
   h.version_minor = lm::version_minor;
-  h.header_size = sizeof(xproc::shm::control_block);
+  h.header_size = sizeof(xproc::core::control_block);
   h.layout_type = 0;
   h.data_capacity = 4096;
   h.data_alignment = 8;
@@ -103,21 +103,21 @@ TEST(IpcIntegration, ValidateLayoutMismatch) {
 }
 
 TEST(IpcIntegration, RoleSendPoll) {
-  constexpr std::size_t total = sizeof(xproc::shm::control_block) + 256;
+  constexpr std::size_t total = sizeof(xproc::core::control_block) + 256;
   xproc::ipc::transport_options o;
   o.path = "/xproc_role_test";
   o.shm_size = total;
   o.type = xproc::ipc::channel_type::fixed;
   o.item_size = 4;
-  xproc::shm::shm::unlink(o.path);
+  xproc::core::shm::unlink(o.path);
   xproc::ipc::channel prod(o, xproc::ipc::endpoint::role::producer);
   EXPECT_THROW(prod.poll([](void*, std::uint32_t) {}), std::logic_error);
-  xproc::shm::shm::unlink(o.path);
+  xproc::core::shm::unlink(o.path);
 }
 
 TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
   const std::string path = "/xproc_attach_infer_size";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options creator_opts;
   creator_opts.path = path;
@@ -166,7 +166,7 @@ TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
   }
 
   EXPECT_GE(observer.attach_count(), 2u);
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 namespace {
@@ -181,7 +181,7 @@ int cross_process_futex_block_main(const char* shm_path) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     xproc::ipc::transport_options opts;
     opts.path = shm_path;
-    opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+    opts.shm_size = sizeof(xproc::core::control_block) + 8192;
     opts.type = xproc::ipc::channel_type::fixed;
     opts.item_size = sizeof(std::uint32_t);
     opts.create_if_missing = false;
@@ -211,7 +211,7 @@ int cross_process_futex_block_main(const char* shm_path) {
   {
     xproc::ipc::transport_options opts;
     opts.path = shm_path;
-    opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+    opts.shm_size = sizeof(xproc::core::control_block) + 8192;
     opts.type = xproc::ipc::channel_type::fixed;
     opts.item_size = sizeof(std::uint32_t);
     xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
@@ -220,7 +220,7 @@ int cross_process_futex_block_main(const char* shm_path) {
     prod.send_fixed(0xdeadbeefu);
     waitpid(pid, &st, 0);
   }
-  xproc::shm::shm::unlink(shm_path);
+  xproc::core::shm::unlink(shm_path);
 
   if (!WIFEXITED(st) || WEXITSTATUS(st) != 0) {
     return 1;
@@ -240,7 +240,7 @@ int cross_process_varlen_main(const char* shm_path) {
     std::this_thread::sleep_for(std::chrono::milliseconds(80));
     xproc::ipc::transport_options opts;
     opts.path = shm_path;
-    opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
+    opts.shm_size = sizeof(xproc::core::control_block) + 16384;
     opts.type = xproc::ipc::channel_type::varlen;
     opts.create_if_missing = false;
     xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
@@ -264,14 +264,14 @@ int cross_process_varlen_main(const char* shm_path) {
   {
     xproc::ipc::transport_options opts;
     opts.path = shm_path;
-    opts.shm_size = sizeof(xproc::shm::control_block) + 16384;
+    opts.shm_size = sizeof(xproc::core::control_block) + 16384;
     opts.type = xproc::ipc::channel_type::varlen;
     xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     prod.send_varlen(msg, static_cast<std::uint32_t>(std::strlen(msg)));
     waitpid(pid, &st, 0);
   }
-  xproc::shm::shm::unlink(shm_path);
+  xproc::core::shm::unlink(shm_path);
 
   if (!WIFEXITED(st) || WEXITSTATUS(st) != 0) {
     return 1;
@@ -282,7 +282,7 @@ int cross_process_varlen_main(const char* shm_path) {
 int consumer_creates_then_forked_producer_main(const char* shm_path) {
   xproc::ipc::transport_options opts;
   opts.path = shm_path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 8192;
+  opts.shm_size = sizeof(xproc::core::control_block) + 8192;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = sizeof(std::uint32_t);
   opts.create_if_missing = true;
@@ -355,20 +355,20 @@ int consumer_creates_then_forked_producer_main(const char* shm_path) {
 TEST(IpcIntegration, CrossProcessFutexBlock) {
   std::string base = "/xproc_ipc_integration_";
   std::string a = base + "futex";
-  xproc::shm::shm::unlink(a.c_str());
+  xproc::core::shm::unlink(a.c_str());
   EXPECT_EQ(cross_process_futex_block_main(a.c_str()), 0);
 }
 
 TEST(IpcIntegration, CrossProcessVarlen) {
   std::string base = "/xproc_ipc_integration_";
   std::string b = base + "varlen";
-  xproc::shm::shm::unlink(b.c_str());
+  xproc::core::shm::unlink(b.c_str());
   EXPECT_EQ(cross_process_varlen_main(b.c_str()), 0);
 }
 
 TEST(IpcIntegration, ConsumerCanCreateBeforeForkedProducer) {
   std::string path = "/xproc_ipc_integration_consumer_creator";
-  xproc::shm::shm::unlink(path.c_str());
+  xproc::core::shm::unlink(path.c_str());
   EXPECT_EQ(consumer_creates_then_forked_producer_main(path.c_str()), 0);
-  xproc::shm::shm::unlink(path.c_str());
+  xproc::core::shm::unlink(path.c_str());
 }

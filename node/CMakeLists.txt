@@ -15,6 +15,18 @@ endif()
 
 set(NODE_ADDON_API_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${NODE_ADDON_API_INCLUDE_DIR}")
 
+get_target_property(XPROC_LIBRARY_TYPE xproc TYPE)
+if(XPROC_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
+  set_target_properties(xproc PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(TARGET xproc_c)
+  get_target_property(XPROC_CAPI_LIBRARY_TYPE xproc_c TYPE)
+  if(XPROC_CAPI_LIBRARY_TYPE STREQUAL "STATIC_LIBRARY")
+    set_target_properties(xproc_c PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  endif()
+endif()
+
 if(NODE_INCLUDE_DIR AND EXISTS "${NODE_INCLUDE_DIR}/node_api.h")
   set(_node_api_include "${NODE_INCLUDE_DIR}")
 else()
@@ -41,6 +53,8 @@ if(NOT EXISTS "${_node_api_include}/node_api.h")
 endif()
 
 message(STATUS "Node-API headers: ${_node_api_include}")
+
+find_program(XPROC_NODE_EXECUTABLE node REQUIRED)
 
 execute_process(
   COMMAND node -p "require('path').dirname(require.resolve('node-api-headers/package.json'))"
@@ -79,6 +93,17 @@ set_target_properties(xproc_node PROPERTIES
   SUFFIX ".node"
   OUTPUT_NAME "xproc"
 )
+
+if(BUILD_TESTING)
+  add_test(
+    NAME xproc_node_smoke
+    COMMAND "${XPROC_NODE_EXECUTABLE}" --test --experimental-strip-types test/smoke.test.ts
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  set_tests_properties(xproc_node_smoke PROPERTIES
+    LABELS "node;smoke;phase1"
+  )
+endif()
 
 if(APPLE)
   target_link_options(xproc_node PRIVATE "-undefined" "dynamic_lookup")

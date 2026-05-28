@@ -31,12 +31,45 @@ set(XPROC_PYTHON_PACKAGE_NAME xproc)
 set(XPROC_PYTHON_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/${XPROC_PYTHON_PACKAGE_NAME}")
 set(XPROC_PYTHON_STAGE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/stage")
 set(XPROC_PYTHON_STAGE_DIR "${XPROC_PYTHON_STAGE_ROOT}/${XPROC_PYTHON_PACKAGE_NAME}")
-set(XPROC_PYTHON_INSTALL_DIR "${XPROC_PYTHON_SITEARCH}/${XPROC_PYTHON_PACKAGE_NAME}")
-set(XPROC_PYTHON_PACKAGE_FILES
-    "${XPROC_PYTHON_SOURCE_DIR}/__init__.py"
-    "${XPROC_PYTHON_SOURCE_DIR}/__init__.pyi"
-    "${XPROC_PYTHON_SOURCE_DIR}/py.typed"
+
+set(_xproc_python_install_dir_override "")
+if(DEFINED CACHE{XPROC_PYTHON_INSTALL_DIR_OVERRIDE})
+    get_property(_xproc_python_install_dir_override CACHE XPROC_PYTHON_INSTALL_DIR_OVERRIDE PROPERTY VALUE)
+elseif(DEFINED CACHE{XPROC_PYTHON_INSTALL_DIR})
+    get_property(_xproc_python_legacy_install_dir CACHE XPROC_PYTHON_INSTALL_DIR PROPERTY VALUE)
+    if(NOT _xproc_python_legacy_install_dir STREQUAL "xproc")
+        set(_xproc_python_install_dir_override "${_xproc_python_legacy_install_dir}")
+    endif()
+endif()
+
+set(XPROC_PYTHON_INSTALL_DIR_OVERRIDE "${_xproc_python_install_dir_override}" CACHE STRING
+    "Override install destination for the Python xproc package")
+mark_as_advanced(XPROC_PYTHON_INSTALL_DIR_OVERRIDE)
+
+set(XPROC_PYTHON_USING_SKBUILD FALSE)
+if(XPROC_SKBUILD_WHEEL_INSTALL)
+    set(XPROC_PYTHON_USING_SKBUILD TRUE)
+endif()
+
+if(XPROC_PYTHON_INSTALL_DIR_OVERRIDE)
+    set(XPROC_PYTHON_EFFECTIVE_INSTALL_DIR "${XPROC_PYTHON_INSTALL_DIR_OVERRIDE}")
+elseif(XPROC_PYTHON_USING_SKBUILD)
+    set(XPROC_PYTHON_EFFECTIVE_INSTALL_DIR "${XPROC_PYTHON_PACKAGE_NAME}")
+else()
+    set(XPROC_PYTHON_EFFECTIVE_INSTALL_DIR "${XPROC_PYTHON_SITEARCH}/${XPROC_PYTHON_PACKAGE_NAME}")
+endif()
+
+set(XPROC_PYTHON_PACKAGE_RELATIVE_FILES
+    "__init__.py"
+    "__init__.pyi"
+    "py.typed"
 )
+set(XPROC_PYTHON_PACKAGE_FILES "")
+foreach(_package_file IN LISTS XPROC_PYTHON_PACKAGE_RELATIVE_FILES)
+    list(APPEND XPROC_PYTHON_PACKAGE_FILES
+        "${XPROC_PYTHON_SOURCE_DIR}/${_package_file}"
+    )
+endforeach()
 file(MAKE_DIRECTORY "${XPROC_PYTHON_STAGE_DIR}")
 
 get_target_property(XPROC_LIBRARY_TYPE xproc TYPE)
@@ -81,52 +114,47 @@ endif()
 
 add_custom_target(xproc_python_package ALL
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${XPROC_PYTHON_STAGE_DIR}"
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${XPROC_PYTHON_PACKAGE_FILES} "${XPROC_PYTHON_STAGE_DIR}"
     DEPENDS _xproc_pybind ${XPROC_PYTHON_PACKAGE_FILES}
     COMMENT "Staging Python xproc package"
     VERBATIM
 )
 
-if(XPROC_LIBRARY_TYPE STREQUAL "SHARED_LIBRARY")
+foreach(_package_file IN LISTS XPROC_PYTHON_PACKAGE_RELATIVE_FILES)
     add_custom_command(TARGET xproc_python_package POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-                "$<TARGET_FILE:xproc>"
-                "${XPROC_PYTHON_STAGE_DIR}/$<TARGET_FILE_NAME:xproc>"
+                "${XPROC_PYTHON_SOURCE_DIR}/${_package_file}"
+                "${XPROC_PYTHON_STAGE_DIR}/${_package_file}"
         VERBATIM
     )
-endif()
+endforeach()
 
-if(XPROC_CAPI_LIBRARY_TYPE STREQUAL "SHARED_LIBRARY")
-    add_custom_command(TARGET xproc_python_package POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-                "$<TARGET_FILE:xproc_c>"
-                "${XPROC_PYTHON_STAGE_DIR}/$<TARGET_FILE_NAME:xproc_c>"
-        VERBATIM
-    )
-endif()
+function(xproc_python_stage_shared_target target_name)
+    get_target_property(_library_type "${target_name}" TYPE)
+    if(_library_type STREQUAL "SHARED_LIBRARY")
+        add_custom_command(TARGET xproc_python_package POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                    "$<TARGET_FILE:${target_name}>"
+                    "${XPROC_PYTHON_STAGE_DIR}/$<TARGET_FILE_NAME:${target_name}>"
+            VERBATIM
+        )
+        install(TARGETS "${target_name}"
+            LIBRARY DESTINATION "${XPROC_PYTHON_EFFECTIVE_INSTALL_DIR}"
+            RUNTIME DESTINATION "${XPROC_PYTHON_EFFECTIVE_INSTALL_DIR}"
+        )
+    endif()
+endfunction()
+
+xproc_python_stage_shared_target(xproc)
+xproc_python_stage_shared_target(xproc_c)
 
 install(FILES
     ${XPROC_PYTHON_PACKAGE_FILES}
-    DESTINATION "${XPROC_PYTHON_INSTALL_DIR}"
+    DESTINATION "${XPROC_PYTHON_EFFECTIVE_INSTALL_DIR}"
 )
 install(TARGETS _xproc_pybind
-    LIBRARY DESTINATION "${XPROC_PYTHON_INSTALL_DIR}"
-    RUNTIME DESTINATION "${XPROC_PYTHON_INSTALL_DIR}"
+    LIBRARY DESTINATION "${XPROC_PYTHON_EFFECTIVE_INSTALL_DIR}"
+    RUNTIME DESTINATION "${XPROC_PYTHON_EFFECTIVE_INSTALL_DIR}"
 )
-
-if(XPROC_LIBRARY_TYPE STREQUAL "SHARED_LIBRARY")
-    install(TARGETS xproc
-        LIBRARY DESTINATION "${XPROC_PYTHON_INSTALL_DIR}"
-        RUNTIME DESTINATION "${XPROC_PYTHON_INSTALL_DIR}"
-    )
-endif()
-
-if(XPROC_CAPI_LIBRARY_TYPE STREQUAL "SHARED_LIBRARY")
-    install(TARGETS xproc_c
-        LIBRARY DESTINATION "${XPROC_PYTHON_INSTALL_DIR}"
-        RUNTIME DESTINATION "${XPROC_PYTHON_INSTALL_DIR}"
-    )
-endif()
 
 if(BUILD_TESTING)
     add_test(

@@ -80,6 +80,9 @@ typedef struct xproc_c_options {
   uint32_t data_align;
   /* Optional shared-memory manifest field for protocol / schema compatibility checks. */
   uint64_t schema_id;
+  /* Optional shared-memory manifest fields persisted by the creator for application metadata. */
+  uint64_t creator_timestamp_ns;
+  uint64_t creator_flags;
   int create_if_missing;
   xproc_c_channel_type channel_type;
   const char* win32_object_namespace;
@@ -128,6 +131,24 @@ XPROC_C_API size_t xproc_c_shm_size_for_data_capacity(size_t data_capacity);
  * @return Usable payload bytes after subtracting the control block.
  */
 XPROC_C_API size_t xproc_c_shm_data_capacity_for_size(size_t shm_size);
+
+/**
+ * @brief Reads the manifest-backed options from an existing shared-memory segment.
+ *
+ * This helper infers the persisted shared-memory configuration so higher-level
+ * bindings can attach without restating fixed item sizing or other creator-owned
+ * metadata.
+ *
+ * String members in @p out_options are borrowed from thread-local storage and
+ * remain valid until the next xproc_c API call on the same thread.
+ *
+ * @param path Shared-memory object name.
+ * @param win32_object_namespace Optional Win32 namespace. Pass NULL to use the default.
+ * @param out_options Receives the inferred option view.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status and thread-local diagnostics.
+ */
+XPROC_C_API xproc_c_status xproc_c_shm_read_existing_options(const char* path, const char* win32_object_namespace,
+                                                             xproc_c_options* out_options);
 
 /**
  * @brief Returns a stable string for a status code.
@@ -233,7 +254,9 @@ XPROC_C_API void xproc_c_producer_close(xproc_c_producer* producer);
  * @brief Returns the options associated with a producer handle.
  *
  * String members in @p out_options are borrowed from the handle and remain valid
- * until the handle is closed.
+ * until the handle is closed. Shared-memory endpoints report resolved options:
+ * if the handle attached with XPROC_C_INFER_EXISTING_SHM_SIZE, the returned
+ * shm_size is the concrete size inferred from the existing segment.
  *
  * @param producer Producer handle to inspect.
  * @param out_options Receives the borrowed option view.
@@ -312,7 +335,9 @@ XPROC_C_API void xproc_c_consumer_close(xproc_c_consumer* consumer);
  * @brief Returns the options associated with a consumer handle.
  *
  * String members in @p out_options are borrowed from the handle and remain valid
- * until the handle is closed.
+ * until the handle is closed. Shared-memory endpoints report resolved options:
+ * if the handle attached with XPROC_C_INFER_EXISTING_SHM_SIZE, the returned
+ * shm_size is the concrete size inferred from the existing segment.
  *
  * @param consumer Consumer handle to inspect.
  * @param out_options Receives the borrowed option view.
@@ -392,7 +417,9 @@ XPROC_C_API void xproc_c_observer_close(xproc_c_observer* observer);
  * @brief Returns the options associated with an observer handle.
  *
  * String members in @p out_options are borrowed from the handle and remain valid
- * until the handle is closed.
+ * until the handle is closed. Shared-memory endpoints report resolved options:
+ * if the handle attached with XPROC_C_INFER_EXISTING_SHM_SIZE, the returned
+ * shm_size is the concrete size inferred from the existing segment.
  *
  * @param observer Observer handle to inspect.
  * @param out_options Receives the borrowed option view.

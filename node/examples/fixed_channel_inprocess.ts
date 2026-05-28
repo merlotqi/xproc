@@ -16,23 +16,13 @@ function cleanupShm(path: string): void {
 async function main(): Promise<void> {
   const shmPath = `/xproc_node_fixed_inprocess_${process.pid}`;
   cleanupShm(shmPath);
-
-  const createOptions: TransportOptions = {
+  const created = xproc.shm.createFixedChannel({
     path: shmPath,
-    shmSize: xproc.shmSizeForDataCapacity(16384n),
-    channelType: "fixed",
     itemSize: 4,
-    createIfMissing: true,
-  };
-
-  const attachOptions: TransportOptions = {
-    ...createOptions,
-    shmSize: xproc.XPROC_C_INFER_EXISTING_SHM_SIZE,
-    createIfMissing: false,
-  };
-
-  const producer = new xproc.Producer(createOptions);
-  const consumer = new xproc.Consumer(attachOptions);
+    dataCapacity: 16384n,
+  });
+  const producer = created.openProducer();
+  const consumer = xproc.shm.attachFixedChannel({ path: shmPath }).openConsumer();
 
   let expected = 1;
 

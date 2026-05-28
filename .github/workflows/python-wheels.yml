@@ -1,0 +1,98 @@
+name: Python Wheels
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/python-wheels.yml"
+      - "CMakeLists.txt"
+      - "LICENSE"
+      - "README.md"
+      - "pyproject.toml"
+      - "Python/**"
+      - "capi/**"
+      - "cmake/**"
+      - "include/**"
+      - "src/**"
+      - "tests/python_wheel_smoke.py"
+  push:
+    branches: [main, master]
+    paths:
+      - ".github/workflows/python-wheels.yml"
+      - "CMakeLists.txt"
+      - "LICENSE"
+      - "README.md"
+      - "pyproject.toml"
+      - "Python/**"
+      - "capi/**"
+      - "cmake/**"
+      - "include/**"
+      - "src/**"
+      - "tests/python_wheel_smoke.py"
+
+permissions:
+  contents: read
+
+jobs:
+  build-wheels:
+    name: Wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.4.1
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+          CIBW_SKIP: "*-win32 *-manylinux_i686"
+          CIBW_ARCHS_LINUX: auto64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_TEST_COMMAND: >-
+            python {project}/tests/python_wheel_smoke.py
+            --expected-wheel {wheel}
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  build-sdist:
+    name: Source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+          python -m build --sdist
+
+      - name: Validate sdist install
+        run: |
+          python -m venv .venv-sdist-smoke
+          . .venv-sdist-smoke/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install dist/*.tar.gz
+          python tests/python_wheel_smoke.py
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error

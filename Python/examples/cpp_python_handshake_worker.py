@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import time
 
-from _common import load_xproc
+from _common import XprocModule, load_xproc
 
 
 UPSTREAM_SCHEMA_ID = 0x5059455654303031  # "PYEVT001"
@@ -70,7 +70,9 @@ def parse_message(raw: bytes) -> tuple[str, dict[str, str]]:
     return message_type, fields
 
 
-def make_varlen_options(xproc, path: str, create_if_missing: bool, schema_id: int):
+def make_varlen_options(
+    xproc: XprocModule, path: str, create_if_missing: bool, schema_id: int
+):
     options = xproc.TransportOptions()
     options.path = path
     options.shm_size = (

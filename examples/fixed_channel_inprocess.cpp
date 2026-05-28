@@ -9,7 +9,7 @@
 
 int main() {
   const std::string path = "/xproc_example_fixed_inprocess";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   const auto created = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(16384);
   xproc::ipc::producer producer = created.open_producer();
@@ -52,6 +52,6 @@ int main() {
   }
 
   t.join();
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   return 0;
 }

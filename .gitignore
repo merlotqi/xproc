@@ -15,6 +15,9 @@ docs/_build
 docs/.venv
 .cache
 .vscode
+.worktrees
+csharp/**/bin/
+csharp/**/obj/
 # CLion
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
@@ -22,3 +25,4 @@ docs/.venv
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #cmake-build-*
 .codex
+**/__pycache__

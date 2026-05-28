@@ -71,8 +71,8 @@ Phase 1 should only be marked done when every remaining unchecked item below is 
 - [x] Producer / consumer / observer attach paths fail with typed layout errors instead of silently accepting a
       mismatched SHM layout.
 - [x] Default attach flows no longer require non-creators to duplicate channel shape manually in the common case.
-- [ ] Decide whether creator timestamp / flags are part of the supported v1 manifest contract or explicitly defer
-      them to a later phase.
+- [x] Decision: creator timestamp / flags are explicitly deferred to a later phase and are not part of the
+      Phase 1 / v1 manifest contract.
 - [x] Refresh docs so the public attach contract is described in terms of manifest-backed validation rather than only
       low-level `transport_options` wiring.
 
@@ -86,8 +86,8 @@ Phase 1 should only be marked done when every remaining unchecked item below is 
 - [x] Make the builder layer cover producer, consumer, and observer attach scenarios without requiring callers to
       hand-wire `shm_size`, `create_if_missing`, `channel_type`, and `item_size`.
 - [x] Update at least one fixed-channel example and one varlen example to use the builder API.
-- [ ] Decide whether builder parity for C / Node / Python is a Phase 1 exit criterion or is intentionally deferred to
-      the bindings-parity phase.
+- [x] Decision: builder parity for C / Node / Python is intentionally deferred to a dedicated bindings-parity stage
+      and is not a Phase 1 exit criterion.
 
 #### Validation / mismatch coverage
 
@@ -98,14 +98,15 @@ Phase 1 should only be marked done when every remaining unchecked item below is 
 - [x] Add a dedicated C++ attach-time test for fixed-channel `item_size` mismatch.
 - [x] Add a dedicated C++ attach-time test for `data_align` mismatch.
 - [x] Add dedicated C++ observer mismatch tests for wrong layout type and schema / manifest-version mismatch.
-- [ ] Decide whether a future manifest-version incompatibility should be represented by the existing layout version
-      fields or by a separate manifest version field, then test that exact contract.
+- [x] Decision: future manifest-version incompatibility will use a separate manifest-version concept in a later design
+      stage rather than extending the Phase 1 layout version contract.
 
 #### Done gate
 
 - [x] README, examples, and user-facing docs reflect the final Phase 1 attach / builder workflow.
 - [x] A targeted Phase 1 regression suite is easy to run locally and in CI.
-- [ ] Phase 2 work does not depend on callers using low-level SHM attach details that Phase 1 was supposed to hide.
+- [ ] Phase 2 follow-up work is scoped behind dedicated design and implementation plans rather than being pulled back
+      into the Phase 1 closeout milestone.
 
 ## Medium priority
 
@@ -179,15 +180,16 @@ Current benchmarks cover shared-memory behavior well enough to guide low-level w
 
 ## Bindings and API parity
 
-### 10. Bring C / Node bindings closer to feature parity
+### 10. Bring binding ergonomics closer to C++ parity
 
-The C++ core is significantly more complete than the binding layers.
+The C++ core still has the most ergonomic builder / codec surface, but the binding layers now cover the core transport
+and manifest features.
 
 Suggested steps:
 
-- Add C API helpers for SHM size calculation and attach semantics
-- Mirror new manifest / builder ergonomics in the C layer
-- Expand the Node binding beyond constants into real producer / consumer / observer objects
+- Add higher-level C API helpers that mirror `make_fixed_channel`, `make_varlen_channel`, and attach flows without
+      requiring callers to fill every `xproc_c_options` field manually
+- Mirror more builder-style ergonomics in Python and C#
 - Add binding-level examples and smoke tests
 
 ## Documentation

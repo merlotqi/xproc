@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14...3.24)
-project(xproc VERSION 0.2.0 LANGUAGES CXX)
+project(xproc VERSION 1.1.0 LANGUAGES CXX)
 
 # Visual Studio generator: default to x64 when -A is omitted, avoiding winnt.h C1189 "No Target Architecture".
 if(WIN32 AND MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -8,12 +8,12 @@ if(WIN32 AND MSVC AND CMAKE_GENERATOR MATCHES "Visual Studio")
     endif()
 endif()
 
-if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux")
-    message(FATAL_ERROR "xproc supports Linux and Windows only (found ${CMAKE_SYSTEM_NAME}); see docs/design.md")
+if(NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    message(FATAL_ERROR "xproc supports Linux, Windows, MacOS only (found ${CMAKE_SYSTEM_NAME}); see docs/design.md")
 endif()
 
 if(WIN32)
-    message(STATUS "xproc: Windows build: atomic_wait uses polling (WaitOnAddress does not pair across separate MapViewOfFile views).")
+    message(STATUS "xproc: Windows build: atomic_wait uses WaitOnAddress/WakeByAddress* with short timeout rechecks for cross-process shared memory.")
 endif()
 
 include(GNUInstallDirs)
@@ -23,121 +23,92 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# scikit-build-core can pass equivalent Windows paths with different slash styles
+# or drive-letter casing; normalize before comparing wheel install destinations.
+function(xproc_normalize_path out_var input_path)
+    if("${input_path}" STREQUAL "")
+        set(${out_var} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    get_filename_component(_xproc_path_abs "${input_path}" ABSOLUTE)
+    file(TO_CMAKE_PATH "${_xproc_path_abs}" _xproc_path_norm)
+    string(REGEX REPLACE "/+$" "" _xproc_path_norm "${_xproc_path_norm}")
+    if(WIN32)
+        string(TOLOWER "${_xproc_path_norm}" _xproc_path_norm)
+    endif()
+
+    set(${out_var} "${_xproc_path_norm}" PARENT_SCOPE)
+endfunction()
+
+function(xproc_paths_equal out_var lhs rhs)
+    xproc_normalize_path(_xproc_lhs "${lhs}")
+    xproc_normalize_path(_xproc_rhs "${rhs}")
+
+    if(_xproc_lhs STREQUAL _xproc_rhs)
+        set(${out_var} TRUE PARENT_SCOPE)
+    else()
+        set(${out_var} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
+set(XPROC_SKBUILD_WHEEL_INSTALL FALSE)
+if(SKBUILD
+   AND DEFINED SKBUILD_STATE AND SKBUILD_STATE
+   AND DEFINED SKBUILD_PLATLIB_DIR AND SKBUILD_PLATLIB_DIR)
+    xproc_paths_equal(_xproc_is_skbuild_wheel_install
+        "${CMAKE_INSTALL_PREFIX}"
+        "${SKBUILD_PLATLIB_DIR}"
+    )
+    if(_xproc_is_skbuild_wheel_install)
+        set(XPROC_SKBUILD_WHEEL_INSTALL TRUE)
+    endif()
+endif()
+
+function(xproc_add_subdirectory path)
+    if(XPROC_SKBUILD_WHEEL_INSTALL)
+        set(CMAKE_SKIP_INSTALL_RULES TRUE)
+    endif()
+    add_subdirectory("${path}")
+    if(XPROC_SKBUILD_WHEEL_INSTALL)
+        file(GENERATE
+            OUTPUT "${CMAKE_BINARY_DIR}/${path}/cmake_install.cmake"
+            CONTENT "# Install rules skipped for wheel build in ${path}\n"
+        )
+    endif()
+endfunction()
+
 if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     find_library(LIB_RT rt)
     find_package(Threads REQUIRED)
 endif()
 
-file(GLOB_RECURSE XPROC_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp")
-file(GLOB_RECURSE XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-list(REMOVE_ITEM XPROC_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/shm/shm_posix.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/shm/shm_win32.cpp")
-if(WIN32)
-    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/shm/shm_win32.cpp")
-else()
-    list(APPEND XPROC_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/shm/shm_posix.cpp")
-endif()
-
 option(XPROC_BUILD_SHARED "Build libxproc as a shared library" OFF)
-
-# Windows + DLL: place xproc.dll next to test/example/benchmark executables so GoogleTest
-# discovery does not fail with 0xc0000135 (STATUS_DLL_NOT_FOUND).
-if(WIN32 AND XPROC_BUILD_SHARED)
-    if(CMAKE_CONFIGURATION_TYPES)
-        foreach(_cfg IN LISTS CMAKE_CONFIGURATION_TYPES)
-            string(TOUPPER "${_cfg}" _CFG_UPPER)
-            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_CFG_UPPER} "${CMAKE_BINARY_DIR}/${_cfg}")
-            set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${_CFG_UPPER} "${CMAKE_BINARY_DIR}/${_cfg}")
-            set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${_CFG_UPPER} "${CMAKE_BINARY_DIR}/${_cfg}")
-        endforeach()
-    else()
-        if(NOT CMAKE_BUILD_TYPE)
-            set(CMAKE_BUILD_TYPE Release)
-        endif()
-        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
-        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
-        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
-    endif()
-endif()
-
-if(XPROC_BUILD_SHARED)
-    add_library(xproc SHARED ${XPROC_HEADERS} ${XPROC_SOURCES})
-else()
-    add_library(xproc STATIC ${XPROC_HEADERS} ${XPROC_SOURCES})
-endif()
-add_library(xproc::xproc ALIAS xproc)
-
-if(XPROC_BUILD_SHARED AND WIN32)
-    set_target_properties(xproc PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
-target_include_directories(xproc PUBLIC
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
-)
-
-set(XPROC_PKGCONFIG_LIBS_PRIVATE "")
-if(CMAKE_SYSTEM_NAME MATCHES "Linux")
-    if(LIB_RT)
-        target_link_libraries(xproc PUBLIC ${LIB_RT})
-        set(XPROC_PKGCONFIG_LIBS_PRIVATE "-pthread -lrt")
-    else()
-        set(XPROC_PKGCONFIG_LIBS_PRIVATE "-pthread")
-    endif()
-    target_link_libraries(xproc PUBLIC Threads::Threads)
-endif()
-
-if(WIN32)
-    target_link_libraries(xproc PUBLIC ws2_32)
-endif()
-
-if(MSVC)
-    target_compile_definitions(xproc PUBLIC _CRT_SECURE_NO_WARNINGS)
-    target_compile_options(xproc PRIVATE /utf-8)
-endif()
-
-option(XPROC_WITH_NLOHMANN_JSON "Enable nlohmann_json reference codec (find_package nlohmann_json)" OFF)
-if(XPROC_WITH_NLOHMANN_JSON)
-    find_package(nlohmann_json CONFIG REQUIRED)
-    target_link_libraries(xproc PUBLIC nlohmann_json::nlohmann_json)
-    target_compile_definitions(xproc PUBLIC XPROC_WITH_NLOHMANN_JSON)
-endif()
-
-option(XPROC_WITH_PROTOBUF "Enable Protobuf reference codec (find_package Protobuf)" OFF)
-if(XPROC_WITH_PROTOBUF)
-    find_package(Protobuf REQUIRED)
-    if(TARGET protobuf::libprotobuf)
-        target_link_libraries(xproc PUBLIC protobuf::libprotobuf)
-    else()
-        target_link_libraries(xproc PUBLIC ${Protobuf_LIBRARIES})
-        target_include_directories(xproc PUBLIC ${Protobuf_INCLUDE_DIRS})
-    endif()
-    target_compile_definitions(xproc PUBLIC XPROC_WITH_PROTOBUF)
-endif()
-
 option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
+option(XPROC_BUILD_TESTS "Build unit tests" ON)
+option(XPROC_BUILD_EXAMPLES "Build examples" ON)
+option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
+option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
+
+xproc_add_subdirectory(src)
+
 if(XPROC_BUILD_CAPI)
-    add_subdirectory(capi)
+    xproc_add_subdirectory(capi)
 endif()
 
-option(XPROC_BUILD_TESTS "Build unit tests" ON)
 if(XPROC_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
 
-option(XPROC_BUILD_EXAMPLES "Build examples" ON)
 if(XPROC_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
 if(XPROC_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
-option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
 set(NODE_INCLUDE_DIR "" CACHE PATH
     "Optional: override directory containing node_api.h. Empty = use node_modules/node-api-headers from npm ci in node/.")
 if(XPROC_BUILD_NODE)
@@ -147,6 +118,15 @@ endif()
 option(XPROC_BUILD_PYTHON "Stage Python binding package" ON)
 if(XPROC_BUILD_PYTHON)
     add_subdirectory(Python)
+endif()
+
+if(TARGET xproc_run_tests)
+    if(TARGET xproc_node)
+        add_dependencies(xproc_run_tests xproc_node)
+    endif()
+    if(TARGET xproc_python_package)
+        add_dependencies(xproc_run_tests xproc_python_package)
+    endif()
 endif()
 
 set(XPROC_EXPORT_WITH_NLOHMANN_JSON 0)
@@ -176,23 +156,25 @@ configure_file(
     @ONLY
 )
 
-install(
-    TARGETS xproc
-    EXPORT xprocTargets
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xproc.pc" DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/xprocConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/xprocConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
-)
-install(EXPORT xprocTargets
-    FILE xprocTargets.cmake
-    NAMESPACE xproc::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
-)
+if(NOT XPROC_SKBUILD_WHEEL_INSTALL)
+    install(
+        TARGETS xproc
+        EXPORT xprocTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+    install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xproc.pc" DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/xprocConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/xprocConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
+    )
+    install(EXPORT xprocTargets
+        FILE xprocTargets.cmake
+        NAMESPACE xproc::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xproc
+    )
+endif()

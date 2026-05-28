@@ -9,19 +9,6 @@
 //   1. xproc-based identity confirmation,
 //   2. realtime progress capture.
 
-#if !defined(__linux__) && !defined(_WIN32) && !defined(_WIN64)
-
-#include <iostream>
-
-int main() {
-  std::cout << "cpp_python_handshake_progress_demo: unsupported platform\n";
-  return 0;
-}
-
-#endif
-
-#if defined(__linux__) || defined(_WIN32) || defined(_WIN64)
-
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -56,7 +43,6 @@ constexpr std::chrono::milliseconds kPollSleep{20};
 constexpr std::chrono::milliseconds kProgressPollSleep{40};
 constexpr std::chrono::seconds kHandshakeTimeout{10};
 constexpr std::size_t kDataCapacity = 65536;
-constexpr std::size_t kShmSize = xproc::ipc::shm_size_for_data_capacity(kDataCapacity);
 constexpr std::uint64_t kUpstreamSchemaId = 0x5059455654303031ULL;    // "PYEVT001"
 constexpr std::uint64_t kDownstreamSchemaId = 0x5059435452303031ULL;  // "PYCTR001"
 constexpr const char* kWorkerScriptName = "cpp_python_handshake_worker.py";
@@ -86,7 +72,7 @@ std::filesystem::path binary_root() { return std::filesystem::path(XPROC_BINARY_
 std::string current_process_id_string() { return std::to_string(xproc::platform::current_process_id()); }
 
 std::string default_python_binary() {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
   return "python3";
 #elif defined(_WIN32) || defined(_WIN64)
   return "python";
@@ -148,18 +134,7 @@ cli_options parse_cli(int argc, char** argv) {
   return cli;
 }
 
-xproc::ipc::transport_options make_varlen_options(const std::string& path, bool create_if_missing,
-                                                  std::uint64_t schema_id) {
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = create_if_missing ? kShmSize : xproc::ipc::infer_existing_shm_size;
-  opts.type = xproc::ipc::channel_type::varlen;
-  opts.schema_id = schema_id;
-  opts.create_if_missing = create_if_missing;
-  return opts;
-}
-
-void cleanup_shm(const std::string& path) { xproc::shm::shm::unlink(path); }
+void cleanup_shm(const std::string& path) { xproc::core::shm::unlink(path); }
 
 std::string escape_field(const std::string& value) {
   std::string out;
@@ -436,8 +411,14 @@ int main(int argc, char** argv) {
     cleanup_shm(upstream_path);
     cleanup_shm(downstream_path);
 
-    xproc::ipc::consumer upstream(make_varlen_options(upstream_path, true, kUpstreamSchemaId));
-    xproc::ipc::producer downstream(make_varlen_options(downstream_path, true, kDownstreamSchemaId));
+    const auto upstream_channel = xproc::ipc::make_varlen_channel(upstream_path)
+                                      .with_schema_id(kUpstreamSchemaId)
+                                      .create(kDataCapacity);
+    xproc::ipc::consumer upstream = upstream_channel.open_consumer();
+    const auto downstream_channel = xproc::ipc::make_varlen_channel(downstream_path)
+                                        .with_schema_id(kDownstreamSchemaId)
+                                        .create(kDataCapacity);
+    xproc::ipc::producer downstream = downstream_channel.open_producer();
 
     const std::vector<std::string> child_argv = make_child_argv(cli, upstream_path, downstream_path, session);
     xproc::examples::process child = xproc::examples::process::spawn(child_argv);
@@ -487,5 +468,3 @@ int main(int argc, char** argv) {
     return 1;
   }
 }
-
-#endif

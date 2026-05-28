@@ -91,7 +91,7 @@ For the focused shared-memory builder / manifest / mismatch regression gate:
 
 .. code-block:: bash
 
-   cmake --build build --target xproc_run_phase1_tests
+   cmake --build build --target xproc_run_tests
 
 Sphinx documentation (this tree)
 --------------------------------

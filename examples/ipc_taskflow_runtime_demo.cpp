@@ -17,17 +17,11 @@ int main() {
   manager.start_processing(std::max<std::size_t>(1, std::thread::hardware_concurrency()));
 
   const std::string path = "/xproc_ipc_taskflow_demo_" + std::to_string(xproc::platform::current_process_id());
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = xproc::ipc::shm_size_for_data_capacity(16384);
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.create_if_missing = true;
-
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(16384);
+  xproc::ipc::producer producer = channel.open_producer();
+  xproc::ipc::consumer consumer = channel.open_consumer();
   xproc::ipc::runtime runtime(consumer);
 
   std::atomic<bool> done{false};
@@ -71,6 +65,6 @@ int main() {
 
   manager.stop_processing();
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
   return done.load(std::memory_order_acquire) ? 0 : 1;
 }

@@ -7,9 +7,9 @@
 
 TEST(IpcObserverAttach, PeekThenConsumerDrains) {
   const std::string path = "/xproc_ipc_observer_attach_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
-  constexpr std::size_t total = sizeof(xproc::shm::control_block) + 512;
+  constexpr std::size_t total = sizeof(xproc::core::control_block) + 512;
   xproc::ipc::transport_options opts;
   opts.path = path;
   opts.shm_size = total;
@@ -57,5 +57,5 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
     EXPECT_GE(snap.write_pos, snap.read_pos);
   }
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }

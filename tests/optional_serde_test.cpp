@@ -15,11 +15,11 @@ namespace {
 #if defined(XPROC_WITH_NLOHMANN_JSON)
 TEST(OptionalSerde, NlohmannJsonRoundtrip) {
   const std::string path = "/xproc_optional_json_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
+  opts.shm_size = sizeof(xproc::core::control_block) + 65536;
   opts.type = xproc::ipc::channel_type::varlen;
 
   std::atomic<bool> producer_ready{false};
@@ -56,18 +56,18 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
   EXPECT_EQ(received["x"].get<int>(), 42);
   EXPECT_EQ(received["y"].get<std::string>(), "ipc");
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 #endif
 
 #if defined(XPROC_WITH_PROTOBUF)
 TEST(OptionalSerde, ProtobufRoundtrip) {
   const std::string path = "/xproc_optional_proto_test";
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 65536;
+  opts.shm_size = sizeof(xproc::core::control_block) + 65536;
   opts.type = xproc::ipc::channel_type::varlen;
 
   std::atomic<bool> producer_ready{false};
@@ -106,7 +106,7 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
   EXPECT_EQ(received.x(), 7);
   EXPECT_EQ(received.y(), -3);
 
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 #endif
 

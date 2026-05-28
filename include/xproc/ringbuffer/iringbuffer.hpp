@@ -2,11 +2,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <xproc/core/shm_layout.hpp>
 #include <xproc/ringbuffer/ringbuffer_error.hpp>
-#include <xproc/shm/shm_layout.hpp>
 
-namespace xproc {
-namespace ringbuffer {
+namespace xproc::ringbuffer {
 
 // ringbuffer_error: status enum for wrappers/tests (see ringbuffer_error.hpp); not returned from fixed_* / varlen_* hot
 // paths. Optional polymorphic facade over a mapped control block (tests, observers). SPSC implementations remain
@@ -20,7 +19,7 @@ class IRingBuffer {
 
 class control_block_ring_facade final : public IRingBuffer {
  public:
-  explicit control_block_ring_facade(const shm::control_block* header) noexcept : header_(header) {}
+  explicit control_block_ring_facade(const core::control_block* header) noexcept : header_(header) {}
 
   std::size_t capacity_bytes() const noexcept override {
     return header_ ? static_cast<std::size_t>(header_->data_capacity) : 0;
@@ -28,11 +27,10 @@ class control_block_ring_facade final : public IRingBuffer {
 
   std::uint32_t data_alignment() const noexcept override { return header_ ? header_->data_alignment : 0; }
 
-  const shm::control_block* control_block() const noexcept { return header_; }
+  const core::control_block* control_block() const noexcept { return header_; }
 
  private:
-  const shm::control_block* header_;
+  const core::control_block* header_;
 };
 
-}  // namespace ringbuffer
-}  // namespace xproc
+}  // namespace xproc::ringbuffer

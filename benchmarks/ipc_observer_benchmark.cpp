@@ -23,11 +23,11 @@ static void BM_ObserverPeekFixed(benchmark::State& state) {
   }
 
   const std::string path = unique_path("obs", static_cast<int>(item));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 
   xproc::ipc::transport_options opts;
   opts.path = path;
-  opts.shm_size = sizeof(xproc::shm::control_block) + 256 * 1024;
+  opts.shm_size = sizeof(xproc::core::control_block) + 256 * 1024;
   opts.type = xproc::ipc::channel_type::fixed;
   opts.item_size = item;
   opts.create_if_missing = true;
@@ -50,7 +50,7 @@ static void BM_ObserverPeekFixed(benchmark::State& state) {
   }
 
   state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * item));
-  xproc::shm::shm::unlink(path);
+  xproc::core::shm::unlink(path);
 }
 
 }  // namespace

@@ -27,6 +27,8 @@ set(XPROC_GTEST_TEST_FILES_COMMON
     ipc_observer_attach_test.cpp
     protocol_codec_test.cpp
     socket_transport_test.cpp
+    runtime_allocation_test.cpp
+    producer_backpressure_test.cpp
 )
 
 # Linux-only (fork, pipe, POSIX paths). Not built on Windows or other OSes.
@@ -79,44 +81,6 @@ if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
     set_property(GLOBAL APPEND PROPERTY XPROC_ALL_TEST_TARGETS xproc_optional_serde_tests)
 endif()
 
-set(XPROC_PHASE1_TEST_PATTERNS
-    "ApiSurface[.]FixedChannelBuildersInferManifestAndRoundTrip"
-    "ApiSurface[.]VarlenChannelBuildersInferManifestAndRoundTrip"
-    "LayoutValidate[.]VersionMismatch"
-    "LayoutValidate[.]LayoutTypeMismatch"
-    "LayoutValidate[.]ValidateTransportOptionsRejectsInvalidAlignAndItemSize"
-    "LayoutValidate[.]SharedMemorySizeHelpersAndInferExistingSemantics"
-    "LayoutValidate[.]FixedItemSizeMismatchOnAttach"
-    "LayoutValidate[.]AlignmentMismatchOnAttach"
-    "LayoutValidate[.]ObserverRejectsLayoutTypeMismatchOnAttach"
-    "LayoutValidate[.]ObserverRejectsSchemaMismatchOnAttach"
-    "LayoutValidate[.]VersionMismatchOnAttach"
-    "LayoutValidate[.]ObserverRejectsVersionMismatchOnAttach"
-    "IpcObserverAttach[.]PeekThenConsumerDrains"
-)
-
-set(XPROC_PHASE1_TEST_TARGETS
-    xproc_api_surface_test
-    xproc_layout_validate_test
-    xproc_ipc_observer_attach_test
-)
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    list(APPEND XPROC_PHASE1_TEST_PATTERNS "IpcIntegration[.]AttachersCanInferExistingShmSize")
-    list(APPEND XPROC_PHASE1_TEST_TARGETS xproc_ipc_integration_test)
-endif()
-
-if(TARGET xproc_c)
-    list(APPEND XPROC_PHASE1_TEST_PATTERNS
-        "CApiSmoke[.]ObserverRejectsSocketAndReportsLayoutError"
-        "CApiSmoke[.]FixedItemSizeAndSchemaIdMismatchReportLayoutErrors"
-    )
-    list(APPEND XPROC_PHASE1_TEST_TARGETS xproc_capi_smoke_tests)
-endif()
-
-string(JOIN "|" XPROC_PHASE1_TEST_REGEX_BODY ${XPROC_PHASE1_TEST_PATTERNS})
-set(XPROC_PHASE1_TEST_REGEX "^(${XPROC_PHASE1_TEST_REGEX_BODY})$")
-
 get_property(XPROC_ALL_TEST_TARGETS GLOBAL PROPERTY XPROC_ALL_TEST_TARGETS)
 
 # Multi-config generators (Visual Studio): ctest must get -C <Config> or tests show "Not Run".
@@ -129,25 +93,13 @@ else()
 endif()
 
 add_custom_target(xproc_run_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} --output-on-failure
+    COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} -LE xproc_benchmark --output-on-failure
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     USES_TERMINAL
     VERBATIM
-    COMMENT "Running all xproc tests"
+    COMMENT "Running all xproc tests (excluding benchmarks — use xproc_run_benchmarks for those)"
 )
 
 if(XPROC_ALL_TEST_TARGETS)
     add_dependencies(xproc_run_tests ${XPROC_ALL_TEST_TARGETS})
-endif()
-
-add_custom_target(xproc_run_phase1_tests
-    COMMAND ${CMAKE_CTEST_COMMAND} ${_xproc_run_tests_ctest_cfg} --output-on-failure -R "${XPROC_PHASE1_TEST_REGEX}"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    USES_TERMINAL
-    VERBATIM
-    COMMENT "Running the targeted xproc Phase 1 regression suite"
-)
-
-if(XPROC_PHASE1_TEST_TARGETS)
-    add_dependencies(xproc_run_phase1_tests ${XPROC_PHASE1_TEST_TARGETS})
 endif()

@@ -6,7 +6,7 @@ import struct
 import subprocess
 import time
 
-from _common import cleanup_shm, find_child_binary, load_xproc, non_negative_int
+from _common import XprocModule, cleanup_shm, find_child_binary, load_xproc, non_negative_int
 
 
 MESSAGE_BYTES = 256
@@ -17,7 +17,7 @@ POLL_INTERVAL_MS = 100
 SCHEMA_ID = 0x4E4F44455F435050  # "NODE_CPP"
 
 
-def create_consumer_options(xproc, shm_path: str):
+def create_consumer_options(xproc: XprocModule, shm_path: str):
     options = xproc.TransportOptions()
     options.path = shm_path
     options.shm_size = xproc.shm_size_for_data_capacity(DATA_CAPACITY)

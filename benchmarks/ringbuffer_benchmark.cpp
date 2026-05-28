@@ -3,15 +3,15 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
+#include <xproc/core/shm_layout_manager.hpp>
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
-#include <xproc/shm/shm_layout_manager.hpp>
 
 namespace {
 
-using xproc::shm::control_block;
+using xproc::core::control_block;
 
 // ~1 MiB on the stack trips stack canaries when benchmarks run under CTest / worker threads.
 // Heap-backed storage with correct alignment for placement-new of control_block.
@@ -42,7 +42,7 @@ class heap_ring_arena {
 
  private:
   static void init_header(control_block& h, std::uint64_t cap, std::uint32_t layout_type, std::uint32_t data_align) {
-    using xproc::shm::layout_manager;
+    using xproc::core::layout_manager;
     h.magic = layout_manager::expected_magic;
     h.version_major = layout_manager::version_major;
     h.version_minor = layout_manager::version_minor;
