@@ -31,6 +31,7 @@ xproc_add_benchmark(ipc_poll_copy ipc_poll_copy_benchmark.cpp)
 xproc_add_benchmark(ipc_cross_framework ipc_cross_framework_benchmark.cpp)
 xproc_add_benchmark(ringbuffer ringbuffer_benchmark.cpp)
 xproc_add_benchmark(shm_layout shm_layout_benchmark.cpp)
+xproc_add_benchmark(runtime runtime_benchmark.cpp)
 add_executable(xproc_bench_sync sync_benchmark.cpp)
 target_link_libraries(xproc_bench_sync PRIVATE xproc benchmark::benchmark)
 set_target_properties(xproc_bench_sync PROPERTIES FOLDER "Benchmarks")
@@ -61,6 +62,7 @@ add_dependencies(
   xproc_bench_ipc_poll_copy
   xproc_bench_ringbuffer
   xproc_bench_shm_layout
+  xproc_bench_runtime
   xproc_bench_sync
 )
 
