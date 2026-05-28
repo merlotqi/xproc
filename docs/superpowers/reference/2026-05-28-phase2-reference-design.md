@@ -17,17 +17,23 @@ The next stage should improve **correctness under loosely-coupled integrations**
 
 ## Priority Tiers
 
-### P0: Runtime Allocation Improvement
+### P0: Runtime Allocation Improvement -- DONE (2026-05-28)
 
 **Spec:** [2026-05-28-phase2-runtime-allocation-design.md](../specs/2026-05-28-phase2-runtime-allocation-design.md)
+**Plan:** [2026-05-28-phase2-runtime-allocation.md](../plans/2026-05-28-phase2-runtime-allocation.md)
+**Branch:** `main` (commits `79de17a`..`0ced62b`)
 
 `ipc::runtime` currently copies each message into a fresh `std::vector<uint8_t>` before dispatch. This is the single largest performance bottleneck for sustained high-throughput workloads.
 
-Key deliverables:
-- Buffer reuse across poll cycles
-- Pluggable copy-policy hooks (zero-copy view vs eager copy vs small-buffer optimization)
-- Optional message batching to amortize executor submission cost
-- Backpressure signaling when consumer falls behind
+Implemented:
+- `copy_policy` enum: `reuse_buffer` (default), `zero_copy`, `sbo`
+- Internal reusable buffer in `runtime` eliminates per-message allocation
+- `run_batched()` for amortizing executor submission cost
+- Backpressure-aware `run()` overload with `on_backpressure(size_t)` callback
+- 9 unit tests covering all policies, batching, backpressure, interface path, varlen
+- Runtime dispatch benchmark comparing baseline vs all three policies
+- Updated `runtime_dispatch_demo` with thread-pool executor and sbo policy
+- Fixed lost-wakeup race in `stop()` via `commit_seq.fetch_add(1)` before `notify_all`
 
 ### P1: Socket Disconnect / Reconnect Resilience
 
@@ -82,11 +88,11 @@ Current benchmarks cover the SHM hot path well but lack visibility into:
 
 ### P0: Runtime allocation
 
-- [ ] Buffer reuse eliminates per-message allocation in the common path
-- [ ] Copy-policy hooks allow callers to choose zero-copy, eager-copy, or small-buffer-optimized modes
-- [ ] Batching mode amortizes executor submission cost
-- [ ] Backpressure signal is documented and testable
-- [ ] Existing `runtime` public API is either unchanged or migrated with a documented upgrade path
+- [x] Buffer reuse eliminates per-message allocation in the common path
+- [x] Copy-policy hooks allow callers to choose zero-copy, eager-copy, or small-buffer-optimized modes
+- [x] Batching mode amortizes executor submission cost
+- [x] Backpressure signal is documented and testable
+- [x] Existing `runtime` public API is either unchanged or migrated with a documented upgrade path
 
 ### P1: Socket resilience
 
@@ -125,7 +131,7 @@ Current benchmarks cover the SHM hot path well but lack visibility into:
 
 - [ ] Socket vs SHM benchmark for fixed and varlen workloads
 - [ ] Observer overhead benchmark under sustained load
-- [ ] Runtime dispatch overhead benchmark
+- [x] Runtime dispatch overhead benchmark
 
 ## Deliverables per Tier
 
@@ -143,4 +149,4 @@ Each priority tier produces:
 
 ## Transition Rule
 
-After this reference spec is committed, each tier spec is written and reviewed independently. The P0 spec (`2026-05-28-phase2-runtime-allocation-design.md`) is written first and is the immediate next action.
+P0 is complete and merged to `main`. The next tier to implement is **P1: Socket Disconnect/Reconnect Resilience**, which should begin with a dedicated spec document followed by an implementation plan.
