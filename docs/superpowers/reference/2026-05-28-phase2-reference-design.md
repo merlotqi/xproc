@@ -7,9 +7,9 @@ Phase 1 closeout: `docs/superpowers/reviews/2026-04-25-channel-manifest-phase-1-
 
 ## Objective
 
-Define the Phase 2 scope for the xproc C++ module. Phase 2 focuses on **runtime ergonomics**, **operational visibility**, and **socket resilience** -- building on the Phase 1 channel-manifest and builder foundation without expanding into new transport or concurrency models.
+Define the Phase 2 scope for the xproc C++ module. Phase 2 focuses on **producer-side send control**, **runtime ergonomics**, **operational visibility**, and **socket resilience** -- building on the Phase 1 channel-manifest and builder foundation without expanding into new transport or concurrency models.
 
-Phase 2 is organized into three priority tiers (P0--P3), each delivered as an independent spec and implementation branch.
+Phase 2 is organized into four priority tiers (P0--P3), each delivered as an independent spec and implementation branch.
 
 ## Guiding Principle
 
@@ -35,7 +35,22 @@ Implemented:
 - Updated `runtime_dispatch_demo` with thread-pool executor and sbo policy
 - Fixed lost-wakeup race in `stop()` via `commit_seq.fetch_add(1)` before `notify_all`
 
-### P1: Socket Disconnect / Reconnect Resilience
+### P0: Producer Backpressure -- NEXT
+
+**Plan:** [2026-05-28-producer-backpressure.md](../plans/2026-05-28-producer-backpressure.md)
+**Branch:** `main` (to be implemented)
+
+The current `send_fixed*` and `send_varlen` APIs block indefinitely when the ring buffer is full. Producers need non-blocking and bounded-time send options for responsive applications.
+
+Key deliverables:
+- Non-blocking `try_send_*` APIs returning `send_result::{ok, full, message_too_large}`
+- Bounded-time `send_*_for(timeout)` APIs returning `send_result::{ok, timeout}`
+- Oversized-message fast-fail (no wasted CAS on messages larger than ring capacity)
+- Ring occupancy watermarks: `used_bytes()`, `available_bytes()`, `fill_ratio()`, `capacity_bytes()`
+- Fixed-channel slot stride fix (reserve `item_size` not `byte_length`)
+- Existing blocking `send_fixed*` / `send_varlen` unchanged (backward compatible)
+
+### P2: Socket Disconnect / Reconnect Resilience
 
 The socket backend (`socket_producer`, `socket_consumer`) has functional connect/accept flows but reconnect semantics are not hardened. This tier covers:
 
@@ -44,7 +59,7 @@ The socket backend (`socket_producer`, `socket_consumer`) has functional connect
 - Decision on transparent vs caller-surfaced reconnect
 - Improved `wait()` and `runtime::stop()` interruption behavior
 
-### P1: Socket Test Coverage
+### P2: Socket Test Coverage
 
 Important gaps block confidence in socket transport correctness:
 
@@ -53,7 +68,7 @@ Important gaps block confidence in socket transport correctness:
 - Socket runtime integration (`ipc::runtime` over `socket_consumer`)
 - Dual-stack listen/connect edge cases
 
-### P2: Observer / Inspector Diagnostic Helpers
+### P3: Observer / Inspector Diagnostic Helpers
 
 `ring_snapshot` exposes raw atomic fields. The next layer should provide derived diagnostics:
 
@@ -62,7 +77,7 @@ Important gaps block confidence in socket transport correctness:
 - Producer liveness hints (commit progress since last snapshot)
 - Time since last observed progress
 
-### P2: C API Builder Parity
+### P3: C API Builder Parity
 
 The C++ builder API (`make_fixed_channel`, `attach_fixed_channel`, etc.) has no C-level equivalent. This blocks builder ergonomics for Python, Node.js, and C# bindings.
 
@@ -71,11 +86,11 @@ Key deliverables:
 - `xproc_c_attach_fixed_channel(path)` inferring options from existing segment
 - Equivalent helpers for variable-length channels
 
-### P3: Codec Receive-Side Parity
+### P4: Codec Receive-Side Parity
 
 `IByteCodec` has send-side helpers but lacks symmetric `poll_decoded` / `peek_decoded` on the receive side. The template codecs (`raw_pod_codec`, `bounded_bytes_codec`, `span_codec`) already have good APIs, so this is a gap-fill for the dynamic codec path.
 
-### P3: Benchmark Expansion
+### P4: Benchmark Expansion
 
 Current benchmarks cover the SHM hot path well but lack visibility into:
 
@@ -94,40 +109,49 @@ Current benchmarks cover the SHM hot path well but lack visibility into:
 - [x] Backpressure signal is documented and testable
 - [x] Existing `runtime` public API is either unchanged or migrated with a documented upgrade path
 
-### P1: Socket resilience
+### P0: Producer backpressure
+
+- [ ] `try_send_fixed_sized` / `try_send_fixed_bytes` / `try_send_varlen` return immediately on full ring
+- [ ] `send_fixed_sized_for` / `send_fixed_bytes_for` / `send_varlen_for` respect timeout
+- [ ] Oversized messages fail immediately with `message_too_large` (no CAS)
+- [ ] `used_bytes()`, `available_bytes()`, `fill_ratio()`, `capacity_bytes()` exposed on producer
+- [ ] Fixed-channel slot stride reserves `item_size` not `byte_length`
+- [ ] Existing blocking sends unchanged
+
+### P2: Socket resilience
 
 - [ ] Stale peer sockets are detected and cleaned up
 - [ ] Reconnect flow is tested for both producer (connect) and consumer (accept) sides
 - [ ] Reconnect semantics (transparent vs surfaced) are documented
 - [ ] `wait()` interruption is responsive, not polling-based
 
-### P1: Socket test coverage
+### P2: Socket test coverage
 
 - [ ] Fixed-frame socket roundtrip tests exist
 - [ ] Disconnect/reconnect tests exist for both sides
 - [ ] `ipc::runtime` over `socket_consumer` is tested
 - [ ] Dual-stack edge cases are covered on Linux and macOS
 
-### P2: Observer diagnostics
+### P3: Observer diagnostics
 
 - [ ] `occupancy_ratio()` and `occupancy_bytes()` helpers exist
 - [ ] `consumer_lag_bytes()` helper exists
 - [ ] `producer_liveness()` helper exists
 - [ ] Helpers are exposed through C API and at least one binding
 
-### P2: C API builder parity
+### P3: C API builder parity
 
 - [ ] `xproc_c_make_fixed_channel` and `xproc_c_attach_fixed_channel` exist
 - [ ] `xproc_c_make_varlen_channel` and `xproc_c_attach_varlen_channel` exist
 - [ ] Python binding smoke test uses C API builders
 
-### P3: Codec receive-side
+### P4: Codec receive-side
 
 - [ ] `poll_decoded(codec, handler)` exists on `consumer`
 - [ ] `peek_decoded(codec, handler)` exists on `observer`
 - [ ] Scratch-buffer helpers available for decode
 
-### P3: Benchmarks
+### P4: Benchmarks
 
 - [ ] Socket vs SHM benchmark for fixed and varlen workloads
 - [ ] Observer overhead benchmark under sustained load
@@ -149,4 +173,4 @@ Each priority tier produces:
 
 ## Transition Rule
 
-P0 is complete and merged to `main`. The next tier to implement is **P1: Socket Disconnect/Reconnect Resilience**, which should begin with a dedicated spec document followed by an implementation plan.
+P0 (runtime allocation) is complete and merged to `main`. The next tier to implement is **P0: Producer Backpressure**, with the plan already written at [2026-05-28-producer-backpressure.md](../plans/2026-05-28-producer-backpressure.md). After producer backpressure, proceed to **P2: Socket Disconnect/Reconnect Resilience**.
