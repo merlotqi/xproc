@@ -77,15 +77,9 @@ int main() {
   xproc::core::shm::unlink(path);
 
   // ---- setup: fixed channel carrying 16-byte messages ----
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = xproc::ipc::shm_size_for_data_capacity(16384);
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = 16;
-  opts.create_if_missing = true;
-
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
+  auto endpoints = xproc::ipc::make_fixed_channel(path, 16).create(16384);
+  auto producer = endpoints.open_producer();
+  auto consumer = endpoints.open_consumer();
   xproc::ipc::runtime runtime(consumer);
 
   // ---- start runtime on a dedicated thread with a 2-worker pool ----
