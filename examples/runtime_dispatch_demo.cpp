@@ -123,7 +123,7 @@ int main() {
   std::cout << "sending " << kExpected << " messages...\n\n";
 
   for (std::uint32_t i = 0; i < kExpected; ++i) {
-    struct __attribute__((packed)) {
+    struct {
       std::uint32_t id;
       std::uint32_t value;
       std::uint32_t pad[2]{};
