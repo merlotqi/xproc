@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <thread>
 #include <xproc/xproc.hpp>
 
 namespace {
@@ -14,9 +13,7 @@ std::string unique_path(const char* name) {
          std::to_string(xproc::platform::current_process_id());
 }
 
-xproc::ipc::transport_options fixed_opts(const std::string& path,
-                                         std::uint32_t item_size,
-                                         std::size_t capacity) {
+xproc::ipc::transport_options fixed_opts(const std::string& path, std::uint32_t item_size, std::size_t capacity) {
   xproc::ipc::transport_options opts;
   opts.path = path;
   opts.shm_size = xproc::ipc::shm_size_for_data_capacity(capacity);
@@ -62,6 +59,86 @@ TEST(ProducerBackpressure, WatermarksTrackFixedOccupancy) {
   ASSERT_TRUE(consumer.poll([](void*, std::uint32_t) {}));
   EXPECT_EQ(producer.used_bytes(), 0u);
   EXPECT_EQ(producer.available_bytes(), 64u);
+
+  xproc::core::shm::unlink(path);
+}
+
+// ---- fixed try_send / timeout / oversized / stride ----
+
+TEST(ProducerBackpressure, TrySendFixedReportsFullWithoutBlocking) {
+  const std::string path = unique_path("fixed_full");
+  xproc::core::shm::unlink(path);
+  auto opts = fixed_opts(path, 8, 32);
+
+  xproc::ipc::producer producer(opts);
+  const std::uint64_t a = 1;
+  const std::uint64_t b = 2;
+  const std::uint64_t c = 3;
+
+  EXPECT_EQ(producer.try_send_fixed_sized(&a, sizeof(a)), xproc::ipc::send_result::ok);
+  EXPECT_EQ(producer.try_send_fixed_sized(&b, sizeof(b)), xproc::ipc::send_result::ok);
+  EXPECT_EQ(producer.try_send_fixed_sized(&c, sizeof(c)), xproc::ipc::send_result::full);
+
+  xproc::core::shm::unlink(path);
+}
+
+TEST(ProducerBackpressure, FixedSendForTimesOutWhenRingStaysFull) {
+  const std::string path = unique_path("fixed_timeout");
+  xproc::core::shm::unlink(path);
+  auto opts = fixed_opts(path, 8, 32);
+
+  xproc::ipc::producer producer(opts);
+  const std::uint64_t a = 1;
+  const std::uint64_t b = 2;
+  const std::uint64_t c = 3;
+
+  ASSERT_EQ(producer.try_send_fixed_sized(&a, sizeof(a)), xproc::ipc::send_result::ok);
+  ASSERT_EQ(producer.try_send_fixed_sized(&b, sizeof(b)), xproc::ipc::send_result::ok);
+  EXPECT_EQ(producer.send_fixed_sized_for(&c, sizeof(c), std::chrono::milliseconds(2)),
+            xproc::ipc::send_result::timeout);
+
+  xproc::core::shm::unlink(path);
+}
+
+TEST(ProducerBackpressure, FixedOversizedMessageFailsImmediately) {
+  const std::string path = unique_path("fixed_oversized");
+  xproc::core::shm::unlink(path);
+  auto opts = fixed_opts(path, 64, 32);
+
+  xproc::ipc::producer producer(opts);
+  std::uint64_t value = 0;
+
+  EXPECT_EQ(producer.try_send_fixed_sized(&value, sizeof(value)), xproc::ipc::send_result::message_too_large);
+
+  xproc::core::shm::unlink(path);
+}
+
+TEST(ProducerBackpressure, SendFixedSizedUsesConfiguredSlotStride) {
+  const std::string path = unique_path("fixed_stride");
+  xproc::core::shm::unlink(path);
+  auto opts = fixed_opts(path, 16, 48);
+
+  xproc::ipc::producer producer(opts);
+  xproc::ipc::consumer consumer(opts);
+
+  const std::uint32_t one = 0x11111111u;
+  const std::uint32_t two = 0x22222222u;
+  ASSERT_EQ(producer.try_send_fixed_sized(&one, sizeof(one)), xproc::ipc::send_result::ok);
+  ASSERT_EQ(producer.try_send_fixed_sized(&two, sizeof(two)), xproc::ipc::send_result::ok);
+
+  std::uint32_t seen_one = 0;
+  std::uint32_t seen_two = 0;
+  ASSERT_TRUE(consumer.poll([&](void* p, std::uint32_t len) {
+    EXPECT_EQ(len, 16u);
+    std::memcpy(&seen_one, p, sizeof(seen_one));
+  }));
+  ASSERT_TRUE(consumer.poll([&](void* p, std::uint32_t len) {
+    EXPECT_EQ(len, 16u);
+    std::memcpy(&seen_two, p, sizeof(seen_two));
+  }));
+
+  EXPECT_EQ(seen_one, one);
+  EXPECT_EQ(seen_two, two);
 
   xproc::core::shm::unlink(path);
 }

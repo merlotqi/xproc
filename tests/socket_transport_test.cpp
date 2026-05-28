@@ -120,17 +120,11 @@ bool spin_until(Predicate&& predicate, int iterations = 4000, int sleep_us = 200
 
 }  // namespace
 
-TEST(SocketTransport, VarlenTcpLoopbackIPv4) {
-  run_varlen_loopback("127.0.0.1");
-}
+TEST(SocketTransport, VarlenTcpLoopbackIPv4) { run_varlen_loopback("127.0.0.1"); }
 
-TEST(SocketTransport, FixedTcpLoopbackIPv6) {
-  run_fixed_loopback("::1");
-}
+TEST(SocketTransport, FixedTcpLoopbackIPv6) { run_fixed_loopback("::1"); }
 
-TEST(SocketTransport, VarlenTcpLoopbackIpv6BracketHost) {
-  run_varlen_loopback("[::1]");
-}
+TEST(SocketTransport, VarlenTcpLoopbackIpv6BracketHost) { run_varlen_loopback("[::1]"); }
 
 TEST(SocketTransport, ReconnectAfterPeerDisconnect) {
   try {

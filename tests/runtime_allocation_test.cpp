@@ -39,18 +39,19 @@ TEST(RuntimeAllocation, ReuseBufferInlineExecutor) {
   std::atomic<int> count{0};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t* data, std::size_t len) {
-             EXPECT_EQ(len, 4u);
-             std::uint32_t v = 0;
-             std::memcpy(&v, data, sizeof(v));
-             EXPECT_EQ(v, 0xDEADBEEFu);
-             ++count;
-             if (count.load() >= 3) {
-               rt.stop();
-             }
-           },
-           xproc::ipc::copy_policy::reuse_buffer);
+    rt.run(
+        executor,
+        [&](const std::uint8_t* data, std::size_t len) {
+          EXPECT_EQ(len, 4u);
+          std::uint32_t v = 0;
+          std::memcpy(&v, data, sizeof(v));
+          EXPECT_EQ(v, 0xDEADBEEFu);
+          ++count;
+          if (count.load() >= 3) {
+            rt.stop();
+          }
+        },
+        xproc::ipc::copy_policy::reuse_buffer);
   });
 
   prod.send_fixed<std::uint32_t>(0xDEADBEEFu);
@@ -93,16 +94,17 @@ TEST(RuntimeAllocation, ZeroCopyInlineExecutor) {
   std::atomic<bool> got{false};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t* data, std::size_t len) {
-             EXPECT_EQ(len, 4u);
-             std::uint32_t v = 0;
-             std::memcpy(&v, data, sizeof(v));
-             EXPECT_EQ(v, 0xCAFEBABEu);
-             got.store(true);
-             rt.stop();
-           },
-           xproc::ipc::copy_policy::zero_copy);
+    rt.run(
+        executor,
+        [&](const std::uint8_t* data, std::size_t len) {
+          EXPECT_EQ(len, 4u);
+          std::uint32_t v = 0;
+          std::memcpy(&v, data, sizeof(v));
+          EXPECT_EQ(v, 0xCAFEBABEu);
+          got.store(true);
+          rt.stop();
+        },
+        xproc::ipc::copy_policy::zero_copy);
   });
 
   prod.send_fixed<std::uint32_t>(0xCAFEBABEu);
@@ -121,13 +123,14 @@ TEST(RuntimeAllocation, SboSmallMessage) {
   std::atomic<bool> got{false};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t* data, std::size_t len) {
-             EXPECT_EQ(len, 4u);
-             got.store(true);
-             rt.stop();
-           },
-           xproc::ipc::copy_policy::sbo);
+    rt.run(
+        executor,
+        [&](const std::uint8_t* data, std::size_t len) {
+          EXPECT_EQ(len, 4u);
+          got.store(true);
+          rt.stop();
+        },
+        xproc::ipc::copy_policy::sbo);
   });
 
   prod.send_fixed<std::uint32_t>(0xBEEF1234u);
@@ -147,13 +150,14 @@ TEST(RuntimeAllocation, SboLargeMessageHeapFallback) {
   std::vector<std::uint8_t> payload(512, std::uint8_t{0xAB});
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t* data, std::size_t len) {
-             EXPECT_EQ(len, 512u);
-             got.store(true);
-             rt.stop();
-           },
-           xproc::ipc::copy_policy::sbo);
+    rt.run(
+        executor,
+        [&](const std::uint8_t* data, std::size_t len) {
+          EXPECT_EQ(len, 512u);
+          got.store(true);
+          rt.stop();
+        },
+        xproc::ipc::copy_policy::sbo);
   });
 
   prod.send_fixed_bytes(payload.data(), 512);
@@ -183,8 +187,7 @@ TEST(RuntimeAllocation, RunBatchedCollectsMultipleMessages) {
             rt.stop();
           }
         },
-        4,
-        xproc::ipc::copy_policy::reuse_buffer);
+        4, xproc::ipc::copy_policy::reuse_buffer);
   });
 
   for (int i = 0; i < 5; ++i) {
@@ -215,8 +218,7 @@ TEST(RuntimeAllocation, BackpressureCallbackFires) {
           got_msg.store(true);
           rt.stop();
         },
-        [&](std::size_t queued) { bp_count.store(queued); },
-        xproc::ipc::copy_policy::reuse_buffer);
+        [&](std::size_t queued) { bp_count.store(queued); }, xproc::ipc::copy_policy::reuse_buffer);
   });
 
   prod.send_fixed<std::uint64_t>(42u);
@@ -236,13 +238,14 @@ TEST(RuntimeAllocation, ReuseBufferViaInterface) {
   std::atomic<bool> got{false};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t* data, std::size_t len) {
-             EXPECT_EQ(len, 4u);
-             got.store(true);
-             rt.stop();
-           },
-           xproc::ipc::copy_policy::reuse_buffer);
+    rt.run(
+        executor,
+        [&](const std::uint8_t* data, std::size_t len) {
+          EXPECT_EQ(len, 4u);
+          got.store(true);
+          rt.stop();
+        },
+        xproc::ipc::copy_policy::reuse_buffer);
   });
 
   prod.send_fixed<std::uint32_t>(0xFEEDF00Du);
@@ -267,13 +270,14 @@ TEST(RuntimeAllocation, ReuseBufferVarlen) {
   std::atomic<bool> got{false};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t* data, std::size_t len) {
-             EXPECT_EQ(len, 11u);
-             got.store(true);
-             rt.stop();
-           },
-           xproc::ipc::copy_policy::reuse_buffer);
+    rt.run(
+        executor,
+        [&](const std::uint8_t* data, std::size_t len) {
+          EXPECT_EQ(len, 11u);
+          got.store(true);
+          rt.stop();
+        },
+        xproc::ipc::copy_policy::reuse_buffer);
   });
 
   prod.send_varlen("hello world", 11);

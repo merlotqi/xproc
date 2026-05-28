@@ -13,7 +13,8 @@
 
 namespace {
 
-void init_header(xproc::core::control_block& h, std::uint64_t cap, std::uint32_t layout_type, std::uint32_t data_align) {
+void init_header(xproc::core::control_block& h, std::uint64_t cap, std::uint32_t layout_type,
+                 std::uint32_t data_align) {
   using lm = xproc::core::layout_manager;
   h.magic = lm::expected_magic;
   h.version_major = lm::version_major;

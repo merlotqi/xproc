@@ -22,9 +22,7 @@ class ringbuffer_view {
     return static_cast<std::size_t>(used > cap ? cap : used);
   }
 
-  inline std::size_t available_bytes() const {
-    return capacity() - used_bytes();
-  }
+  inline std::size_t available_bytes() const { return capacity() - used_bytes(); }
 
   inline double fill_ratio() const {
     const auto cap = capacity();

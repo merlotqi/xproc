@@ -30,8 +30,8 @@
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/iringbuffer.hpp>
-#include <xproc/ringbuffer/ringbuffer_error.hpp>
 #include <xproc/ringbuffer/reserve_result.hpp>
+#include <xproc/ringbuffer/ringbuffer_error.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
 #include <xproc/ringbuffer/varlen_writer.hpp>
 
