@@ -7,7 +7,7 @@ consumption, see [INSTALL.md](INSTALL.md).
 
 - C++17 compatible compiler
 - CMake 3.14 or later
-- On Linux: POSIX shared memory support
+- On Linux/macOS: POSIX shared memory support
 - On Windows: a 64-bit toolchain is recommended
 
 Optional dependencies:
@@ -88,6 +88,10 @@ cmake --build build
 
 Notable examples:
 
+- `xproc_fixed_channel_inprocess`
+- `xproc_varlen_channel_inprocess`
+- `xproc_mpsc_fan_in_demo`
+- `xproc_spmc_fan_out_demo`
 - `xproc_ipc_taskflow_runtime_demo`
 - `xproc_ipc_taskflow_pipeline_demo`
 

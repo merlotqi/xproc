@@ -1,7 +1,10 @@
 const assert = require("node:assert/strict") as typeof import("node:assert/strict");
 const test = require("node:test") as typeof import("node:test");
+const timers = require("node:timers/promises");
 
 const xproc = require("../index.js") as XprocModule;
+
+const delay = timers.setTimeout as (ms: number) => Promise<void>;
 
 let shmSequence = 0;
 
@@ -55,6 +58,78 @@ test("high-level shm fixed create/attach infers manifest fields", () => {
     assert.equal(attachedObserverOptions.schemaId, 0x1234n);
     assert.equal(attachedConsumerOptions.creatorTimestampNs, 0x1122334455667788n);
     assert.equal(attachedObserverOptions.creatorFlags, 0x8877665544332211n);
+  } finally {
+    observer.close();
+    consumer.close();
+    producer.close();
+    cleanupShm(path);
+  }
+});
+
+test("high-level shm consumer waitAsync resolves without blocking the event loop", async () => {
+  const path = uniqueShmPath("wait_async");
+  cleanupShm(path);
+
+  const created = xproc.shm.createFixedChannel({
+    path,
+    itemSize: 4,
+    dataCapacity: 4096n,
+  });
+
+  const producer = created.openProducer();
+  const consumer = xproc.shm.attachFixedChannel({ path }).openConsumer();
+
+  try {
+    let timerObserved = false;
+    const waiting = consumer.waitAsync();
+    const timer = delay(5).then(() => {
+      timerObserved = true;
+    });
+
+    await timer;
+    assert.equal(timerObserved, true);
+
+    producer.sendFixedSized(Buffer.from([5, 6, 7, 8]));
+    await waiting;
+
+    const payload = consumer.pollCopy();
+    assert.ok(payload);
+    assert.deepEqual([...Buffer.from(payload as Uint8Array)], [5, 6, 7, 8]);
+  } finally {
+    consumer.close();
+    producer.close();
+    cleanupShm(path);
+  }
+});
+
+test("high-level shm pollCopyInto and peekCopyInto copy into caller-owned buffers", () => {
+  const path = uniqueShmPath("copy_into");
+  cleanupShm(path);
+
+  const created = xproc.shm.createFixedChannel({
+    path,
+    itemSize: 4,
+    dataCapacity: 4096n,
+  });
+
+  const producer = created.openProducer();
+  const consumer = xproc.shm.attachFixedChannel({ path }).openConsumer();
+  const observer = xproc.shm.attachFixedChannel({ path }).openObserver();
+
+  try {
+    producer.sendFixedSized(Buffer.from([9, 10, 11, 12]));
+
+    const observed = Buffer.alloc(4);
+    assert.equal(observer.peekCopyInto(observed), 4);
+    assert.deepEqual([...observed], [9, 10, 11, 12]);
+
+    const consumed = Buffer.alloc(4);
+    assert.equal(consumer.pollCopyInto(consumed), 4);
+    assert.deepEqual([...consumed], [9, 10, 11, 12]);
+    assert.equal(consumer.pollCopyInto(consumed), null);
+
+    producer.sendFixedSized(Buffer.from([1, 2, 3, 4]));
+    assert.throws(() => consumer.pollCopyInto(Buffer.alloc(2)), /buffer too small/i);
   } finally {
     observer.close();
     consumer.close();

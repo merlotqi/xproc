@@ -64,6 +64,9 @@ from typing import Final
 BytesLike = bytes | bytearray | memoryview | str
 """Type alias for values accepted by send methods: bytes, bytearray, memoryview, or str."""
 
+WritableBuffer = bytearray | memoryview
+"""Mutable byte buffer accepted by copy-into receive methods."""
+
 
 class XprocError(RuntimeError):
     """Exception raised for xproc transport and layout failures.
@@ -379,6 +382,14 @@ class Consumer:
             available. Call :meth:`wait` first to block until data arrives.
         """
         ...
+    def poll_copy_into(self, buffer: WritableBuffer) -> int | None:
+        """Non-blocking read into a caller-owned mutable buffer.
+
+        Returns the number of bytes written, or ``None`` if no message is
+        currently available. Raises :class:`ValueError` if ``buffer`` is too
+        small for the pending payload.
+        """
+        ...
     def wait(self) -> None:
         """Block until data is available or the transport wakes the consumer.
 
@@ -442,6 +453,14 @@ class Observer:
             The payload as ``bytes``, or ``None`` if no message is currently
             available. Unlike :meth:`Consumer.poll_copy`, the message remains
             visible to subsequent peek calls and the consumer.
+        """
+        ...
+    def peek_copy_into(self, buffer: WritableBuffer) -> int | None:
+        """Peek into a caller-owned mutable buffer without consuming.
+
+        Returns the number of bytes written, or ``None`` if no message is
+        currently visible. Raises :class:`ValueError` if ``buffer`` is too small
+        for the latest payload.
         """
         ...
     def __enter__(self) -> Observer: ...

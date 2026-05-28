@@ -18,7 +18,6 @@ namespace {
 
 constexpr const char* kChildFlag = "--pc-varlen-child";
 constexpr std::size_t kDataCapacity = 32768;
-constexpr std::size_t kShmSize = xproc::ipc::shm_size_for_data_capacity(kDataCapacity);
 
 std::string make_message(int i) {
   const std::size_t burst = 12u + static_cast<std::size_t>((i % 5) * 11);
@@ -27,13 +26,8 @@ std::string make_message(int i) {
 }
 
 int run_child_writer(const std::string& shm_path) {
-  xproc::ipc::transport_options opts;
-  opts.path = shm_path;
-  opts.shm_size = xproc::ipc::infer_existing_shm_size;
-  opts.type = xproc::ipc::channel_type::varlen;
-  opts.create_if_missing = false;
-
-  xproc::ipc::producer producer(opts);
+  xproc::ipc::producer producer =
+      xproc::ipc::attach_varlen_channel(shm_path).open_producer();
 
   std::thread writer([&] {
     for (int i = 0; i <= 20; ++i) {
@@ -63,12 +57,8 @@ int main(int argc, char** argv) {
 
   xproc::core::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = kShmSize;
-  opts.type = xproc::ipc::channel_type::varlen;
-  opts.create_if_missing = true;
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_varlen_channel(path).create(kDataCapacity);
+  xproc::ipc::consumer consumer = channel.open_consumer();
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, path});

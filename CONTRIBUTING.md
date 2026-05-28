@@ -9,7 +9,7 @@ Thanks for contributing.
 - C++17 compiler
 - CMake 3.14+
 - Ninja or Make
-- Linux or Windows
+- Linux, macOS, or Windows
 
 Optional:
 
@@ -55,7 +55,7 @@ cmake --build build --target xproc_run_benchmarks
 
 - Keep changes focused and minimal.
 - Add or update tests for behavior changes.
-- Preserve Linux and Windows compatibility.
+- Preserve Linux, macOS, and Windows compatibility.
 - Update docs (`README.md`, `docs/*.rst`) when APIs or build flags change.
 - Keep benchmark changes reproducible and avoid noisy environmental assumptions.
 

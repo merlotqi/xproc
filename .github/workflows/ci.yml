@@ -43,6 +43,42 @@ jobs:
         working-directory: node
         run: npm run verify:pack
 
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: node/package-lock.json
+      - name: Install Node binding deps
+        working-directory: node
+        run: npm ci
+      - name: Typecheck Node package
+        working-directory: node
+        run: npm run typecheck
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Test Node package
+        working-directory: node
+        run: npm test
+      - name: Stage macOS prebuild
+        working-directory: node
+        run: npm run stage:prebuild -- --source ../build/node/xproc.node
+      - name: Assert packaged file list
+        working-directory: node
+        run: npm run assert:packlist
+      - name: Verify packed install
+        working-directory: node
+        run: npm run verify:pack
+
   build-windows:
     runs-on: windows-latest
     steps:

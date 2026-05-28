@@ -132,15 +132,10 @@ int main() {
             << "  Shared memory path:  " << shm_path << "\n"
             << "  Sample count:        " << kTelemetryMax << " completion events\n\n";
 
-  xproc::ipc::transport_options channel_opts;
-  channel_opts.path = shm_path;
-  channel_opts.shm_size = sizeof(xproc::core::control_block) + 32 * 1024;
-  channel_opts.type = xproc::ipc::channel_type::fixed;
-  channel_opts.item_size = sizeof(std::uint32_t);
-  channel_opts.create_if_missing = true;
-
-  xproc::ipc::producer producer(channel_opts);
-  xproc::ipc::consumer consumer(channel_opts);
+  constexpr std::size_t kTelemetryCapacity = 32 * 1024;
+  const auto channel = xproc::ipc::make_fixed_channel(shm_path, sizeof(std::uint32_t)).create(kTelemetryCapacity);
+  xproc::ipc::producer producer = channel.open_producer();
+  xproc::ipc::consumer consumer = channel.open_consumer();
 
   // Monitoring sink thread - collects telemetry samples
   std::thread sink_thread([&] {

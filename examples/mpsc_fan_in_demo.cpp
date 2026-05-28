@@ -25,25 +25,21 @@ int main() {
 
   xproc::shm::shm::unlink(path);
 
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = sizeof(xproc::core::control_block) + 256 * 1024;
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.create_if_missing = true;
+  constexpr std::size_t kDataCapacity = 256 * 1024;
 
   std::cout << "Transport (shared memory):\n"
-            << "  path:              " << opts.path << "\n"
-            << "  shm_size:          " << opts.shm_size << " bytes\n"
+            << "  path:              " << path << "\n"
+            << "  shm_size:          " << xproc::ipc::shm_size_for_data_capacity(kDataCapacity) << " bytes\n"
             << "  channel_type:      fixed\n"
-            << "  item_size:         " << opts.item_size << " bytes (uint32_t payload)\n"
+            << "  item_size:         " << sizeof(std::uint32_t) << " bytes (uint32_t payload)\n"
             << "Workload:\n"
             << "  producer_threads:  " << kProducerThreads << "\n"
             << "  items_per_thread:  " << kItemsPerProducer << "\n"
             << "  total_items:       " << kTotalItems << " (values 1.." << kTotalItems << ")\n\n";
 
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
+  const auto channel = xproc::ipc::make_fixed_channel(path, sizeof(std::uint32_t)).create(kDataCapacity);
+  xproc::ipc::producer producer = channel.open_producer();
+  xproc::ipc::consumer consumer = channel.open_consumer();
 
   std::cout << "Phase 1 — fan-in to the ring:\n"
             << "  - Start one fan-in thread (sole ipc::producer).\n"

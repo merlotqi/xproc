@@ -259,6 +259,36 @@ py::object peek_copy_impl(xproc_c_observer* handle, const char* context) {
   return py::bytes(payload);
 }
 
+py::object copy_status_to_python(xproc_c_status status, std::uint32_t bytes_written, const char* context) {
+  if (status == XPROC_C_STATUS_AGAIN) {
+    return py::none();
+  }
+  if (status == XPROC_C_STATUS_BUFFER_TOO_SMALL) {
+    throw py::value_error(std::string(context) + ": destination buffer is too small; required at least " +
+                          std::to_string(bytes_written) + " bytes");
+  }
+  require_status_ok(context, status);
+  return py::int_(bytes_written);
+}
+
+py::object poll_copy_into_impl(xproc_c_consumer* handle, py::buffer buffer, const char* context) {
+  py::buffer_info info = buffer.request(true);
+  const std::size_t capacity = static_cast<std::size_t>(info.size) * static_cast<std::size_t>(info.itemsize);
+  std::uint32_t bytes_written = 0;
+  const xproc_c_status status = xproc_c_consumer_poll_copy(
+      handle, capacity == 0 ? nullptr : info.ptr, narrow_size(capacity, context), &bytes_written);
+  return copy_status_to_python(status, bytes_written, context);
+}
+
+py::object peek_copy_into_impl(xproc_c_observer* handle, py::buffer buffer, const char* context) {
+  py::buffer_info info = buffer.request(true);
+  const std::size_t capacity = static_cast<std::size_t>(info.size) * static_cast<std::size_t>(info.itemsize);
+  std::uint32_t bytes_written = 0;
+  const xproc_c_status status = xproc_c_observer_peek_copy(
+      handle, capacity == 0 ? nullptr : info.ptr, narrow_size(capacity, context), &bytes_written);
+  return copy_status_to_python(status, bytes_written, context);
+}
+
 const char* backend_name(xproc_c_backend backend) {
   switch (backend) {
     case XPROC_C_BACKEND_SHARED_MEMORY:
@@ -394,6 +424,11 @@ class consumer {
     return poll_copy_impl(handle_, "Consumer.poll_copy");
   }
 
+  py::object poll_copy_into(py::buffer buffer) {
+    require_open("Consumer.poll_copy_into");
+    return poll_copy_into_impl(handle_, buffer, "Consumer.poll_copy_into");
+  }
+
   void wait() {
     require_open("Consumer.wait");
     py::gil_scoped_release release;
@@ -468,6 +503,11 @@ class observer {
   py::object peek_copy() {
     require_open("Observer.peek_copy");
     return peek_copy_impl(handle_, "Observer.peek_copy");
+  }
+
+  py::object peek_copy_into(py::buffer buffer) {
+    require_open("Observer.peek_copy_into");
+    return peek_copy_into_impl(handle_, buffer, "Observer.peek_copy_into");
   }
 
  private:
@@ -610,6 +650,7 @@ PYBIND11_MODULE(_xproc_pybind, m) {
       .def("options", &consumer::options)
       .def("pending_len", &consumer::pending_len)
       .def("poll_copy", &consumer::poll_copy)
+      .def("poll_copy_into", &consumer::poll_copy_into)
       .def("wait", &consumer::wait)
       .def("socket_port", &consumer::socket_port)
       .def(
@@ -622,6 +663,7 @@ PYBIND11_MODULE(_xproc_pybind, m) {
       .def("options", &observer::options)
       .def("snapshot", &observer::get_snapshot)
       .def("peek_copy", &observer::peek_copy)
+      .def("peek_copy_into", &observer::peek_copy_into)
       .def(
           "__enter__", [](observer& self) -> observer& { return self; }, py::return_value_policy::reference_internal)
       .def("__exit__", [](observer& self, py::object, py::object, py::object) { self.close(); });

@@ -10,6 +10,7 @@
 #include <xproc/core/shm_layout.hpp>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/endpoint.hpp>
+#include <xproc/ipc/shm_builders.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
 #include "process.hpp"
@@ -21,15 +22,7 @@ constexpr const char* kChildFlag = "--ping-pong-child";
 int child_main(const char* shm_path) {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-  xproc::ipc::transport_options opts;
-  opts.path = shm_path;
-  opts.shm_size = xproc::ipc::shm_size_for_data_capacity(65536);
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.data_align = 8;
-  opts.create_if_missing = false;
-
-  xproc::ipc::consumer ch(opts);
+  xproc::ipc::consumer ch = xproc::ipc::attach_fixed_channel(shm_path).open_consumer();
   std::uint32_t last = 0;
   for (int i = 0; i < 100; ++i) {
     bool got = false;
@@ -68,21 +61,15 @@ int main(int argc, char** argv) {
     shm_path = argv[1];
   }
 
-  xproc::ipc::transport_options opts;
-  opts.path = shm_path;
-  opts.shm_size = xproc::ipc::shm_size_for_data_capacity(65536);
-  opts.type = xproc::ipc::channel_type::fixed;
-  opts.item_size = sizeof(std::uint32_t);
-  opts.data_align = 8;
-  opts.create_if_missing = true;
-
   xproc::core::shm::unlink(shm_path);
+  const auto channel =
+      xproc::ipc::make_fixed_channel(shm_path, sizeof(std::uint32_t)).with_data_align(8).create(65536);
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, shm_path});
 
   {
-    xproc::ipc::producer ch(opts);
+    xproc::ipc::producer ch = channel.open_producer();
     for (std::uint32_t i = 0; i < 100; ++i) {
       ch.send_fixed(i);
     }
