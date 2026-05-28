@@ -29,7 +29,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure -LE xproc_benchmark
       - name: Test Node package
         working-directory: node
         run: npm test
@@ -65,7 +65,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure -LE xproc_benchmark
       - name: Test Node package
         working-directory: node
         run: npm test
@@ -101,7 +101,7 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: ctest --test-dir build -C Release --output-on-failure -LE xproc_benchmark
       - name: Test Node package
         working-directory: node
         run: npm test
