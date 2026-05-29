@@ -53,8 +53,11 @@ class consumer_channel_interface {
     return poll_impl([&](void* p, std::uint32_t len) { std::forward<F>(handler)(p, len); });
   }
 
-  /// Called when poll returned false: block until new data or return after a short sleep (socket).
+  /// Called when poll returned false: block until new data, an interrupt, or a backend-specific wake condition.
   virtual void wait() = 0;
+
+  /// Interrupts a thread currently blocked in wait(). Backends that do not block in wait() may keep the default.
+  virtual void interrupt_wait() noexcept {}
 
  protected:
   virtual bool poll_impl(const std::function<void(void*, std::uint32_t)>& handler) = 0;

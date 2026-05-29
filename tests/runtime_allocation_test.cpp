@@ -2,10 +2,14 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstring>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
+#include <xproc/sync/atomic_wait.hpp>
 #include <xproc/xproc.hpp>
 
 namespace {
@@ -25,6 +29,167 @@ struct Fixture {
 
   ~Fixture() { xproc::core::shm::unlink(path); }
 };
+
+class BlockingInterfaceConsumer final : public xproc::ipc::consumer_channel_interface {
+ public:
+  const xproc::ipc::transport_options& options() const noexcept override { return opts_; }
+
+  void wait() override {
+    std::unique_lock<std::mutex> lock(mu_);
+    entered_wait_.store(true, std::memory_order_release);
+    cv_.notify_all();
+    cv_.wait(lock, [&] { return interrupted_; });
+  }
+
+  void interrupt_wait() noexcept override {
+    std::lock_guard<std::mutex> lock(mu_);
+    interrupted_ = true;
+    cv_.notify_all();
+  }
+
+  void request_exit_message() noexcept {
+    emit_exit_message_.store(true, std::memory_order_release);
+    interrupt_wait();
+  }
+
+  bool wait_entered_for(std::chrono::milliseconds timeout) {
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+      if (entered_wait_.load(std::memory_order_acquire)) {
+        return true;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return entered_wait_.load(std::memory_order_acquire);
+  }
+
+ protected:
+  bool poll_impl(const std::function<void(void*, std::uint32_t)>& handler) override {
+    if (emit_exit_message_.exchange(false, std::memory_order_acq_rel)) {
+      handler(&dummy_, 0);
+      return true;
+    }
+    return false;
+  }
+
+ private:
+  xproc::ipc::transport_options opts_{};
+  std::mutex mu_;
+  std::condition_variable cv_;
+  bool interrupted_{false};
+  std::atomic<bool> entered_wait_{false};
+  std::atomic<bool> emit_exit_message_{false};
+  std::uint8_t dummy_{0};
+};
+
+bool wait_for_true(const std::atomic<bool>& flag, std::chrono::milliseconds timeout) {
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  while (std::chrono::steady_clock::now() < deadline) {
+    if (flag.load(std::memory_order_acquire)) {
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  return flag.load(std::memory_order_acquire);
+}
+
+bool stop_fake_runtime_until_returned(xproc::ipc::runtime& rt, BlockingInterfaceConsumer& cons,
+                                      const std::atomic<bool>& returned, std::chrono::milliseconds timeout) {
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  while (std::chrono::steady_clock::now() < deadline) {
+    rt.stop();
+    cons.request_exit_message();
+    if (returned.load(std::memory_order_acquire)) {
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  rt.stop();
+  cons.request_exit_message();
+  return returned.load(std::memory_order_acquire);
+}
+
+class SharedHeaderInterfaceConsumer final : public xproc::ipc::consumer_channel_interface {
+ public:
+  const xproc::ipc::transport_options& options() const noexcept override { return opts_; }
+
+  xproc::core::control_block* shared_header() noexcept override { return &header_; }
+  const xproc::core::control_block* shared_header() const noexcept override { return &header_; }
+
+  void wait() override {
+    entered_wait_.store(true, std::memory_order_release);
+    const auto last_commit = header_.rb_meta.commit_seq.load(std::memory_order_acquire);
+    xproc::sync::atomic_wait(&header_.rb_meta.commit_seq, last_commit);
+  }
+
+  bool wait_entered_for(std::chrono::milliseconds timeout) const { return wait_for_true(entered_wait_, timeout); }
+
+  void pause_before_wait_snapshot() {
+    pause_before_wait_snapshot_.store(true, std::memory_order_release);
+    entered_wait_.store(false, std::memory_order_release);
+    std::lock_guard<std::mutex> lock(gate_mu_);
+    wait_snapshot_gate_open_ = false;
+  }
+
+  void release_wait_snapshot_gate() {
+    std::lock_guard<std::mutex> lock(gate_mu_);
+    wait_snapshot_gate_open_ = true;
+    gate_cv_.notify_all();
+  }
+
+  void force_wake() noexcept {
+    header_.rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
+    xproc::sync::atomic_notify_all(&header_.rb_meta.commit_seq);
+  }
+
+  void request_exit_message() noexcept {
+    emit_exit_message_.store(true, std::memory_order_release);
+    release_wait_snapshot_gate();
+    force_wake();
+  }
+
+ protected:
+  bool poll_impl(const std::function<void(void*, std::uint32_t)>& handler) override {
+    if (emit_exit_message_.exchange(false, std::memory_order_acq_rel)) {
+      handler(&dummy_, 0);
+      return true;
+    }
+    entered_wait_.store(true, std::memory_order_release);
+    if (pause_before_wait_snapshot_.exchange(false, std::memory_order_acq_rel)) {
+      std::unique_lock<std::mutex> lock(gate_mu_);
+      gate_cv_.wait(lock, [&] { return wait_snapshot_gate_open_; });
+    }
+    return false;
+  }
+
+ private:
+  xproc::ipc::transport_options opts_{};
+  xproc::core::control_block header_{};
+  std::atomic<bool> entered_wait_{false};
+  std::atomic<bool> emit_exit_message_{false};
+  std::atomic<bool> pause_before_wait_snapshot_{false};
+  std::mutex gate_mu_;
+  std::condition_variable gate_cv_;
+  bool wait_snapshot_gate_open_{false};
+  std::uint8_t dummy_{0};
+};
+
+bool stop_shared_header_runtime_until_returned(xproc::ipc::runtime& rt, SharedHeaderInterfaceConsumer& cons,
+                                               const std::atomic<bool>& returned,
+                                               std::chrono::milliseconds timeout) {
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  while (std::chrono::steady_clock::now() < deadline) {
+    rt.stop();
+    cons.request_exit_message();
+    if (returned.load(std::memory_order_acquire)) {
+      return true;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  rt.stop();
+  cons.request_exit_message();
+  return returned.load(std::memory_order_acquire);
+}
 
 }  // namespace
 
@@ -251,6 +416,101 @@ TEST(RuntimeAllocation, ReuseBufferViaInterface) {
   prod.send_fixed<std::uint32_t>(0xFEEDF00Du);
   rt_thread.join();
   EXPECT_TRUE(got.load());
+}
+
+TEST(RuntimeAllocation, StopInterruptsInterfaceWait) {
+  auto cons = std::make_shared<BlockingInterfaceConsumer>();
+  auto rt = std::make_shared<xproc::ipc::runtime>(*cons);
+  auto returned = std::make_shared<std::atomic<bool>>(false);
+
+  std::thread rt_thread([rt, cons, returned] {
+    auto executor = [](auto task) { task(); };
+    rt->run(executor, [rt](const std::uint8_t*, std::size_t) { rt->stop(); });
+    returned->store(true, std::memory_order_release);
+  });
+
+  const bool entered_wait = cons->wait_entered_for(std::chrono::milliseconds(250));
+  EXPECT_TRUE(entered_wait);
+  if (!entered_wait) {
+    const bool cleaned = stop_fake_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+    EXPECT_TRUE(cleaned);
+    rt_thread.join();
+    return;
+  }
+
+  rt->stop();
+  const bool returned_after_stop = wait_for_true(*returned, std::chrono::milliseconds(250));
+  bool cleaned = true;
+  if (!returned_after_stop) {
+    cleaned = stop_fake_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+  }
+  EXPECT_TRUE(cleaned);
+  rt_thread.join();
+  EXPECT_TRUE(returned_after_stop);
+}
+
+TEST(RuntimeAllocation, StopInterruptsSharedHeaderInterfaceWait) {
+  auto cons = std::make_shared<SharedHeaderInterfaceConsumer>();
+  auto rt = std::make_shared<xproc::ipc::runtime>(*cons);
+  auto returned = std::make_shared<std::atomic<bool>>(false);
+
+  std::thread rt_thread([rt, cons, returned] {
+    auto executor = [](auto task) { task(); };
+    rt->run(executor, [rt](const std::uint8_t*, std::size_t) { rt->stop(); });
+    returned->store(true, std::memory_order_release);
+  });
+
+  const bool entered_wait = cons->wait_entered_for(std::chrono::milliseconds(250));
+  EXPECT_TRUE(entered_wait);
+  if (!entered_wait) {
+    const bool cleaned = stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+    EXPECT_TRUE(cleaned);
+    rt_thread.join();
+    return;
+  }
+
+  rt->stop();
+  const bool returned_after_stop = wait_for_true(*returned, std::chrono::milliseconds(250));
+  bool cleaned = true;
+  if (!returned_after_stop) {
+    cleaned = stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+  }
+  EXPECT_TRUE(cleaned);
+  rt_thread.join();
+  EXPECT_TRUE(returned_after_stop);
+}
+
+TEST(RuntimeAllocation, StopBeforeSharedHeaderWaitSnapshotDoesNotHang) {
+  auto cons = std::make_shared<SharedHeaderInterfaceConsumer>();
+  auto rt = std::make_shared<xproc::ipc::runtime>(*cons);
+  auto returned = std::make_shared<std::atomic<bool>>(false);
+  cons->pause_before_wait_snapshot();
+
+  std::thread rt_thread([rt, cons, returned] {
+    auto executor = [](auto task) { task(); };
+    rt->run(executor, [rt](const std::uint8_t*, std::size_t) { rt->stop(); });
+    returned->store(true, std::memory_order_release);
+  });
+
+  const bool entered_wait = cons->wait_entered_for(std::chrono::milliseconds(250));
+  EXPECT_TRUE(entered_wait);
+  if (!entered_wait) {
+    const bool cleaned = stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+    EXPECT_TRUE(cleaned);
+    rt_thread.join();
+    return;
+  }
+
+  rt->stop();
+  cons->release_wait_snapshot_gate();
+  const bool returned_after_stop = wait_for_true(*returned, std::chrono::milliseconds(250));
+  bool cleaned = true;
+  if (!returned_after_stop) {
+    cleaned = stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+  }
+  EXPECT_TRUE(cleaned);
+  rt_thread.join();
+  EXPECT_TRUE(returned_after_stop);
 }
 
 // ---- varlen channel ----

@@ -136,6 +136,13 @@ class runtime {
       shm_->header()->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
       sync::atomic_notify_all(&shm_->header()->rb_meta.commit_seq);
     }
+    if (iface_ != nullptr) {
+      if (auto* header = iface_->shared_header(); header != nullptr) {
+        header->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
+        sync::atomic_notify_all(&header->rb_meta.commit_seq);
+      }
+      iface_->interrupt_wait();
+    }
   }
 
  private:
@@ -148,11 +155,28 @@ class runtime {
 
   void wait_for_data() {
     if (shm_ != nullptr && shm_->header() != nullptr) {
-      const uint32_t last_commit = shm_->header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      sync::atomic_wait(&shm_->header()->rb_meta.commit_seq, last_commit);
+      wait_for_shared_header(shm_->header());
     } else if (iface_ != nullptr) {
+      if (auto* header = iface_->shared_header(); header != nullptr) {
+        wait_for_shared_header(header);
+        return;
+      }
+      if (!running_.load(std::memory_order_acquire)) {
+        return;
+      }
       iface_->wait();
     }
+  }
+
+  void wait_for_shared_header(core::control_block* header) {
+    if (header == nullptr) {
+      return;
+    }
+    const uint32_t last_commit = header->rb_meta.commit_seq.load(std::memory_order_acquire);
+    if (!running_.load(std::memory_order_acquire)) {
+      return;
+    }
+    sync::atomic_wait(&header->rb_meta.commit_seq, last_commit);
   }
 
   // ---- dispatch helpers for channel* path ----
