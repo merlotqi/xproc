@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -174,6 +175,97 @@ TEST(SocketTransport, ReconnectAfterPeerDisconnect) {
     ASSERT_TRUE(spin_until([&]() { return poll_once(); }));
     ASSERT_EQ(observed.size(), 2u);
     EXPECT_EQ(observed[1], 0x33334444u);
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
+TEST(SocketTransport, ProducerReconnectClosesOldPeerAndSendsOnNewConnection) {
+  try {
+    xproc::ipc::transport_options co;
+    co.backend = xproc::ipc::transport_backend::socket;
+    co.socket_listen = true;
+    co.socket_port = 0;
+    co.type = xproc::ipc::channel_type::fixed;
+    co.item_size = sizeof(std::uint32_t);
+    co.socket_host.clear();
+    xproc::ipc::socket_consumer cons(co);
+
+    xproc::ipc::transport_options po;
+    po.backend = xproc::ipc::transport_backend::socket;
+    po.socket_listen = false;
+    po.socket_host = "127.0.0.1";
+    po.socket_port = cons.options().socket_port;
+    po.type = xproc::ipc::channel_type::fixed;
+    po.item_size = sizeof(std::uint32_t);
+    po.socket_connect_retries = 5;
+    po.socket_connect_retry_ms = 1;
+
+    xproc::ipc::socket_producer prod(po);
+    ASSERT_TRUE(prod.is_connected());
+
+    const std::uint32_t first = 0x10203040u;
+    prod.send_fixed_sized(&first, sizeof(first));
+
+    std::uint32_t actual = 0;
+    ASSERT_TRUE(spin_until([&] {
+      return cons.poll([&](void* p, std::uint32_t len) {
+        ASSERT_EQ(len, sizeof(actual));
+        std::memcpy(&actual, p, sizeof(actual));
+      });
+    }));
+    EXPECT_EQ(actual, first);
+
+    prod.reconnect();
+    ASSERT_TRUE(prod.is_connected());
+
+    const std::uint32_t second = 0xABCDEF12u;
+    prod.send_fixed_sized(&second, sizeof(second));
+
+    actual = 0;
+    ASSERT_TRUE(spin_until([&] {
+      return cons.poll([&](void* p, std::uint32_t len) {
+        ASSERT_EQ(len, sizeof(actual));
+        std::memcpy(&actual, p, sizeof(actual));
+      });
+    }));
+    EXPECT_EQ(actual, second);
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
+TEST(SocketTransport, TryReconnectReturnsFalseWithoutListener) {
+  try {
+    std::unique_ptr<xproc::ipc::socket_producer> prod;
+    std::uint16_t port = 0;
+
+    {
+      xproc::ipc::transport_options co;
+      co.backend = xproc::ipc::transport_backend::socket;
+      co.socket_listen = true;
+      co.socket_port = 0;
+      co.type = xproc::ipc::channel_type::fixed;
+      co.item_size = sizeof(std::uint32_t);
+      co.socket_host.clear();
+      xproc::ipc::socket_consumer cons(co);
+      port = cons.options().socket_port;
+
+      xproc::ipc::transport_options po;
+      po.backend = xproc::ipc::transport_backend::socket;
+      po.socket_listen = false;
+      po.socket_host = "127.0.0.1";
+      po.socket_port = port;
+      po.type = xproc::ipc::channel_type::fixed;
+      po.item_size = sizeof(std::uint32_t);
+      po.socket_connect_retries = 1;
+      po.socket_connect_retry_ms = 1;
+      prod = std::make_unique<xproc::ipc::socket_producer>(po);
+    }
+
+    ASSERT_NE(prod, nullptr);
+    EXPECT_FALSE(prod->try_reconnect());
+    EXPECT_FALSE(prod->is_connected());
   } catch (const std::runtime_error& ex) {
     skip_if_socket_unavailable(ex);
   }

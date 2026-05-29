@@ -147,7 +147,7 @@ void write_full_sock(sock_handle s, const void* data, std::size_t len) {
   const auto* p = static_cast<const std::uint8_t*>(data);
   std::size_t left = len;
   while (left > 0) {
-    const ssize_t r = ::send(s, p, left, 0);
+    const ssize_t r = ::send(s, p, left, send_no_signal_flags());
     if (r <= 0) {
       throw std::runtime_error("socket send failed");
     }
@@ -171,6 +171,15 @@ void read_exact_sock(sock_handle s, void* data, std::size_t len) {
 
 #endif
 
+void suppress_sigpipe(sock_handle s) noexcept {
+#if !defined(_WIN32) && defined(SO_NOSIGPIPE)
+  int yes = 1;
+  (void)::setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE, &yes, sizeof(yes));
+#else
+  (void)s;
+#endif
+}
+
 template <typename Attempt>
 sock_handle try_resolved_stream_socket(addrinfo* res, Attempt&& attempt) {
   for (int pass = 0; pass < 2; ++pass) {
@@ -183,6 +192,7 @@ sock_handle try_resolved_stream_socket(addrinfo* res, Attempt&& attempt) {
       if (is_invalid(s)) {
         continue;
       }
+      suppress_sigpipe(s);
       if (attempt(s, it)) {
         return s;
       }
@@ -285,6 +295,7 @@ sock_handle tcp_accept(sock_handle listen_fd) {
   if (is_invalid(c)) {
     throw std::runtime_error("socket accept failed");
   }
+  suppress_sigpipe(c);
   return c;
 }
 
@@ -334,6 +345,7 @@ socket_wait_interruptor::socket_wait_interruptor() {
   if (listener == INVALID_SOCKET) {
     fail();
   }
+  suppress_sigpipe(listener);
 
   set_reuse_addr(listener);
   sockaddr_in addr{};
@@ -354,6 +366,7 @@ socket_wait_interruptor::socket_wait_interruptor() {
   if (write_ == INVALID_SOCKET) {
     fail();
   }
+  suppress_sigpipe(write_);
   if (::connect(write_, reinterpret_cast<sockaddr*>(&addr), addr_len) != 0) {
     fail();
   }
@@ -364,6 +377,7 @@ socket_wait_interruptor::socket_wait_interruptor() {
   if (read_ == INVALID_SOCKET) {
     fail();
   }
+  suppress_sigpipe(read_);
 
   set_nonblocking(read_);
   set_nonblocking(write_);
@@ -450,6 +464,20 @@ socket_producer::socket_producer(const transport_options& opts) : opts_(opts) {
   if (opts_.backend != transport_backend::socket) {
     throw std::logic_error("socket_producer: backend must be socket");
   }
+  connect_with_retries();
+}
+
+socket_producer::~socket_producer() { close_sock(); }
+
+bool socket_producer::is_connected() const noexcept {
+#if defined(_WIN32)
+  return sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET);
+#else
+  return sock_ >= 0;
+#endif
+}
+
+void socket_producer::connect_with_retries() {
   const int max_retries = (opts_.socket_connect_retries > 0) ? opts_.socket_connect_retries : INT_MAX;
   const int retry_ms = (opts_.socket_connect_retry_ms > 0) ? opts_.socket_connect_retry_ms : 10;
   for (int attempt = 0; attempt < max_retries; ++attempt) {
@@ -469,14 +497,33 @@ socket_producer::socket_producer(const transport_options& opts) : opts_(opts) {
   }
 }
 
-socket_producer::~socket_producer() { close_sock(); }
+void socket_producer::reconnect() {
+  close_sock();
+  connect_with_retries();
+}
+
+bool socket_producer::try_reconnect() noexcept {
+  close_sock();
+  try {
+    connect_with_retries();
+    return true;
+  } catch (...) {
+    close_sock();
+    return false;
+  }
+}
 
 void socket_producer::write_full(const void* data, std::size_t len) {
+  try {
 #if defined(_WIN32)
-  write_full_sock(static_cast<SOCKET>(sock_), data, len);
+    write_full_sock(static_cast<SOCKET>(sock_), data, len);
 #else
-  write_full_sock(sock_, data, len);
+    write_full_sock(sock_, data, len);
 #endif
+  } catch (...) {
+    close_sock();
+    throw;
+  }
 }
 
 void socket_producer::send_fixed_bytes(const void* data, std::uint32_t payload_len) {
@@ -590,6 +637,7 @@ bool socket_consumer::ensure_peer_connected() {
   if (c == INVALID_SOCKET) {
     return false;
   }
+  suppress_sigpipe(c);
   // Replace existing (closed/stale) sock; keep listen_ open for potential reconnections.
   if (sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET)) {
     close_handle(static_cast<SOCKET>(sock_));
@@ -614,6 +662,7 @@ bool socket_consumer::ensure_peer_connected() {
   if (c < 0) {
     return false;
   }
+  suppress_sigpipe(c);
   // Replace existing (closed/stale) sock; keep listen_ open for potential reconnections.
   if (sock_ >= 0) {
     close_handle(sock_);

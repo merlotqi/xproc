@@ -22,6 +22,10 @@ class socket_producer final : public producer_channel_interface {
 
   const transport_options& options() const noexcept override { return opts_; }
 
+  bool is_connected() const noexcept;
+  void reconnect();
+  bool try_reconnect() noexcept;
+
   void send_fixed_bytes(const void* data, std::uint32_t payload_len) override;
   void send_fixed_sized(const void* data, std::uint32_t byte_length) override;
   void send_varlen(const void* data, std::uint32_t len) override;
@@ -34,6 +38,7 @@ class socket_producer final : public producer_channel_interface {
   int sock_{-1};
 #endif
   void close_sock() noexcept;
+  void connect_with_retries();
   void write_full(const void* data, std::size_t len);
 };
 
