@@ -25,6 +25,7 @@ From repository root:
 ./build/examples/xproc_varlen_channel_inprocess
 ./build/examples/xproc_observer_peek_demo
 ./build/examples/xproc_codec_roundtrip_demo
+./build/examples/xproc_socket_varlen_reconnect_demo
 ./build/examples/xproc_runtime_dispatch_demo
 ./build/examples/xproc_parent_child_counter_monitor
 ./build/examples/xproc_parent_child_struct_monitor
@@ -72,6 +73,9 @@ From repository root:
 
 - `xproc_codec_roundtrip_demo`  
   Typed messaging helpers (`send_encoded` + `poll_decoded`) using `raw_pod_codec`.
+
+- `xproc_socket_varlen_reconnect_demo`
+  Loopback TCP socket transport with variable-length payloads, explicit producer reconnect, and transparent consumer peer replacement.
 
 - `xproc_runtime_dispatch_demo`  
   `ipc_runtime` run loop with a simple inline executor and copied payload handler.

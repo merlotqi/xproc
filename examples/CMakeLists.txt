@@ -12,6 +12,7 @@ set(XPROC_EXAMPLE_FILES
     varlen_channel_inprocess.cpp
     observer_peek_demo.cpp
     codec_roundtrip_demo.cpp
+    socket_varlen_reconnect_demo.cpp
     runtime_dispatch_demo.cpp
     parent_child_counter_monitor.cpp
     parent_child_struct_monitor.cpp
