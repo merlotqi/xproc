@@ -54,6 +54,7 @@ Key deliverables:
 ### P2: Socket Disconnect / Reconnect Resilience
 
 **Spec:** [2026-05-29-socket-disconnect-reconnect-resilience-design.md](../specs/2026-05-29-socket-disconnect-reconnect-resilience-design.md)
+**Plan:** [2026-05-29-socket-disconnect-reconnect-resilience.md](../plans/2026-05-29-socket-disconnect-reconnect-resilience.md)
 
 The socket backend (`socket_producer`, `socket_consumer`) has functional connect/accept flows but reconnect semantics are not hardened. This tier covers:
 
