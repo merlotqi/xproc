@@ -4,6 +4,11 @@ include(CMakeFindDependencyMacro)
 
 if("@CMAKE_SYSTEM_NAME@" STREQUAL "Linux")
   find_dependency(Threads)
+  find_library(LIB_RT rt)
+elseif("@CMAKE_SYSTEM_NAME@" STREQUAL "Darwin")
+  # macOS: pthread and socket APIs are provided by libSystem — no extra dependencies.
+elseif("@CMAKE_SYSTEM_NAME@" STREQUAL "Windows")
+  # Windows: ws2_32 is resolved via the exported targets file — no extra find_dependency needed.
 endif()
 
 if(@XPROC_EXPORT_WITH_NLOHMANN_JSON@)

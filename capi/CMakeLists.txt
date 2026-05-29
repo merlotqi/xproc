@@ -16,6 +16,12 @@ endif()
 
 add_library(xproc::xproc_c ALIAS xproc_c)
 
+if(APPLE AND XPROC_BUILD_SHARED)
+    set_target_properties(xproc_c PROPERTIES
+        INSTALL_RPATH "@loader_path"
+    )
+endif()
+
 target_link_libraries(xproc_c PUBLIC xproc::xproc)
 target_compile_definitions(xproc_c PRIVATE XPROC_CAPI_PROJECT_VERSION="${PROJECT_VERSION}")
 
@@ -24,6 +30,20 @@ target_include_directories(xproc_c PUBLIC
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
+# Windows + DLL: align xproc_c.dll output directory with xproc.dll so both are
+# discoverable by test/example executables during gtest discovery and direct runs.
+if(WIN32 AND XPROC_BUILD_SHARED)
+    if(CMAKE_CONFIGURATION_TYPES)
+        foreach(_cfg IN LISTS CMAKE_CONFIGURATION_TYPES)
+            string(TOUPPER "${_cfg}" _CFG_UPPER)
+            set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_CFG_UPPER} "${CMAKE_BINARY_DIR}/${_cfg}")
+        endforeach()
+    else()
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}")
+    endif()
+endif()
+
+if(NOT XPROC_SKBUILD_WHEEL_INSTALL)
 install(
     TARGETS xproc_c
     EXPORT xprocTargets
@@ -34,3 +54,4 @@ install(
 )
 
 install(FILES ${XPROC_CAPI_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+endif()

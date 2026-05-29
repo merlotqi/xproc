@@ -40,6 +40,12 @@ if(XPROC_BUILD_SHARED AND WIN32)
     set_target_properties(xproc PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
+if(APPLE AND XPROC_BUILD_SHARED)
+    set_target_properties(xproc PROPERTIES
+        INSTALL_RPATH "@loader_path"
+    )
+endif()
+
 target_include_directories(xproc PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>"
     "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
@@ -54,6 +60,10 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
         set(XPROC_PKGCONFIG_LIBS_PRIVATE "-pthread")
     endif()
     target_link_libraries(xproc PUBLIC Threads::Threads)
+elseif(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    # macOS: pthread is part of libSystem — no extra link flags or pkg-config deps needed.
+elseif(WIN32)
+    # Windows: ws2_32 is handled as a CMake PUBLIC link dependency; pkg-config is uncommon here.
 endif()
 
 if(WIN32)

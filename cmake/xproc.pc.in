@@ -4,7 +4,7 @@ libdir=${exec_prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 
 Name: xproc
-Description: SPSC IPC ring buffer over shared memory (Linux/Windows)
+Description: SPSC IPC ring buffer over shared memory (Linux/Windows/MacOS)
 Version: @PROJECT_VERSION@
 Libs: -L${libdir} -lxproc
 Cflags: -I${includedir}
