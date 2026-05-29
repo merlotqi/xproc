@@ -35,10 +35,11 @@ Implemented:
 - Updated `runtime_dispatch_demo` with thread-pool executor and sbo policy
 - Fixed lost-wakeup race in `stop()` via `commit_seq.fetch_add(1)` before `notify_all`
 
-### P0: Producer Backpressure -- NEXT
+### P0: Producer Backpressure -- DONE (2026-05-28)
 
+**Spec:** [2026-05-28-producer-backpressure-design.md](../specs/2026-05-28-producer-backpressure-design.md)
 **Plan:** [2026-05-28-producer-backpressure.md](../plans/2026-05-28-producer-backpressure.md)
-**Branch:** `main` (to be implemented)
+**Branch:** `main` (commits `fbed8fc`..`3779092`)
 
 The current `send_fixed*` and `send_varlen` APIs block indefinitely when the ring buffer is full. Producers need non-blocking and bounded-time send options for responsive applications.
 
@@ -111,12 +112,12 @@ Current benchmarks cover the SHM hot path well but lack visibility into:
 
 ### P0: Producer backpressure
 
-- [ ] `try_send_fixed_sized` / `try_send_fixed_bytes` / `try_send_varlen` return immediately on full ring
-- [ ] `send_fixed_sized_for` / `send_fixed_bytes_for` / `send_varlen_for` respect timeout
-- [ ] Oversized messages fail immediately with `message_too_large` (no CAS)
-- [ ] `used_bytes()`, `available_bytes()`, `fill_ratio()`, `capacity_bytes()` exposed on producer
-- [ ] Fixed-channel slot stride reserves `item_size` not `byte_length`
-- [ ] Existing blocking sends unchanged
+- [x] `try_send_fixed_sized` / `try_send_fixed_bytes` / `try_send_varlen` return immediately on full ring
+- [x] `send_fixed_sized_for` / `send_fixed_bytes_for` / `send_varlen_for` respect timeout
+- [x] Oversized messages fail immediately with `message_too_large` (no CAS)
+- [x] `used_bytes()`, `available_bytes()`, `fill_ratio()`, `capacity_bytes()` exposed on producer
+- [x] Fixed-channel slot stride reserves `item_size` not `byte_length`
+- [x] Existing blocking sends unchanged
 
 ### P2: Socket resilience
 
@@ -173,4 +174,4 @@ Each priority tier produces:
 
 ## Transition Rule
 
-P0 (runtime allocation) is complete and merged to `main`. The next tier to implement is **P0: Producer Backpressure**, with the plan already written at [2026-05-28-producer-backpressure.md](../plans/2026-05-28-producer-backpressure.md). After producer backpressure, proceed to **P2: Socket Disconnect/Reconnect Resilience**.
+P0 (runtime allocation) and **P0: Producer Backpressure** are complete and merged to `main`. The next tier to implement is **P2: Socket Disconnect/Reconnect Resilience**.
