@@ -1,8 +1,15 @@
+#include <algorithm>
+#include <array>
+#include <cerrno>
 #include <chrono>
+#include <climits>
 #include <cstring>
+#include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 #include <xproc/ipc/options.hpp>
 #include <xproc/ipc/socket_channel.hpp>
 
@@ -72,6 +79,13 @@ void close_handle(sock_handle s) noexcept {
   }
 }
 
+void set_nonblocking(sock_handle s) noexcept {
+  u_long mode = 1;
+  (void)::ioctlsocket(s, FIONBIO, &mode);
+}
+
+int send_no_signal_flags() noexcept { return 0; }
+
 void write_full_sock(sock_handle s, const void* data, std::size_t len) {
   const auto* p = static_cast<const char*>(data);
   std::size_t left = len;
@@ -112,6 +126,21 @@ void close_handle(sock_handle s) noexcept {
   if (!is_invalid(s)) {
     ::close(s);
   }
+}
+
+void set_nonblocking(sock_handle s) noexcept {
+  const int flags = ::fcntl(s, F_GETFL, 0);
+  if (flags >= 0) {
+    (void)::fcntl(s, F_SETFL, flags | O_NONBLOCK);
+  }
+}
+
+int send_no_signal_flags() noexcept {
+#if defined(MSG_NOSIGNAL)
+  return MSG_NOSIGNAL;
+#else
+  return 0;
+#endif
 }
 
 void write_full_sock(sock_handle s, const void* data, std::size_t len) {
@@ -261,6 +290,151 @@ sock_handle tcp_accept(sock_handle listen_fd) {
 
 }  // namespace
 
+class socket_wait_interruptor {
+ public:
+  socket_wait_interruptor();
+  ~socket_wait_interruptor();
+
+  socket_wait_interruptor(const socket_wait_interruptor&) = delete;
+  socket_wait_interruptor& operator=(const socket_wait_interruptor&) = delete;
+
+#if defined(_WIN32)
+  SOCKET read_handle() const noexcept { return read_; }
+#else
+  int read_handle() const noexcept { return read_; }
+#endif
+
+  void notify() noexcept;
+  void drain() noexcept;
+
+ private:
+#if defined(_WIN32)
+  SOCKET read_{INVALID_SOCKET};
+  SOCKET write_{INVALID_SOCKET};
+#else
+  int read_{-1};
+  int write_{-1};
+#endif
+};
+
+#if defined(_WIN32)
+socket_wait_interruptor::socket_wait_interruptor() {
+  winsock_init();
+
+  SOCKET listener = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  auto fail = [&] {
+    close_handle(listener);
+    close_handle(read_);
+    close_handle(write_);
+    read_ = INVALID_SOCKET;
+    write_ = INVALID_SOCKET;
+    throw std::runtime_error("socket wake setup failed");
+  };
+
+  if (listener == INVALID_SOCKET) {
+    fail();
+  }
+
+  set_reuse_addr(listener);
+  sockaddr_in addr{};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.sin_port = 0;
+
+  if (::bind(listener, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0 || ::listen(listener, 1) != 0) {
+    fail();
+  }
+
+  int addr_len = sizeof(addr);
+  if (::getsockname(listener, reinterpret_cast<sockaddr*>(&addr), &addr_len) != 0) {
+    fail();
+  }
+
+  write_ = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  if (write_ == INVALID_SOCKET) {
+    fail();
+  }
+  if (::connect(write_, reinterpret_cast<sockaddr*>(&addr), addr_len) != 0) {
+    fail();
+  }
+
+  read_ = ::accept(listener, nullptr, nullptr);
+  close_handle(listener);
+  listener = INVALID_SOCKET;
+  if (read_ == INVALID_SOCKET) {
+    fail();
+  }
+
+  set_nonblocking(read_);
+  set_nonblocking(write_);
+}
+
+socket_wait_interruptor::~socket_wait_interruptor() {
+  close_handle(read_);
+  close_handle(write_);
+}
+
+void socket_wait_interruptor::notify() noexcept {
+  if (write_ == INVALID_SOCKET) {
+    return;
+  }
+  const char byte = 1;
+  (void)::send(write_, &byte, 1, 0);
+}
+
+void socket_wait_interruptor::drain() noexcept {
+  if (read_ == INVALID_SOCKET) {
+    return;
+  }
+  std::array<char, 64> buf{};
+  for (;;) {
+    const int r = ::recv(read_, buf.data(), static_cast<int>(buf.size()), 0);
+    if (r <= 0) {
+      return;
+    }
+  }
+}
+#else
+socket_wait_interruptor::socket_wait_interruptor() {
+  int fds[2] = {-1, -1};
+  if (::socketpair(AF_UNIX, SOCK_STREAM, 0, fds) != 0) {
+    throw std::runtime_error("socket wake setup failed");
+  }
+  read_ = fds[0];
+  write_ = fds[1];
+  suppress_sigpipe(static_cast<sock_handle>(read_));
+  suppress_sigpipe(static_cast<sock_handle>(write_));
+  set_nonblocking(read_);
+  set_nonblocking(write_);
+}
+
+socket_wait_interruptor::~socket_wait_interruptor() {
+  close_handle(read_);
+  close_handle(write_);
+}
+
+void socket_wait_interruptor::notify() noexcept {
+  if (write_ < 0) {
+    return;
+  }
+  const std::uint8_t byte = 1;
+  (void)::send(write_, &byte, sizeof(byte), send_no_signal_flags());
+}
+
+void socket_wait_interruptor::drain() noexcept {
+  if (read_ < 0) {
+    return;
+  }
+  std::array<std::uint8_t, 64> buf{};
+  for (;;) {
+    const ssize_t r = ::recv(read_, buf.data(), buf.size(), 0);
+    if (r <= 0) {
+      return;
+    }
+  }
+}
+#endif
+
 void socket_producer::close_sock() noexcept {
 #if defined(_WIN32)
   close_handle(static_cast<SOCKET>(sock_));
@@ -364,7 +538,8 @@ void socket_consumer::close_sock() noexcept {
 #endif
 }
 
-socket_consumer::socket_consumer(const transport_options& opts) : opts_(opts) {
+socket_consumer::socket_consumer(const transport_options& opts)
+    : opts_(opts), wake_(std::make_unique<socket_wait_interruptor>()) {
   validate_consumer_transport_options(opts_);
   if (opts_.backend != transport_backend::socket) {
     throw std::logic_error("socket_consumer: backend must be socket");
@@ -383,6 +558,14 @@ socket_consumer::socket_consumer(const transport_options& opts) : opts_(opts) {
 socket_consumer::~socket_consumer() {
   close_sock();
   close_listen();
+}
+
+bool socket_consumer::is_connected() const noexcept {
+#if defined(_WIN32)
+  return sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET);
+#else
+  return sock_ >= 0;
+#endif
 }
 
 bool socket_consumer::ensure_peer_connected() {
@@ -442,43 +625,57 @@ bool socket_consumer::ensure_peer_connected() {
 
 void socket_consumer::wait() {
 #if defined(_WIN32)
-  // If already connected, sleep briefly (no select on data socket needed).
-  if (sock_ != static_cast<std::uintptr_t>(INVALID_SOCKET)) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  const SOCKET wake = wake_ ? wake_->read_handle() : INVALID_SOCKET;
+  const SOCKET ready = is_connected() ? static_cast<SOCKET>(sock_) : static_cast<SOCKET>(listen_);
+  if (wake == INVALID_SOCKET && ready == INVALID_SOCKET) {
     return;
   }
-  if (is_invalid(static_cast<SOCKET>(listen_))) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    return;
-  }
-  // Wait on listen socket with select() timeout to avoid busy-spin.
-  const SOCKET ls = static_cast<SOCKET>(listen_);
   fd_set readfds;
   FD_ZERO(&readfds);
-  FD_SET(ls, &readfds);
-  TIMEVAL tv{};
-  tv.tv_sec = 0;
-  tv.tv_usec = 5000;  // 5 ms timeout
-  ::select(0, &readfds, nullptr, nullptr, &tv);
+  if (wake != INVALID_SOCKET) {
+    FD_SET(wake, &readfds);
+  }
+  if (ready != INVALID_SOCKET) {
+    FD_SET(ready, &readfds);
+  }
+  const int sel = ::select(0, &readfds, nullptr, nullptr, nullptr);
+  if (sel > 0 && wake != INVALID_SOCKET && FD_ISSET(wake, &readfds)) {
+    wake_->drain();
+  }
 #else
-  // If already connected, sleep briefly (no select on data socket needed).
-  if (sock_ >= 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  const int wake = wake_ ? wake_->read_handle() : -1;
+  const int ready = is_connected() ? sock_ : listen_;
+  if (wake < 0 && ready < 0) {
     return;
   }
-  if (listen_ < 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  for (;;) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    int nfds = 0;
+    if (wake >= 0) {
+      FD_SET(wake, &readfds);
+      nfds = std::max(nfds, wake + 1);
+    }
+    if (ready >= 0) {
+      FD_SET(ready, &readfds);
+      nfds = std::max(nfds, ready + 1);
+    }
+    const int sel = ::select(nfds, &readfds, nullptr, nullptr, nullptr);
+    if (sel < 0 && errno == EINTR) {
+      continue;
+    }
+    if (sel > 0 && wake >= 0 && FD_ISSET(wake, &readfds)) {
+      wake_->drain();
+    }
     return;
   }
-  // Wait on listen socket with select() timeout to avoid busy-spin.
-  fd_set readfds;
-  FD_ZERO(&readfds);
-  FD_SET(listen_, &readfds);
-  timeval tv{};
-  tv.tv_sec = 0;
-  tv.tv_usec = 5000;  // 5 ms timeout
-  ::select(listen_ + 1, &readfds, nullptr, nullptr, &tv);
 #endif
+}
+
+void socket_consumer::interrupt_wait() noexcept {
+  if (wake_) {
+    wake_->notify();
+  }
 }
 
 bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>& handler) {

@@ -229,6 +229,33 @@ TEST(SocketTransport, RuntimeProcessesSocketMessages) {
   }
 }
 
+TEST(SocketTransport, WaitBlocksUntilSocketConsumerIsInterrupted) {
+  try {
+    xproc::ipc::transport_options co;
+    co.backend = xproc::ipc::transport_backend::socket;
+    co.socket_listen = true;
+    co.socket_port = 0;
+    co.type = xproc::ipc::channel_type::varlen;
+    co.socket_host.clear();
+    xproc::ipc::socket_consumer cons(co);
+
+    std::atomic<bool> returned{false};
+    std::thread waiter([&] {
+      cons.wait();
+      returned.store(true, std::memory_order_release);
+    });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(25));
+    EXPECT_FALSE(returned.load(std::memory_order_acquire));
+
+    cons.interrupt_wait();
+    waiter.join();
+    EXPECT_TRUE(returned.load(std::memory_order_acquire));
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
 TEST(SocketTransport, FactoryCreatesShmAndSocket) {
   xproc::ipc::transport_options shm_o;
   shm_o.backend = xproc::ipc::transport_backend::shared_memory;

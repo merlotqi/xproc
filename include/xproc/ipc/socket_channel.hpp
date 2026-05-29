@@ -1,9 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <xproc/ipc/channel_interface.hpp>
 
 namespace xproc::ipc {
+
+class socket_wait_interruptor;
 
 // TCP framing: fixed channel sends exactly item_size bytes per message; variable sends uint32_t LE len + payload.
 // Producer connect resolves IPv4 / IPv6 via getaddrinfo(AF_UNSPEC). Consumer listen prefers an IPv6 socket with
@@ -44,13 +47,16 @@ class socket_consumer final : public consumer_channel_interface {
 
   const transport_options& options() const noexcept override { return opts_; }
 
+  bool is_connected() const noexcept;
   void wait() override;
+  void interrupt_wait() noexcept override;
 
  protected:
   bool poll_impl(const std::function<void(void*, std::uint32_t)>& handler) override;
 
  private:
   transport_options opts_;
+  std::unique_ptr<socket_wait_interruptor> wake_;
 #if defined(_WIN32)
   std::uintptr_t listen_{static_cast<std::uintptr_t>(-1)};
   std::uintptr_t sock_{static_cast<std::uintptr_t>(-1)};
