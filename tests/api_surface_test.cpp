@@ -6,6 +6,7 @@
 #include <cstring>
 #include <string>
 #include <thread>
+#include <type_traits>
 #include <xproc/xproc.hpp>
 
 TEST(ApiSurface, PlatformInfoAndProcessId) {
@@ -375,4 +376,88 @@ TEST(ApiSurface, DirectTransportOptionsPersistCreatorMetadataOnCreateAndAttach) 
   EXPECT_EQ(observer.header()->creator_flags, creator_opts.creator_flags);
 
   xproc::core::shm::unlink(path);
+}
+
+TEST(ApiSurface, SocketBuildersProduceExpectedOptions) {
+  const auto varlen_listener = xproc::ipc::listen_varlen_socket();
+  const auto varlen_listener_opts = varlen_listener.options();
+  EXPECT_EQ(varlen_listener_opts.backend, xproc::ipc::transport_backend::socket);
+  EXPECT_EQ(varlen_listener_opts.type, xproc::ipc::channel_type::varlen);
+  EXPECT_TRUE(varlen_listener_opts.socket_listen);
+  EXPECT_TRUE(varlen_listener_opts.socket_host.empty());
+  EXPECT_EQ(varlen_listener_opts.socket_port, 0u);
+  EXPECT_EQ(varlen_listener_opts.item_size, 0u);
+
+  const auto fixed_listener_opts = xproc::ipc::listen_fixed_socket(sizeof(std::uint32_t))
+                                       .with_port(12345)
+                                       .options();
+  EXPECT_EQ(fixed_listener_opts.backend, xproc::ipc::transport_backend::socket);
+  EXPECT_EQ(fixed_listener_opts.type, xproc::ipc::channel_type::fixed);
+  EXPECT_TRUE(fixed_listener_opts.socket_listen);
+  EXPECT_TRUE(fixed_listener_opts.socket_host.empty());
+  EXPECT_EQ(fixed_listener_opts.socket_port, 12345u);
+  EXPECT_EQ(fixed_listener_opts.item_size, sizeof(std::uint32_t));
+
+  const auto varlen_connector_opts = xproc::ipc::connect_varlen_socket("127.0.0.1", 54321)
+                                         .with_connect_retries(7)
+                                         .with_connect_retry_ms(3)
+                                         .options();
+  EXPECT_EQ(varlen_connector_opts.backend, xproc::ipc::transport_backend::socket);
+  EXPECT_EQ(varlen_connector_opts.type, xproc::ipc::channel_type::varlen);
+  EXPECT_FALSE(varlen_connector_opts.socket_listen);
+  EXPECT_EQ(varlen_connector_opts.socket_host, "127.0.0.1");
+  EXPECT_EQ(varlen_connector_opts.socket_port, 54321u);
+  EXPECT_EQ(varlen_connector_opts.item_size, 0u);
+  EXPECT_EQ(varlen_connector_opts.socket_connect_retries, 7);
+  EXPECT_EQ(varlen_connector_opts.socket_connect_retry_ms, 3);
+
+  const auto fixed_connector_opts = xproc::ipc::connect_fixed_socket("::1", 4444, sizeof(std::uint64_t)).options();
+  EXPECT_EQ(fixed_connector_opts.backend, xproc::ipc::transport_backend::socket);
+  EXPECT_EQ(fixed_connector_opts.type, xproc::ipc::channel_type::fixed);
+  EXPECT_FALSE(fixed_connector_opts.socket_listen);
+  EXPECT_EQ(fixed_connector_opts.socket_host, "::1");
+  EXPECT_EQ(fixed_connector_opts.socket_port, 4444u);
+  EXPECT_EQ(fixed_connector_opts.item_size, sizeof(std::uint64_t));
+}
+
+TEST(ApiSurface, SocketBuildersRejectInvalidOptions) {
+  EXPECT_THROW((void)xproc::ipc::listen_fixed_socket(0).options(), std::invalid_argument);
+  EXPECT_THROW((void)xproc::ipc::connect_fixed_socket("127.0.0.1", 1234, 0).options(), std::invalid_argument);
+  EXPECT_THROW((void)xproc::ipc::connect_varlen_socket("", 1234).options(), std::invalid_argument);
+  EXPECT_THROW((void)xproc::ipc::connect_varlen_socket("127.0.0.1", 0).options(), std::invalid_argument);
+  EXPECT_THROW((void)xproc::ipc::connect_varlen_socket("127.0.0.1", 1234).with_connect_retries(-1).options(),
+               std::invalid_argument);
+  EXPECT_THROW((void)xproc::ipc::connect_varlen_socket("127.0.0.1", 1234).with_connect_retry_ms(-1).options(),
+               std::invalid_argument);
+}
+
+TEST(ApiSurface, SocketBuildersOpenSpecificEndpointsAndRoundTrip) {
+  try {
+    auto consumer = xproc::ipc::listen_varlen_socket().open_consumer();
+    auto producer = xproc::ipc::connect_varlen_socket("127.0.0.1", consumer.options().socket_port)
+                        .with_connect_retries(20)
+                        .with_connect_retry_ms(1)
+                        .open_producer();
+
+    static_assert(std::is_same_v<decltype(consumer), xproc::ipc::socket_consumer>);
+    static_assert(std::is_same_v<decltype(producer), xproc::ipc::socket_producer>);
+
+    const std::string expected = "socket-builder-roundtrip";
+    producer.send_varlen(expected.data(), static_cast<std::uint32_t>(expected.size()));
+
+    std::string actual;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (actual.empty() && std::chrono::steady_clock::now() < deadline) {
+      const bool got = consumer.poll([&](void* p, std::uint32_t len) {
+        actual.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      });
+      if (!got) {
+        consumer.wait();
+      }
+    }
+
+    EXPECT_EQ(actual, expected);
+  } catch (const std::runtime_error& ex) {
+    GTEST_SKIP() << "socket transport unavailable in this environment: " << ex.what();
+  }
 }
