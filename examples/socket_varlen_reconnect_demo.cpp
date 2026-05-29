@@ -1,7 +1,6 @@
 // Socket variable-length reconnect example (single process, loopback TCP).
 #include <chrono>
 #include <cstdint>
-#include <cstring>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -10,28 +9,6 @@
 #include <xproc/xproc.hpp>
 
 namespace {
-
-xproc::ipc::transport_options make_socket_consumer_options() {
-  xproc::ipc::transport_options opts;
-  opts.backend = xproc::ipc::transport_backend::socket;
-  opts.type = xproc::ipc::channel_type::varlen;
-  opts.socket_listen = true;
-  opts.socket_port = 0;
-  opts.socket_host.clear();
-  return opts;
-}
-
-xproc::ipc::transport_options make_socket_producer_options(std::uint16_t port) {
-  xproc::ipc::transport_options opts;
-  opts.backend = xproc::ipc::transport_backend::socket;
-  opts.type = xproc::ipc::channel_type::varlen;
-  opts.socket_listen = false;
-  opts.socket_host = "127.0.0.1";
-  opts.socket_port = port;
-  opts.socket_connect_retries = 50;
-  opts.socket_connect_retry_ms = 2;
-  return opts;
-}
 
 bool poll_until(xproc::ipc::socket_consumer& consumer, const std::string& expected) {
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
@@ -69,8 +46,11 @@ bool wait_until_consumer_drops_stale_peer(xproc::ipc::socket_consumer& consumer)
 
 int main() {
   try {
-    xproc::ipc::socket_consumer consumer(make_socket_consumer_options());
-    xproc::ipc::socket_producer producer(make_socket_producer_options(consumer.options().socket_port));
+    auto consumer = xproc::ipc::listen_varlen_socket().open_consumer();
+    auto producer = xproc::ipc::connect_varlen_socket("127.0.0.1", consumer.options().socket_port)
+                        .with_connect_retries(50)
+                        .with_connect_retry_ms(2)
+                        .open_producer();
 
     if (!producer.is_connected()) {
       std::cerr << "producer did not connect to socket consumer\n";
