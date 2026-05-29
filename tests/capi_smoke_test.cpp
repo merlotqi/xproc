@@ -1,9 +1,30 @@
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 #include <gtest/gtest.h>
 
 #include <array>
+#include <atomic>
+#include <cerrno>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 extern "C" {
@@ -12,6 +33,160 @@ extern "C" {
 
 #include <xproc/core/shm.hpp>
 #include <xproc/core/shm_layout.hpp>
+
+namespace {
+
+#if defined(_WIN32)
+using test_sock_handle = SOCKET;
+constexpr test_sock_handle k_invalid_test_sock = INVALID_SOCKET;
+#else
+using test_sock_handle = int;
+constexpr test_sock_handle k_invalid_test_sock = -1;
+#endif
+
+bool ensure_test_winsock() {
+#if defined(_WIN32)
+  static const int startup_result = [] {
+    WSADATA data;
+    return ::WSAStartup(MAKEWORD(2, 2), &data);
+  }();
+  return startup_result == 0;
+#else
+  return true;
+#endif
+}
+
+void close_test_sock(test_sock_handle sock) noexcept {
+#if defined(_WIN32)
+  if (sock != INVALID_SOCKET) {
+    ::closesocket(sock);
+  }
+#else
+  if (sock >= 0) {
+    ::close(sock);
+  }
+#endif
+}
+
+void set_test_sock_linger_reset(test_sock_handle sock) noexcept {
+  linger reset{};
+  reset.l_onoff = 1;
+  reset.l_linger = 0;
+  static_cast<void>(
+      ::setsockopt(sock, SOL_SOCKET, SO_LINGER, reinterpret_cast<const char*>(&reset), sizeof(reset)));
+}
+
+class ResettingTcpServer {
+ public:
+  ResettingTcpServer() {
+    if (!ensure_test_winsock()) {
+      throw std::runtime_error("WSAStartup failed");
+    }
+
+    test_sock_handle listener = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listener == k_invalid_test_sock) {
+      throw std::runtime_error("socket failed");
+    }
+
+    const int reuse = 1;
+    static_cast<void>(
+        ::setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuse), sizeof(reuse)));
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    if (::bind(listener, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) != 0) {
+      close_test_sock(listener);
+      throw std::runtime_error("bind failed");
+    }
+    if (::listen(listener, 1) != 0) {
+      close_test_sock(listener);
+      throw std::runtime_error("listen failed");
+    }
+
+    sockaddr_in bound{};
+#if defined(_WIN32)
+    int bound_len = sizeof(bound);
+#else
+    socklen_t bound_len = sizeof(bound);
+#endif
+    if (::getsockname(listener, reinterpret_cast<sockaddr*>(&bound), &bound_len) != 0) {
+      close_test_sock(listener);
+      throw std::runtime_error("getsockname failed");
+    }
+
+    listener_ = listener;
+    port_ = ntohs(bound.sin_port);
+
+    try {
+      worker_ = std::thread([this] { accept_and_reset(); });
+    } catch (...) {
+      close_test_sock(listener_);
+      listener_ = k_invalid_test_sock;
+      throw;
+    }
+  }
+
+  ResettingTcpServer(const ResettingTcpServer&) = delete;
+  ResettingTcpServer& operator=(const ResettingTcpServer&) = delete;
+
+  ~ResettingTcpServer() {
+    stop_.store(true);
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+    close_test_sock(listener_);
+  }
+
+  std::uint16_t port() const noexcept { return port_; }
+
+ private:
+  void accept_and_reset() noexcept {
+    while (!stop_.load()) {
+      fd_set readfds;
+      FD_ZERO(&readfds);
+      FD_SET(listener_, &readfds);
+
+      timeval timeout{};
+      timeout.tv_usec = 10 * 1000;
+
+#if defined(_WIN32)
+      const int ready = ::select(0, &readfds, nullptr, nullptr, &timeout);
+#else
+      const int ready = ::select(listener_ + 1, &readfds, nullptr, nullptr, &timeout);
+#endif
+      if (ready == 0) {
+        continue;
+      }
+      if (ready < 0) {
+#if !defined(_WIN32)
+        if (errno == EINTR) {
+          continue;
+        }
+#endif
+        return;
+      }
+
+      test_sock_handle accepted = ::accept(listener_, nullptr, nullptr);
+      if (accepted == k_invalid_test_sock) {
+        continue;
+      }
+
+      set_test_sock_linger_reset(accepted);
+      close_test_sock(accepted);
+      return;
+    }
+  }
+
+  test_sock_handle listener_ = k_invalid_test_sock;
+  std::uint16_t port_ = 0;
+  std::atomic<bool> stop_{false};
+  std::thread worker_;
+};
+
+}  // namespace
 
 TEST(CApiSmoke, FixedProducerConsumerRoundTrip) {
   const std::string path = "/xproc_capi_fixed_roundtrip";
@@ -394,6 +569,40 @@ TEST(CApiSmoke, FixedItemSizeAndSchemaIdMismatchReportLayoutErrors) {
 
   xproc_c_producer_close(producer);
   EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+}
+
+TEST(CApiSmoke, SocketProducerSendFailureMapsToRuntimeError) {
+  ResettingTcpServer server;
+
+  xproc_c_options producer_opts;
+  xproc_c_options_init(&producer_opts);
+  producer_opts.backend = XPROC_C_BACKEND_SOCKET;
+  producer_opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  producer_opts.item_size = sizeof(std::uint32_t);
+  producer_opts.socket_host = "127.0.0.1";
+  producer_opts.socket_port = server.port();
+  producer_opts.socket_listen = 0;
+  producer_opts.socket_connect_retries = 1;
+  producer_opts.socket_connect_retry_ms = 1;
+
+  xproc_c_producer* producer = nullptr;
+  const xproc_c_status open_status = xproc_c_producer_open(&producer_opts, &producer);
+  if (open_status != XPROC_C_STATUS_OK) {
+    GTEST_SKIP() << "socket producer unavailable in this environment: " << xproc_c_last_error_message();
+  }
+
+  const std::uint32_t value = 0xABCD1234u;
+  xproc_c_status status = XPROC_C_STATUS_OK;
+  for (int i = 0; i < 100; ++i) {
+    status = xproc_c_producer_send_fixed_sized(producer, &value, sizeof(value));
+    if (status == XPROC_C_STATUS_RUNTIME_ERROR) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+
+  EXPECT_EQ(status, XPROC_C_STATUS_RUNTIME_ERROR);
+  xproc_c_producer_close(producer);
 }
 
 TEST(CApiSmoke, SocketRoundTripAndBorrowedOptions) {

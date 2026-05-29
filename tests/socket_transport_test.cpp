@@ -1,12 +1,31 @@
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
+
 #include <gtest/gtest.h>
 
 #include <array>
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -14,9 +33,220 @@
 
 namespace {
 
+#if defined(_WIN32)
+using test_sock_handle = SOCKET;
+constexpr test_sock_handle k_invalid_test_sock = INVALID_SOCKET;
+#else
+using test_sock_handle = int;
+constexpr test_sock_handle k_invalid_test_sock = -1;
+#endif
+
 void skip_if_socket_unavailable(const std::runtime_error& ex) {
   GTEST_SKIP() << "socket transport unavailable in this environment: " << ex.what();
 }
+
+bool ensure_test_winsock() {
+#if defined(_WIN32)
+  static const int startup_result = [] {
+    WSADATA data;
+    return ::WSAStartup(MAKEWORD(2, 2), &data);
+  }();
+  return startup_result == 0;
+#else
+  return true;
+#endif
+}
+
+void close_test_sock(test_sock_handle sock) noexcept {
+#if defined(_WIN32)
+  if (sock != INVALID_SOCKET) {
+    ::closesocket(sock);
+  }
+#else
+  if (sock >= 0) {
+    ::close(sock);
+  }
+#endif
+}
+
+void set_test_sock_linger_reset(test_sock_handle sock) noexcept {
+  linger reset{};
+  reset.l_onoff = 1;
+  reset.l_linger = 0;
+  static_cast<void>(
+      ::setsockopt(sock, SOL_SOCKET, SO_LINGER, reinterpret_cast<const char*>(&reset), sizeof(reset)));
+}
+
+void raw_socket_send_and_close(std::uint16_t port, const void* data, std::size_t len) {
+  ASSERT_TRUE(ensure_test_winsock());
+
+  const std::string port_text = std::to_string(port);
+  addrinfo hints{};
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_protocol = IPPROTO_TCP;
+
+  addrinfo* resolved = nullptr;
+  ASSERT_EQ(::getaddrinfo("127.0.0.1", port_text.c_str(), &hints, &resolved), 0);
+  struct addrinfo_guard {
+    addrinfo* value;
+    ~addrinfo_guard() {
+      if (value != nullptr) {
+        ::freeaddrinfo(value);
+      }
+    }
+  } guard{resolved};
+
+  test_sock_handle sock = k_invalid_test_sock;
+  struct sock_guard {
+    test_sock_handle& value;
+    ~sock_guard() { close_test_sock(value); }
+  } closer{sock};
+
+  for (addrinfo* ai = resolved; ai != nullptr; ai = ai->ai_next) {
+    sock = ::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+    if (sock == k_invalid_test_sock) {
+      continue;
+    }
+#if defined(_WIN32)
+    const int addr_len = static_cast<int>(ai->ai_addrlen);
+#else
+    const socklen_t addr_len = static_cast<socklen_t>(ai->ai_addrlen);
+#endif
+    if (::connect(sock, ai->ai_addr, addr_len) == 0) {
+      break;
+    }
+    close_test_sock(sock);
+    sock = k_invalid_test_sock;
+  }
+
+  ASSERT_NE(sock, k_invalid_test_sock) << "raw socket connect failed";
+
+  const char* bytes = static_cast<const char*>(data);
+  std::size_t sent = 0;
+  while (sent < len) {
+#if defined(_WIN32)
+    const int n = ::send(sock, bytes + sent, static_cast<int>(len - sent), 0);
+#else
+    const ssize_t n = ::send(sock, bytes + sent, len - sent, 0);
+#endif
+    ASSERT_GT(n, 0) << "raw socket send failed";
+    sent += static_cast<std::size_t>(n);
+  }
+}
+
+class ResettingTcpServer {
+ public:
+  ResettingTcpServer() {
+    if (!ensure_test_winsock()) {
+      throw std::runtime_error("WSAStartup failed");
+    }
+
+    test_sock_handle listener = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listener == k_invalid_test_sock) {
+      throw std::runtime_error("socket failed");
+    }
+
+    const int reuse = 1;
+    static_cast<void>(
+        ::setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&reuse), sizeof(reuse)));
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    if (::bind(listener, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) != 0) {
+      close_test_sock(listener);
+      throw std::runtime_error("bind failed");
+    }
+    if (::listen(listener, 1) != 0) {
+      close_test_sock(listener);
+      throw std::runtime_error("listen failed");
+    }
+
+    sockaddr_in bound{};
+#if defined(_WIN32)
+    int bound_len = sizeof(bound);
+#else
+    socklen_t bound_len = sizeof(bound);
+#endif
+    if (::getsockname(listener, reinterpret_cast<sockaddr*>(&bound), &bound_len) != 0) {
+      close_test_sock(listener);
+      throw std::runtime_error("getsockname failed");
+    }
+
+    listener_ = listener;
+    port_ = ntohs(bound.sin_port);
+
+    try {
+      worker_ = std::thread([this] { accept_and_reset(); });
+    } catch (...) {
+      close_test_sock(listener_);
+      listener_ = k_invalid_test_sock;
+      throw;
+    }
+  }
+
+  ResettingTcpServer(const ResettingTcpServer&) = delete;
+  ResettingTcpServer& operator=(const ResettingTcpServer&) = delete;
+
+  ~ResettingTcpServer() {
+    stop_.store(true, std::memory_order_release);
+    if (worker_.joinable()) {
+      worker_.join();
+    }
+    close_test_sock(listener_);
+  }
+
+  std::uint16_t port() const noexcept { return port_; }
+  bool reset_completed() const noexcept { return reset_completed_.load(std::memory_order_acquire); }
+
+ private:
+  void accept_and_reset() noexcept {
+    while (!stop_.load(std::memory_order_acquire)) {
+      fd_set readfds;
+      FD_ZERO(&readfds);
+      FD_SET(listener_, &readfds);
+
+      timeval timeout{};
+      timeout.tv_usec = 10 * 1000;
+
+#if defined(_WIN32)
+      const int ready = ::select(0, &readfds, nullptr, nullptr, &timeout);
+#else
+      const int ready = ::select(listener_ + 1, &readfds, nullptr, nullptr, &timeout);
+#endif
+      if (ready == 0) {
+        continue;
+      }
+      if (ready < 0) {
+#if !defined(_WIN32)
+        if (errno == EINTR) {
+          continue;
+        }
+#endif
+        return;
+      }
+
+      test_sock_handle accepted = ::accept(listener_, nullptr, nullptr);
+      if (accepted == k_invalid_test_sock) {
+        continue;
+      }
+
+      set_test_sock_linger_reset(accepted);
+      close_test_sock(accepted);
+      reset_completed_.store(true, std::memory_order_release);
+      return;
+    }
+  }
+
+  test_sock_handle listener_ = k_invalid_test_sock;
+  std::uint16_t port_ = 0;
+  std::atomic<bool> stop_{false};
+  std::atomic<bool> reset_completed_{false};
+  std::thread worker_;
+};
 
 void run_varlen_loopback(const std::string& producer_host) {
   try {
@@ -117,6 +347,20 @@ bool spin_until(Predicate&& predicate, int iterations = 4000, int sleep_us = 200
     std::this_thread::sleep_for(std::chrono::microseconds(sleep_us));
   }
   return false;
+}
+
+void drive_partial_disconnect_cleanup(xproc::ipc::socket_consumer& cons) {
+  std::size_t complete_messages = 0;
+  bool unexpected_complete_message = false;
+  ASSERT_TRUE(spin_until([&] {
+    for (int i = 0; i < 4; ++i) {
+      const bool got = cons.poll([&](void*, std::uint32_t) { ++complete_messages; });
+      unexpected_complete_message = unexpected_complete_message || got;
+    }
+    return !cons.is_connected();
+  })) << "consumer did not clean up the partial-frame peer";
+  EXPECT_FALSE(unexpected_complete_message);
+  EXPECT_EQ(complete_messages, 0u);
 }
 
 }  // namespace
@@ -266,6 +510,121 @@ TEST(SocketTransport, TryReconnectReturnsFalseWithoutListener) {
     ASSERT_NE(prod, nullptr);
     EXPECT_FALSE(prod->try_reconnect());
     EXPECT_FALSE(prod->is_connected());
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
+TEST(SocketTransport, ProducerSendFailureClosesSocket) {
+  try {
+    ResettingTcpServer server;
+
+    xproc::ipc::transport_options po;
+    po.backend = xproc::ipc::transport_backend::socket;
+    po.socket_listen = false;
+    po.socket_host = "127.0.0.1";
+    po.socket_port = server.port();
+    po.type = xproc::ipc::channel_type::fixed;
+    po.item_size = sizeof(std::uint32_t);
+    po.socket_connect_retries = 1;
+    po.socket_connect_retry_ms = 1;
+
+    xproc::ipc::socket_producer prod(po);
+    ASSERT_TRUE(prod.is_connected());
+    ASSERT_TRUE(spin_until([&] { return server.reset_completed(); }, 1000, 1000));
+
+    const std::uint32_t value = 0xCC55AA33u;
+    bool failed = false;
+    for (int i = 0; i < 100 && !failed; ++i) {
+      try {
+        prod.send_fixed_sized(&value, sizeof(value));
+      } catch (const std::runtime_error&) {
+        failed = true;
+      }
+      if (!failed) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+    }
+
+    EXPECT_TRUE(failed);
+    EXPECT_FALSE(prod.is_connected());
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
+TEST(SocketTransport, ConsumerRecoversAfterPartialFixedFrameDisconnect) {
+  try {
+    xproc::ipc::transport_options co;
+    co.backend = xproc::ipc::transport_backend::socket;
+    co.socket_listen = true;
+    co.socket_port = 0;
+    co.type = xproc::ipc::channel_type::fixed;
+    co.item_size = sizeof(std::uint32_t);
+    co.socket_host.clear();
+    xproc::ipc::socket_consumer cons(co);
+
+    const std::uint16_t partial = 0xBEEFu;
+    raw_socket_send_and_close(cons.options().socket_port, &partial, sizeof(partial));
+    drive_partial_disconnect_cleanup(cons);
+
+    xproc::ipc::transport_options po;
+    po.backend = xproc::ipc::transport_backend::socket;
+    po.socket_listen = false;
+    po.socket_host = "127.0.0.1";
+    po.socket_port = cons.options().socket_port;
+    po.type = xproc::ipc::channel_type::fixed;
+    po.item_size = sizeof(std::uint32_t);
+
+    xproc::ipc::socket_producer prod(po);
+    const std::uint32_t expected = 0x12345678u;
+    prod.send_fixed_sized(&expected, sizeof(expected));
+
+    std::uint32_t actual = 0;
+    ASSERT_TRUE(spin_until([&] {
+      return cons.poll([&](void* p, std::uint32_t len) {
+        ASSERT_EQ(len, sizeof(actual));
+        std::memcpy(&actual, p, sizeof(actual));
+      });
+    }));
+    EXPECT_EQ(actual, expected);
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
+TEST(SocketTransport, ConsumerRecoversAfterPartialVarlenFrameDisconnect) {
+  try {
+    xproc::ipc::transport_options co;
+    co.backend = xproc::ipc::transport_backend::socket;
+    co.socket_listen = true;
+    co.socket_port = 0;
+    co.type = xproc::ipc::channel_type::varlen;
+    co.socket_host.clear();
+    xproc::ipc::socket_consumer cons(co);
+
+    const std::array<char, 5> partial{{5, 0, 0, 0, 'h'}};
+    raw_socket_send_and_close(cons.options().socket_port, partial.data(), partial.size());
+    drive_partial_disconnect_cleanup(cons);
+
+    xproc::ipc::transport_options po;
+    po.backend = xproc::ipc::transport_backend::socket;
+    po.socket_listen = false;
+    po.socket_host = "127.0.0.1";
+    po.socket_port = cons.options().socket_port;
+    po.type = xproc::ipc::channel_type::varlen;
+
+    xproc::ipc::socket_producer prod(po);
+    const std::string expected = "after-partial";
+    prod.send_varlen(expected.data(), static_cast<std::uint32_t>(expected.size()));
+
+    std::string actual;
+    ASSERT_TRUE(spin_until([&] {
+      return cons.poll([&](void* p, std::uint32_t len) {
+        actual.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      });
+    }));
+    EXPECT_EQ(actual, expected);
   } catch (const std::runtime_error& ex) {
     skip_if_socket_unavailable(ex);
   }
