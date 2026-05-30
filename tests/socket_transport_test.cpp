@@ -369,6 +369,8 @@ TEST(SocketTransport, VarlenTcpLoopbackIPv4) { run_varlen_loopback("127.0.0.1");
 
 TEST(SocketTransport, FixedTcpLoopbackIPv6) { run_fixed_loopback("::1"); }
 
+TEST(SocketTransport, FixedTcpLoopbackIPv4) { run_fixed_loopback("127.0.0.1"); }
+
 TEST(SocketTransport, VarlenTcpLoopbackIpv6BracketHost) { run_varlen_loopback("[::1]"); }
 
 TEST(SocketTransport, ReconnectAfterPeerDisconnect) {
