@@ -371,6 +371,52 @@ TEST(SocketTransport, FixedTcpLoopbackIPv6) { run_fixed_loopback("::1"); }
 
 TEST(SocketTransport, FixedTcpLoopbackIPv4) { run_fixed_loopback("127.0.0.1"); }
 
+TEST(SocketTransport, FixedBytesZeroPaddedRoundtrip) {
+  try {
+    xproc::ipc::transport_options co;
+    co.backend = xproc::ipc::transport_backend::socket;
+    co.socket_listen = true;
+    co.socket_port = 0;
+    co.type = xproc::ipc::channel_type::fixed;
+    co.item_size = 8;
+    co.socket_host.clear();
+
+    xproc::ipc::socket_consumer cons(co);
+
+    xproc::ipc::transport_options po;
+    po.backend = xproc::ipc::transport_backend::socket;
+    po.socket_listen = false;
+    po.socket_host = "127.0.0.1";
+    po.socket_port = cons.options().socket_port;
+    po.type = xproc::ipc::channel_type::fixed;
+    po.item_size = 8;
+
+    xproc::ipc::socket_producer prod(po);
+
+    const std::array<char, 4> payload{{'A', 'B', 'C', 'D'}};
+    prod.send_fixed_bytes(payload.data(), payload.size());
+
+    std::array<char, 8> received{};
+    ASSERT_TRUE(spin_until([&] {
+      return cons.poll([&](void* p, std::uint32_t len) {
+        ASSERT_EQ(len, 8u);
+        std::memcpy(received.data(), p, 8);
+      });
+    }));
+
+    EXPECT_EQ(received[0], 'A');
+    EXPECT_EQ(received[1], 'B');
+    EXPECT_EQ(received[2], 'C');
+    EXPECT_EQ(received[3], 'D');
+    EXPECT_EQ(received[4], '\0');
+    EXPECT_EQ(received[5], '\0');
+    EXPECT_EQ(received[6], '\0');
+    EXPECT_EQ(received[7], '\0');
+  } catch (const std::runtime_error& ex) {
+    skip_if_socket_unavailable(ex);
+  }
+}
+
 TEST(SocketTransport, VarlenTcpLoopbackIpv6BracketHost) { run_varlen_loopback("[::1]"); }
 
 TEST(SocketTransport, ReconnectAfterPeerDisconnect) {
