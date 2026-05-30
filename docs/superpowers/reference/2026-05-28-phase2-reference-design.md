@@ -131,10 +131,10 @@ Current benchmarks cover the SHM hot path well but lack visibility into:
 
 ### P2: Socket test coverage
 
-- [ ] Fixed-frame socket roundtrip tests exist
-- [ ] Disconnect/reconnect tests exist for both sides
-- [ ] `ipc::runtime` over `socket_consumer` is tested
-- [ ] Dual-stack edge cases are covered on Linux and macOS
+- [x] Fixed-frame socket roundtrip tests exist
+- [x] Disconnect/reconnect tests exist for both sides
+- [x] `ipc::runtime` over `socket_consumer` is tested
+- [x] Dual-stack edge cases are covered on Linux and macOS
 
 ### P3: Observer diagnostics
 
