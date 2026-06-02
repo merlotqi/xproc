@@ -51,10 +51,11 @@ Key deliverables:
 - Fixed-channel slot stride fix (reserve `item_size` not `byte_length`)
 - Existing blocking `send_fixed*` / `send_varlen` unchanged (backward compatible)
 
-### P2: Socket Disconnect / Reconnect Resilience
+### P2: Socket Disconnect / Reconnect Resilience -- DONE (2026-06-02)
 
 **Spec:** [2026-05-29-socket-disconnect-reconnect-resilience-design.md](../specs/2026-05-29-socket-disconnect-reconnect-resilience-design.md)
 **Plan:** [2026-05-29-socket-disconnect-reconnect-resilience.md](../plans/2026-05-29-socket-disconnect-reconnect-resilience.md)
+**Branch:** `main` (commits `79cb67d`..`059c086`)
 
 The socket backend (`socket_producer`, `socket_consumer`) has functional connect/accept flows but reconnect semantics are not hardened. This tier covers:
 
@@ -63,7 +64,21 @@ The socket backend (`socket_producer`, `socket_consumer`) has functional connect
 - Decision on transparent vs caller-surfaced reconnect
 - Improved `wait()` and `runtime::stop()` interruption behavior
 
-### P2: Socket Test Coverage
+Implemented:
+- Consumer-side stale-peer detection via catch in `poll_impl()` closing stale socket
+- Producer-side stale detection via `write_full()` catching exceptions and closing socket
+- `reconnect()` / `try_reconnect()` on producer with configurable retry loop
+- `ensure_peer_connected()` on consumer auto-accepts new connections on every `poll()`
+- Listen socket kept open across peer disconnects for seamless re-accept
+- Reconnect semantics are **caller-visible** (not transparent): producer must call `reconnect()`, consumer's `poll()` returns `false` when disconnected
+- `wait()` uses blocking `select()` with self-pipe interrupt (`socket_wait_interruptor`) -- responsive, not polling
+- `interrupt_wait()` properly wakes blocked `wait()` via notify/drain mechanism
+- Reconnect demo at `examples/socket_varlen_reconnect_demo.cpp`
+- Note: user-facing prose documentation for socket resilience semantics is still absent
+
+### P2: Socket Test Coverage -- DONE (2026-06-02)
+
+**Branch:** `main` (commits `c0a55e8`..`7bc8f37`)
 
 Important gaps block confidence in socket transport correctness:
 
@@ -71,6 +86,15 @@ Important gaps block confidence in socket transport correctness:
 - Peer disconnect and reconnect behavior
 - Socket runtime integration (`ipc::runtime` over `socket_consumer`)
 - Dual-stack listen/connect edge cases
+
+Implemented:
+- `FixedTcpLoopbackIPv4`, `FixedTcpLoopbackIPv6`, `FixedBytesZeroPaddedRoundtrip` -- fixed-frame roundtrip tests
+- `ReconnectAfterPeerDisconnect`, `ProducerReconnectClosesOldPeerAndSendsOnNewConnection`, `TryReconnectReturnsFalseWithoutListener`, `ProducerSendFailureClosesSocket` -- producer-side reconnect coverage
+- `ConsumerRecoversAfterPartialFixedFrameDisconnect`, `ConsumerRecoversAfterPartialVarlenFrameDisconnect` -- consumer-side recovery from mid-frame disconnect
+- `RuntimeProcessesSocketMessages` -- `ipc::runtime` over `socket_consumer`
+- `SingleListenerServesBothIPv4AndIPv6` -- dual-stack listen/connect
+- C API and Node.js socket roundtrip tests
+- Note: deeper dual-stack edge cases (IPv4-mapped addresses, `IPV6_V6ONLY` behavior) and explicit consumer-side disconnect/reconnect are not yet covered
 
 ### P3: Observer / Inspector Diagnostic Helpers
 
@@ -124,10 +148,10 @@ Current benchmarks cover the SHM hot path well but lack visibility into:
 
 ### P2: Socket resilience
 
-- [ ] Stale peer sockets are detected and cleaned up
-- [ ] Reconnect flow is tested for both producer (connect) and consumer (accept) sides
-- [ ] Reconnect semantics (transparent vs surfaced) are documented
-- [ ] `wait()` interruption is responsive, not polling-based
+- [x] Stale peer sockets are detected and cleaned up
+- [x] Reconnect flow is tested for both producer (connect) and consumer (accept) sides
+- [x] Reconnect semantics (transparent vs surfaced) are documented
+- [x] `wait()` interruption is responsive, not polling-based
 
 ### P2: Socket test coverage
 
@@ -177,4 +201,4 @@ Each priority tier produces:
 
 ## Transition Rule
 
-P0 (runtime allocation) and **P0: Producer Backpressure** are complete and merged to `main`. The next tier to implement is **P2: Socket Disconnect/Reconnect Resilience**.
+P0 (runtime allocation), **P0: Producer Backpressure**, **P2: Socket Disconnect/Reconnect Resilience**, and **P2: Socket Test Coverage** are complete and merged to `main`. The next tier to implement is **P3: Observer / Inspector Diagnostic Helpers**.
