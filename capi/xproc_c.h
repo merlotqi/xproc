@@ -1,6 +1,7 @@
 #ifndef XPROC_C_H_
 #define XPROC_C_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -448,6 +449,90 @@ XPROC_C_API xproc_c_status xproc_c_observer_snapshot(const xproc_c_observer* obs
  */
 XPROC_C_API xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer, void* buffer,
                                                       uint32_t buffer_capacity, uint32_t* out_len);
+
+/**
+ * @brief Returns the ring occupancy ratio visible to an observer.
+ *
+ * @param observer Observer handle.
+ * @param out Receives the occupancy ratio in [0.0, 1.0].
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_observer_occupancy_ratio(xproc_c_observer* observer, double* out);
+
+/**
+ * @brief Returns the number of occupied bytes in the ring.
+ *
+ * @param observer Observer handle.
+ * @param out Receives the occupied byte count.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_observer_occupancy_bytes(xproc_c_observer* observer, uint64_t* out);
+
+/**
+ * @brief Returns the number of available bytes in the ring.
+ *
+ * @param observer Observer handle.
+ * @param out Receives the available byte count.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_observer_available_bytes(xproc_c_observer* observer, uint64_t* out);
+
+/**
+ * @brief Returns the consumer lag in bytes (written but not yet consumed).
+ *
+ * @param observer Observer handle.
+ * @param out Receives the lag in bytes.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_observer_consumer_lag_bytes(xproc_c_observer* observer, uint64_t* out);
+
+typedef struct xproc_c_diagnostics_tracker xproc_c_diagnostics_tracker;
+
+/**
+ * @brief Creates a diagnostics tracker from an observer's initial state.
+ *
+ * @param observer Observer handle.
+ * @param out Receives the created tracker handle.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_diagnostics_tracker_create(xproc_c_observer* observer,
+                                                               xproc_c_diagnostics_tracker** out);
+
+/**
+ * @brief Updates the tracker with the observer's current snapshot.
+ *
+ * @param tracker Tracker handle.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_diagnostics_tracker_update(xproc_c_diagnostics_tracker* tracker);
+
+/**
+ * @brief Returns whether the producer has committed new messages since the last update.
+ *
+ * @param tracker Tracker handle.
+ * @param out Receives true if commit_seq changed since previous update.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_diagnostics_tracker_producer_alive(xproc_c_diagnostics_tracker* tracker,
+                                                                       bool* out);
+
+/**
+ * @brief Returns milliseconds since the last ring progress (write_pos or read_pos change).
+ *
+ * @param tracker Tracker handle.
+ * @param out Receives idle duration in milliseconds.
+ * @return XPROC_C_STATUS_OK on success, otherwise an error status.
+ */
+XPROC_C_API xproc_c_status xproc_c_diagnostics_tracker_idle_ms(xproc_c_diagnostics_tracker* tracker, uint64_t* out);
+
+/**
+ * @brief Destroys a diagnostics tracker handle.
+ *
+ * Passing NULL is allowed.
+ *
+ * @param tracker Tracker handle to destroy.
+ */
+XPROC_C_API void xproc_c_diagnostics_tracker_destroy(xproc_c_diagnostics_tracker* tracker);
 
 #ifdef __cplusplus
 }  // extern "C"

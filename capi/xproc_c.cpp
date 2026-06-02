@@ -15,6 +15,7 @@
 #include <xproc/ipc/transport_factory.hpp>
 #include <xproc/platform/process.hpp>
 #include <xproc/core/layout_exception.hpp>
+#include <xproc/ipc/diagnostics_tracker.hpp>
 
 #ifndef XPROC_CAPI_PROJECT_VERSION
 #define XPROC_CAPI_PROJECT_VERSION "0.0.0"
@@ -31,6 +32,11 @@ struct xproc_c_consumer {
 
 struct xproc_c_observer {
   std::unique_ptr<xproc::ipc::observer> impl;
+};
+
+struct xproc_c_diagnostics_tracker {
+  std::unique_ptr<xproc::ipc::diagnostics_tracker> impl;
+  xproc_c_observer* owner;  // borrows observer for snapshot updates
 };
 
 namespace {
@@ -749,3 +755,129 @@ xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer, void* buff
     return XPROC_C_STATUS_OK;
   });
 }
+
+xproc_c_status xproc_c_observer_occupancy_ratio(xproc_c_observer* observer, double* out) {
+  if (out == nullptr) {
+    return invalid_argument("xproc_c_observer_occupancy_ratio: out must not be null");
+  }
+  const xproc_c_status status = validate_handle(observer, "xproc_c_observer_occupancy_ratio: observer is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    *out = observer->impl->occupancy_ratio();
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_observer_occupancy_bytes(xproc_c_observer* observer, uint64_t* out) {
+  if (out == nullptr) {
+    return invalid_argument("xproc_c_observer_occupancy_bytes: out must not be null");
+  }
+  const xproc_c_status status = validate_handle(observer, "xproc_c_observer_occupancy_bytes: observer is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    *out = observer->impl->occupancy_bytes();
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_observer_available_bytes(xproc_c_observer* observer, uint64_t* out) {
+  if (out == nullptr) {
+    return invalid_argument("xproc_c_observer_available_bytes: out must not be null");
+  }
+  const xproc_c_status status = validate_handle(observer, "xproc_c_observer_available_bytes: observer is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    *out = observer->impl->available_bytes();
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_observer_consumer_lag_bytes(xproc_c_observer* observer, uint64_t* out) {
+  if (out == nullptr) {
+    return invalid_argument("xproc_c_observer_consumer_lag_bytes: out must not be null");
+  }
+  const xproc_c_status status = validate_handle(observer, "xproc_c_observer_consumer_lag_bytes: observer is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    *out = observer->impl->consumer_lag_bytes();
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_diagnostics_tracker_create(xproc_c_observer* observer,
+                                                   xproc_c_diagnostics_tracker** out) {
+  if (out == nullptr) {
+    return invalid_argument("xproc_c_diagnostics_tracker_create: out must not be null");
+  }
+  *out = nullptr;
+  const xproc_c_status status = validate_handle(observer, "xproc_c_diagnostics_tracker_create: observer is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    auto handle = std::make_unique<xproc_c_diagnostics_tracker>();
+    const auto snap = observer->impl->snapshot();
+    const auto cap = static_cast<std::uint64_t>(observer->impl->header()->data_capacity);
+    handle->impl = std::make_unique<xproc::ipc::diagnostics_tracker>(snap, cap);
+    handle->owner = observer;
+    *out = handle.release();
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_diagnostics_tracker_update(xproc_c_diagnostics_tracker* tracker) {
+  const xproc_c_status status = validate_handle(tracker, "xproc_c_diagnostics_tracker_update: tracker is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    tracker->impl->update(tracker->owner->impl->snapshot());
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_diagnostics_tracker_producer_alive(xproc_c_diagnostics_tracker* tracker, bool* out) {
+  if (out == nullptr) {
+    return invalid_argument("xproc_c_diagnostics_tracker_producer_alive: out must not be null");
+  }
+  const xproc_c_status status = validate_handle(tracker, "xproc_c_diagnostics_tracker_producer_alive: tracker is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    *out = tracker->impl->producer_alive();
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_diagnostics_tracker_idle_ms(xproc_c_diagnostics_tracker* tracker, uint64_t* out) {
+  if (out == nullptr) {
+    return invalid_argument("xproc_c_diagnostics_tracker_idle_ms: out must not be null");
+  }
+  const xproc_c_status status = validate_handle(tracker, "xproc_c_diagnostics_tracker_idle_ms: tracker is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  return catch_status([&]() -> xproc_c_status {
+    *out = tracker->impl->idle_duration_ms();
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+void xproc_c_diagnostics_tracker_destroy(xproc_c_diagnostics_tracker* tracker) { delete tracker; }

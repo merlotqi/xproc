@@ -669,3 +669,201 @@ TEST(CApiSmoke, SocketRoundTripAndBorrowedOptions) {
   xproc_c_producer_close(producer);
   xproc_c_consumer_close(consumer);
 }
+
+TEST(CApiSmoke, COccupancyRatioSmoke) {
+  const char* path = "/xproc_capi_occ_ratio";
+  xproc_c_shm_unlink(path);
+
+  xproc_c_options opts;
+  xproc_c_options_init(&opts);
+  opts.path = path;
+  opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  opts.item_size = sizeof(uint32_t);
+
+  xproc_c_producer* prod = nullptr;
+  xproc_c_observer* obs = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&opts, &prod), XPROC_C_STATUS_OK);
+
+  xproc_c_options obs_opts = opts;
+  obs_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  obs_opts.create_if_missing = 0;
+  ASSERT_EQ(xproc_c_observer_open(&obs_opts, &obs), XPROC_C_STATUS_OK);
+
+  uint32_t val = 42;
+  ASSERT_EQ(xproc_c_producer_send_fixed_sized(prod, &val, sizeof(val)), XPROC_C_STATUS_OK);
+
+  double ratio = 0.0;
+  ASSERT_EQ(xproc_c_observer_occupancy_ratio(obs, &ratio), XPROC_C_STATUS_OK);
+  EXPECT_GT(ratio, 0.0);
+
+  xproc_c_observer_close(obs);
+  xproc_c_producer_close(prod);
+  xproc_c_shm_unlink(path);
+}
+
+TEST(CApiSmoke, COccupancyBytesSmoke) {
+  const char* path = "/xproc_capi_occ_bytes";
+  xproc_c_shm_unlink(path);
+
+  xproc_c_options opts;
+  xproc_c_options_init(&opts);
+  opts.path = path;
+  opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  opts.item_size = sizeof(uint32_t);
+
+  xproc_c_observer* obs = nullptr;
+  xproc_c_producer* prod = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&opts, &prod), XPROC_C_STATUS_OK);
+
+  xproc_c_options obs_opts = opts;
+  obs_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  obs_opts.create_if_missing = 0;
+  ASSERT_EQ(xproc_c_observer_open(&obs_opts, &obs), XPROC_C_STATUS_OK);
+
+  uint64_t bytes = 999;
+  ASSERT_EQ(xproc_c_observer_occupancy_bytes(obs, &bytes), XPROC_C_STATUS_OK);
+  EXPECT_EQ(bytes, 0u);
+
+  xproc_c_observer_close(obs);
+  xproc_c_producer_close(prod);
+  xproc_c_shm_unlink(path);
+}
+
+TEST(CApiSmoke, CAvailableBytesSmoke) {
+  const char* path = "/xproc_capi_avail_bytes";
+  xproc_c_shm_unlink(path);
+
+  xproc_c_options opts;
+  xproc_c_options_init(&opts);
+  opts.path = path;
+  opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  opts.item_size = sizeof(uint32_t);
+
+  xproc_c_observer* obs = nullptr;
+  xproc_c_producer* prod = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&opts, &prod), XPROC_C_STATUS_OK);
+
+  xproc_c_options obs_opts = opts;
+  obs_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  obs_opts.create_if_missing = 0;
+  ASSERT_EQ(xproc_c_observer_open(&obs_opts, &obs), XPROC_C_STATUS_OK);
+
+  uint64_t avail = 0;
+  ASSERT_EQ(xproc_c_observer_available_bytes(obs, &avail), XPROC_C_STATUS_OK);
+  EXPECT_GT(avail, 0u);
+
+  xproc_c_observer_close(obs);
+  xproc_c_producer_close(prod);
+  xproc_c_shm_unlink(path);
+}
+
+TEST(CApiSmoke, CConsumerLagBytesSmoke) {
+  const char* path = "/xproc_capi_lag_bytes";
+  xproc_c_shm_unlink(path);
+
+  xproc_c_options opts;
+  xproc_c_options_init(&opts);
+  opts.path = path;
+  opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  opts.item_size = sizeof(uint32_t);
+
+  xproc_c_producer* prod = nullptr;
+  xproc_c_observer* obs = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&opts, &prod), XPROC_C_STATUS_OK);
+
+  xproc_c_options obs_opts = opts;
+  obs_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  obs_opts.create_if_missing = 0;
+  ASSERT_EQ(xproc_c_observer_open(&obs_opts, &obs), XPROC_C_STATUS_OK);
+
+  uint32_t val = 42;
+  ASSERT_EQ(xproc_c_producer_send_fixed_sized(prod, &val, sizeof(val)), XPROC_C_STATUS_OK);
+
+  uint64_t lag = 0;
+  ASSERT_EQ(xproc_c_observer_consumer_lag_bytes(obs, &lag), XPROC_C_STATUS_OK);
+  EXPECT_GT(lag, 0u);
+
+  xproc_c_observer_close(obs);
+  xproc_c_producer_close(prod);
+  xproc_c_shm_unlink(path);
+}
+
+TEST(CApiSmoke, CTrackerCreateUpdateDestroy) {
+  const char* path = "/xproc_capi_tracker_lifecycle";
+  xproc_c_shm_unlink(path);
+
+  xproc_c_options opts;
+  xproc_c_options_init(&opts);
+  opts.path = path;
+  opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  opts.item_size = sizeof(uint32_t);
+
+  xproc_c_observer* obs = nullptr;
+  xproc_c_producer* prod = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&opts, &prod), XPROC_C_STATUS_OK);
+
+  xproc_c_options obs_opts = opts;
+  obs_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  obs_opts.create_if_missing = 0;
+  ASSERT_EQ(xproc_c_observer_open(&obs_opts, &obs), XPROC_C_STATUS_OK);
+
+  xproc_c_diagnostics_tracker* tracker = nullptr;
+  ASSERT_EQ(xproc_c_diagnostics_tracker_create(obs, &tracker), XPROC_C_STATUS_OK);
+  ASSERT_NE(tracker, nullptr);
+
+  ASSERT_EQ(xproc_c_diagnostics_tracker_update(tracker), XPROC_C_STATUS_OK);
+
+  bool alive = false;
+  ASSERT_EQ(xproc_c_diagnostics_tracker_producer_alive(tracker, &alive), XPROC_C_STATUS_OK);
+
+  uint64_t ms = 0;
+  ASSERT_EQ(xproc_c_diagnostics_tracker_idle_ms(tracker, &ms), XPROC_C_STATUS_OK);
+
+  xproc_c_diagnostics_tracker_destroy(tracker);
+  xproc_c_observer_close(obs);
+  xproc_c_producer_close(prod);
+  xproc_c_shm_unlink(path);
+}
+
+TEST(CApiSmoke, CTrackerProducerAlive) {
+  const char* path = "/xproc_capi_tracker_alive";
+  xproc_c_shm_unlink(path);
+
+  xproc_c_options opts;
+  xproc_c_options_init(&opts);
+  opts.path = path;
+  opts.shm_size = xproc_c_shm_size_for_data_capacity(4096);
+  opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  opts.item_size = sizeof(uint32_t);
+
+  xproc_c_producer* prod = nullptr;
+  xproc_c_observer* obs = nullptr;
+  ASSERT_EQ(xproc_c_producer_open(&opts, &prod), XPROC_C_STATUS_OK);
+
+  xproc_c_options obs_opts = opts;
+  obs_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  obs_opts.create_if_missing = 0;
+  ASSERT_EQ(xproc_c_observer_open(&obs_opts, &obs), XPROC_C_STATUS_OK);
+
+  xproc_c_diagnostics_tracker* tracker = nullptr;
+  ASSERT_EQ(xproc_c_diagnostics_tracker_create(obs, &tracker), XPROC_C_STATUS_OK);
+
+  uint32_t val = 42;
+  ASSERT_EQ(xproc_c_producer_send_fixed_sized(prod, &val, sizeof(val)), XPROC_C_STATUS_OK);
+
+  ASSERT_EQ(xproc_c_diagnostics_tracker_update(tracker), XPROC_C_STATUS_OK);
+
+  bool alive = false;
+  ASSERT_EQ(xproc_c_diagnostics_tracker_producer_alive(tracker, &alive), XPROC_C_STATUS_OK);
+  EXPECT_TRUE(alive);
+
+  xproc_c_diagnostics_tracker_destroy(tracker);
+  xproc_c_observer_close(obs);
+  xproc_c_producer_close(prod);
+  xproc_c_shm_unlink(path);
+}
