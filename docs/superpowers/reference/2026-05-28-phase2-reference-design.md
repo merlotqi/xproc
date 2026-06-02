@@ -96,7 +96,11 @@ Implemented:
 - C API and Node.js socket roundtrip tests
 - Note: deeper dual-stack edge cases (IPv4-mapped addresses, `IPV6_V6ONLY` behavior) and explicit consumer-side disconnect/reconnect are not yet covered
 
-### P3: Observer / Inspector Diagnostic Helpers
+### P3: Observer / Inspector Diagnostic Helpers -- DONE (2026-06-02)
+
+**Spec:** [2026-06-02-phase2-observer-diagnostics-design.md](../specs/2026-06-02-phase2-observer-diagnostics-design.md)
+**Plan:** [2026-06-02-phase2-observer-diagnostics.md](../plans/2026-06-02-phase2-observer-diagnostics.md)
+**Branch:** `main` (commits `b8a4072`..`94d3666`)
 
 `ring_snapshot` exposes raw atomic fields. The next layer should provide derived diagnostics:
 
@@ -104,6 +108,14 @@ Implemented:
 - Consumer lag in bytes (`write_pos - read_pos`)
 - Producer liveness hints (commit progress since last snapshot)
 - Time since last observed progress
+
+Implemented:
+- `occupancy_ratio()`, `occupancy_bytes()`, `available_bytes()`, `consumer_lag_bytes()` on observer class
+- Private `used_bytes_()` helper with `wp >= rp` underflow guard (matches `channel::used_bytes()` pattern)
+- `diagnostics_tracker` class: `producer_alive()` (commit_seq delta), `idle_duration_ms()` (steady_clock since last progress)
+- C API: 4 observer-handle diagnostic functions + opaque `xproc_c_diagnostics_tracker` handle (create/update/producer_alive/idle_ms/destroy)
+- `const`-correct C API signatures, lifetime documentation for tracker
+- 9 C++ unit tests + 6 C API smoke tests
 
 ### P3: C API Builder Parity
 
@@ -162,10 +174,10 @@ Current benchmarks cover the SHM hot path well but lack visibility into:
 
 ### P3: Observer diagnostics
 
-- [ ] `occupancy_ratio()` and `occupancy_bytes()` helpers exist
-- [ ] `consumer_lag_bytes()` helper exists
-- [ ] `producer_liveness()` helper exists
-- [ ] Helpers are exposed through C API and at least one binding
+- [x] `occupancy_ratio()` and `occupancy_bytes()` helpers exist
+- [x] `consumer_lag_bytes()` helper exists
+- [x] `producer_liveness()` helper exists
+- [x] Helpers are exposed through C API and at least one binding
 
 ### P3: C API builder parity
 
@@ -201,4 +213,4 @@ Each priority tier produces:
 
 ## Transition Rule
 
-P0 (runtime allocation), **P0: Producer Backpressure**, **P2: Socket Disconnect/Reconnect Resilience**, and **P2: Socket Test Coverage** are complete and merged to `main`. The next tier to implement is **P3: Observer / Inspector Diagnostic Helpers**.
+P0 (runtime allocation), **P0: Producer Backpressure**, **P2: Socket Disconnect/Reconnect Resilience**, **P2: Socket Test Coverage**, and **P3: Observer / Inspector Diagnostic Helpers** are complete and merged to `main`. The next tier to implement is **P3: C API Builder Parity**.
