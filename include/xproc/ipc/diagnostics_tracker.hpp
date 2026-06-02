@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <algorithm>
 #include <xproc/ipc/inspector.hpp>
 
 namespace xproc::ipc {
