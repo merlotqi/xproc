@@ -25,6 +25,7 @@ set(XPROC_GTEST_TEST_FILES_COMMON
     ringbuffer_spsc_test.cpp
     layout_validate_test.cpp
     ipc_observer_attach_test.cpp
+    ipc_diagnostics_test.cpp
     protocol_codec_test.cpp
     socket_transport_test.cpp
     runtime_allocation_test.cpp

@@ -96,6 +96,47 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
     return varlen_reader_->peek(std::forward<F>(handler));
   }
 
+  double occupancy_ratio() const {
+    if (!header_) return 0.0;
+    const auto cap = header_->data_capacity;
+    if (cap == 0) return 0.0;
+    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
+    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
+    auto used = wp - rp;
+    if (used > cap) used = cap;
+    return static_cast<double>(used) / static_cast<double>(cap);
+  }
+
+  std::uint64_t occupancy_bytes() const {
+    if (!header_) return 0;
+    const auto cap = header_->data_capacity;
+    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
+    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
+    auto used = wp - rp;
+    if (used > cap) used = cap;
+    return used;
+  }
+
+  std::uint64_t available_bytes() const {
+    if (!header_) return 0;
+    const auto cap = header_->data_capacity;
+    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
+    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
+    auto used = wp - rp;
+    if (used > cap) used = cap;
+    return cap - used;
+  }
+
+  std::uint64_t consumer_lag_bytes() const {
+    if (!header_) return 0;
+    const auto cap = header_->data_capacity;
+    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
+    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
+    auto lag = wp - rp;
+    if (lag > cap) lag = cap;
+    return lag;
+  }
+
  private:
   transport_options opts_;
   core::shm shm_;
