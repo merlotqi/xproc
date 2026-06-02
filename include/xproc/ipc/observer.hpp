@@ -100,44 +100,32 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
     if (!header_) return 0.0;
     const auto cap = header_->data_capacity;
     if (cap == 0) return 0.0;
-    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
-    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
-    auto used = wp - rp;
-    if (used > cap) used = cap;
-    return static_cast<double>(used) / static_cast<double>(cap);
+    return static_cast<double>(used_bytes_()) / static_cast<double>(cap);
   }
 
-  std::uint64_t occupancy_bytes() const {
-    if (!header_) return 0;
-    const auto cap = header_->data_capacity;
-    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
-    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
-    auto used = wp - rp;
-    if (used > cap) used = cap;
-    return used;
-  }
+  std::uint64_t occupancy_bytes() const { return used_bytes_(); }
 
   std::uint64_t available_bytes() const {
     if (!header_) return 0;
-    const auto cap = header_->data_capacity;
-    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
-    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
-    auto used = wp - rp;
-    if (used > cap) used = cap;
-    return cap - used;
+    return header_->data_capacity - used_bytes_();
   }
 
   std::uint64_t consumer_lag_bytes() const {
+    // Semantically distinct from occupancy_bytes: measures consumer delay.
+    // Currently computes the same value in SPSC layout; may diverge in
+    // future multi-consumer or segmented layouts.
+    return used_bytes_();
+  }
+
+ private:
+  std::uint64_t used_bytes_() const {
     if (!header_) return 0;
     const auto cap = header_->data_capacity;
     const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
     const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
-    auto lag = wp - rp;
-    if (lag > cap) lag = cap;
-    return lag;
+    return wp >= rp ? std::min(wp - rp, cap) : 0;
   }
 
- private:
   transport_options opts_;
   core::shm shm_;
   core::control_block* header_{nullptr};
