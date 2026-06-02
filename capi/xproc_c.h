@@ -457,7 +457,7 @@ XPROC_C_API xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer
  * @param out Receives the occupancy ratio in [0.0, 1.0].
  * @return XPROC_C_STATUS_OK on success, otherwise an error status.
  */
-XPROC_C_API xproc_c_status xproc_c_observer_occupancy_ratio(xproc_c_observer* observer, double* out);
+XPROC_C_API xproc_c_status xproc_c_observer_occupancy_ratio(const xproc_c_observer* observer, double* out);
 
 /**
  * @brief Returns the number of occupied bytes in the ring.
@@ -466,7 +466,7 @@ XPROC_C_API xproc_c_status xproc_c_observer_occupancy_ratio(xproc_c_observer* ob
  * @param out Receives the occupied byte count.
  * @return XPROC_C_STATUS_OK on success, otherwise an error status.
  */
-XPROC_C_API xproc_c_status xproc_c_observer_occupancy_bytes(xproc_c_observer* observer, uint64_t* out);
+XPROC_C_API xproc_c_status xproc_c_observer_occupancy_bytes(const xproc_c_observer* observer, uint64_t* out);
 
 /**
  * @brief Returns the number of available bytes in the ring.
@@ -475,7 +475,7 @@ XPROC_C_API xproc_c_status xproc_c_observer_occupancy_bytes(xproc_c_observer* ob
  * @param out Receives the available byte count.
  * @return XPROC_C_STATUS_OK on success, otherwise an error status.
  */
-XPROC_C_API xproc_c_status xproc_c_observer_available_bytes(xproc_c_observer* observer, uint64_t* out);
+XPROC_C_API xproc_c_status xproc_c_observer_available_bytes(const xproc_c_observer* observer, uint64_t* out);
 
 /**
  * @brief Returns the consumer lag in bytes (written but not yet consumed).
@@ -484,18 +484,21 @@ XPROC_C_API xproc_c_status xproc_c_observer_available_bytes(xproc_c_observer* ob
  * @param out Receives the lag in bytes.
  * @return XPROC_C_STATUS_OK on success, otherwise an error status.
  */
-XPROC_C_API xproc_c_status xproc_c_observer_consumer_lag_bytes(xproc_c_observer* observer, uint64_t* out);
+XPROC_C_API xproc_c_status xproc_c_observer_consumer_lag_bytes(const xproc_c_observer* observer, uint64_t* out);
 
 typedef struct xproc_c_diagnostics_tracker xproc_c_diagnostics_tracker;
 
 /**
  * @brief Creates a diagnostics tracker from an observer's initial state.
  *
+ * The observer must outlive the tracker. Destroying the observer before the
+ * tracker results in undefined behavior.
+ *
  * @param observer Observer handle.
  * @param out Receives the created tracker handle.
  * @return XPROC_C_STATUS_OK on success, otherwise an error status.
  */
-XPROC_C_API xproc_c_status xproc_c_diagnostics_tracker_create(xproc_c_observer* observer,
+XPROC_C_API xproc_c_status xproc_c_diagnostics_tracker_create(const xproc_c_observer* observer,
                                                                xproc_c_diagnostics_tracker** out);
 
 /**

@@ -36,7 +36,7 @@ struct xproc_c_observer {
 
 struct xproc_c_diagnostics_tracker {
   std::unique_ptr<xproc::ipc::diagnostics_tracker> impl;
-  xproc_c_observer* owner;  // borrows observer for snapshot updates
+  const xproc_c_observer* owner;  // borrows observer for snapshot updates
 };
 
 namespace {
@@ -756,7 +756,7 @@ xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer, void* buff
   });
 }
 
-xproc_c_status xproc_c_observer_occupancy_ratio(xproc_c_observer* observer, double* out) {
+xproc_c_status xproc_c_observer_occupancy_ratio(const xproc_c_observer* observer, double* out) {
   if (out == nullptr) {
     return invalid_argument("xproc_c_observer_occupancy_ratio: out must not be null");
   }
@@ -771,7 +771,7 @@ xproc_c_status xproc_c_observer_occupancy_ratio(xproc_c_observer* observer, doub
   });
 }
 
-xproc_c_status xproc_c_observer_occupancy_bytes(xproc_c_observer* observer, uint64_t* out) {
+xproc_c_status xproc_c_observer_occupancy_bytes(const xproc_c_observer* observer, uint64_t* out) {
   if (out == nullptr) {
     return invalid_argument("xproc_c_observer_occupancy_bytes: out must not be null");
   }
@@ -786,7 +786,7 @@ xproc_c_status xproc_c_observer_occupancy_bytes(xproc_c_observer* observer, uint
   });
 }
 
-xproc_c_status xproc_c_observer_available_bytes(xproc_c_observer* observer, uint64_t* out) {
+xproc_c_status xproc_c_observer_available_bytes(const xproc_c_observer* observer, uint64_t* out) {
   if (out == nullptr) {
     return invalid_argument("xproc_c_observer_available_bytes: out must not be null");
   }
@@ -801,7 +801,7 @@ xproc_c_status xproc_c_observer_available_bytes(xproc_c_observer* observer, uint
   });
 }
 
-xproc_c_status xproc_c_observer_consumer_lag_bytes(xproc_c_observer* observer, uint64_t* out) {
+xproc_c_status xproc_c_observer_consumer_lag_bytes(const xproc_c_observer* observer, uint64_t* out) {
   if (out == nullptr) {
     return invalid_argument("xproc_c_observer_consumer_lag_bytes: out must not be null");
   }
@@ -816,7 +816,7 @@ xproc_c_status xproc_c_observer_consumer_lag_bytes(xproc_c_observer* observer, u
   });
 }
 
-xproc_c_status xproc_c_diagnostics_tracker_create(xproc_c_observer* observer,
+xproc_c_status xproc_c_diagnostics_tracker_create(const xproc_c_observer* observer,
                                                    xproc_c_diagnostics_tracker** out) {
   if (out == nullptr) {
     return invalid_argument("xproc_c_diagnostics_tracker_create: out must not be null");
