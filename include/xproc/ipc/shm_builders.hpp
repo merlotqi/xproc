@@ -8,8 +8,8 @@
 #include <thread>
 #include <utility>
 #include <xproc/core/layout_exception.hpp>
+#include <xproc/core/layout_manager.hpp>
 #include <xproc/core/shm.hpp>
-#include <xproc/core/shm_layout_manager.hpp>
 #include <xproc/core/shm_open_mode.hpp>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/observer.hpp>

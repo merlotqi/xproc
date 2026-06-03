@@ -1,7 +1,7 @@
 #include <atomic>
 #include <cstring>
-#include <xproc/core/shm_layout.hpp>
-#include <xproc/core/shm_layout_manager.hpp>
+#include <xproc/core/layout_types.hpp>
+#include <xproc/core/layout_manager.hpp>
 #include <xproc/platform/platform.hpp>
 #include <xproc/platform/process.hpp>
 

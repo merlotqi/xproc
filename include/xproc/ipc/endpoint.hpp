@@ -6,9 +6,9 @@
 #include <string>
 #include <type_traits>
 #include <xproc/core/layout_exception.hpp>
+#include <xproc/core/layout_manager.hpp>
+#include <xproc/core/layout_types.hpp>
 #include <xproc/core/shm.hpp>
-#include <xproc/core/shm_layout.hpp>
-#include <xproc/core/shm_layout_manager.hpp>
 #include <xproc/core/shm_open_mode.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/platform/process.hpp>

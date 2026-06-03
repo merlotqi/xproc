@@ -30,7 +30,6 @@
 // ringbuffer include files.
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
-#include <xproc/ringbuffer/iringbuffer.hpp>
 #include <xproc/ringbuffer/reserve_result.hpp>
 #include <xproc/ringbuffer/ringbuffer_error.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
@@ -38,10 +37,9 @@
 
 // shm include files.
 #include <xproc/core/layout_exception.hpp>
+#include <xproc/core/layout_manager.hpp>
+#include <xproc/core/layout_types.hpp>
 #include <xproc/core/shm.hpp>
-#include <xproc/core/shm_backend.hpp>
-#include <xproc/core/shm_layout.hpp>
-#include <xproc/core/shm_layout_manager.hpp>
 #include <xproc/core/shm_open_mode.hpp>
 
 // sync include files.

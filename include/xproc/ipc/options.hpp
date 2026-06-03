@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/layout_types.hpp>
 
 namespace xproc::ipc {
 

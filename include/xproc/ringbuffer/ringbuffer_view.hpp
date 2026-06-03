@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/layout_types.hpp>
 
 namespace xproc::ringbuffer {
 

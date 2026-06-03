@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <stdexcept>
-#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/layout_types.hpp>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/options.hpp>
 

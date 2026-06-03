@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/layout_types.hpp>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/endpoint.hpp>
 #include <xproc/ipc/shm_builders.hpp>

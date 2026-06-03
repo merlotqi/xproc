@@ -2,8 +2,8 @@
 
 #include <cstdint>
 #include <system_error>
+#include <xproc/core/layout_types.hpp>
 #include <xproc/core/shm.hpp>
-#include <xproc/core/shm_layout.hpp>
 
 namespace xproc::core {
 

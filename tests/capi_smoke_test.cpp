@@ -32,7 +32,7 @@ extern "C" {
 }
 
 #include <xproc/core/shm.hpp>
-#include <xproc/core/shm_layout.hpp>
+#include <xproc/core/layout_types.hpp>
 
 namespace {
 

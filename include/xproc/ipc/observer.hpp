@@ -7,8 +7,8 @@
 #include <string>
 #include <utility>
 #include <xproc/core/layout_exception.hpp>
+#include <xproc/core/layout_manager.hpp>
 #include <xproc/core/shm.hpp>
-#include <xproc/core/shm_layout_manager.hpp>
 #include <xproc/ipc/inspector.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/ringbuffer/fixed_reader.hpp>

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
-#include <xproc/core/shm_layout_manager.hpp>
+#include <xproc/core/layout_manager.hpp>
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/fixed_writer.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>

@@ -163,21 +163,6 @@ TEST(LayoutValidate, CreatorMetadataFieldsDefaultToZero) {
   EXPECT_EQ(opts.creator_flags, 0u);
 }
 
-TEST(LayoutValidate, DefaultShmBackendStub) {
-  xproc::core::default_shm_backend b;
-  EXPECT_FALSE(b.is_attached());
-  EXPECT_EQ(b.last_os_error(), 0);
-}
-
-TEST(LayoutValidate, RingbufferFacadeAndErrorStrings) {
-  alignas(64) xproc::core::control_block h{};
-  h.data_capacity = 1024;
-  h.data_alignment = 8;
-  xproc::ringbuffer::control_block_ring_facade view(&h);
-  EXPECT_EQ(view.capacity_bytes(), 1024u);
-  EXPECT_EQ(view.data_alignment(), 8u);
-  EXPECT_STREQ(xproc::ringbuffer::ringbuffer_error_cstr(xproc::ringbuffer::ringbuffer_error::empty), "empty");
-}
 
 TEST(LayoutValidate, FixedItemSizeMismatchOnAttach) {
   const std::string path = "/xproc_layout_fixed_item_size_attach";

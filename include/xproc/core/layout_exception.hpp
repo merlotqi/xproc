@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <xproc/core/shm_layout_manager.hpp>
+#include <xproc/core/layout_manager.hpp>
 
 namespace xproc::core {
 

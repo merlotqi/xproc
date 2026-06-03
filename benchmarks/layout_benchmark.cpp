@@ -2,7 +2,7 @@
 
 #include <array>
 #include <cstdint>
-#include <xproc/core/shm_layout_manager.hpp>
+#include <xproc/core/layout_manager.hpp>
 
 namespace {
 
