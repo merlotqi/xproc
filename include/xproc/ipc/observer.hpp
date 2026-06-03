@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
@@ -123,7 +124,7 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
     const auto cap = header_->data_capacity;
     const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
     const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
-    return wp >= rp ? std::min(wp - rp, cap) : 0;
+    return wp >= rp ? (std::min)(wp - rp, cap) : 0;
   }
 
   transport_options opts_;
