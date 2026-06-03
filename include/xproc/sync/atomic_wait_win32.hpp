@@ -157,7 +157,7 @@ inline void polling_wait(const std::atomic<T>* atomic, T old) {
     ++iteration;
     if (iteration <= tuning.spin_count) {
       // Exponential backoff: 1, 2, 4, ..., capped at 256 pauses per iter.
-      const std::uint32_t exp = std::min(iteration - 1, 8u);
+      const std::uint32_t exp = (std::min)(iteration - 1, 8u);
       const std::uint32_t delay = 1u << exp;
       for (std::uint32_t i = 0; i < delay; ++i) {
         XPROC_CPU_PAUSE();

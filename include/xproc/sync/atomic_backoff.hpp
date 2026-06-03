@@ -32,7 +32,7 @@ class atomic_backoff {
     iterations_++;
     if (iterations_ <= spin_iterations_) {
       // Exponential delay: 1, 2, 4, 8, ..., capped at 256 pauses.
-      const uint32_t exp = std::min(iterations_ - 1, max_pause_exponent);
+      const uint32_t exp = (std::min)(iterations_ - 1, max_pause_exponent);
       const uint32_t delay = 1u << exp;
       for (uint32_t i = 0; i < delay; ++i) {
         XPROC_CPU_PAUSE();
