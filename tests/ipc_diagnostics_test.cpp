@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 #include <thread>
-#include <chrono>
-#include <xproc/xproc.hpp>
 #include <xproc/ipc/diagnostics_tracker.hpp>
+#include <xproc/xproc.hpp>
 
 static xproc::ipc::transport_options make_test_opts(const std::string& path, std::size_t data_capacity) {
   xproc::core::shm::unlink(path);

@@ -90,14 +90,14 @@ std::wstring utf8_to_wide(const std::string& value) {
   if (value.empty()) {
     return std::wstring{};
   }
-  const int needed = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(),
-                                            static_cast<int>(value.size()), nullptr, 0);
+  const int needed =
+      ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), nullptr, 0);
   if (needed <= 0) {
     throw std::runtime_error("utf8_to_wide: MultiByteToWideChar size failed");
   }
   std::wstring out(static_cast<std::size_t>(needed), L'\0');
-  const int written =
-      ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), out.data(), needed);
+  const int written = ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()),
+                                            out.data(), needed);
   if (written != needed) {
     throw std::runtime_error("utf8_to_wide: MultiByteToWideChar conversion failed");
   }

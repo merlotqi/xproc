@@ -72,8 +72,7 @@ void set_test_sock_linger_reset(test_sock_handle sock) noexcept {
   linger reset{};
   reset.l_onoff = 1;
   reset.l_linger = 0;
-  static_cast<void>(
-      ::setsockopt(sock, SOL_SOCKET, SO_LINGER, reinterpret_cast<const char*>(&reset), sizeof(reset)));
+  static_cast<void>(::setsockopt(sock, SOL_SOCKET, SO_LINGER, reinterpret_cast<const char*>(&reset), sizeof(reset)));
 }
 
 class ResettingTcpServer {

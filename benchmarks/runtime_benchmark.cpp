@@ -12,8 +12,7 @@ namespace {
 
 std::string unique_path(const char* prefix, int arg) {
   const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
-  return std::string("/xproc_bench_rt_") + prefix + "_" + std::to_string(arg) +
-         "_" + std::to_string(now);
+  return std::string("/xproc_bench_rt_") + prefix + "_" + std::to_string(arg) + "_" + std::to_string(now);
 }
 
 // Baseline: direct poll loop without runtime (no intermediate allocation).
@@ -69,12 +68,13 @@ static void BM_RuntimeReuseBuffer(benchmark::State& state) {
   std::atomic<bool> done{true};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t*, std::size_t len) {
-             benchmark::DoNotOptimize(len);
-             done.store(true);
-           },
-           xproc::ipc::copy_policy::reuse_buffer);
+    rt.run(
+        executor,
+        [&](const std::uint8_t*, std::size_t len) {
+          benchmark::DoNotOptimize(len);
+          done.store(true);
+        },
+        xproc::ipc::copy_policy::reuse_buffer);
   });
 
   std::vector<std::byte> payload(payload_len, std::byte{0x5a});
@@ -111,12 +111,13 @@ static void BM_RuntimeZeroCopy(benchmark::State& state) {
   std::atomic<bool> done{true};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t*, std::size_t len) {
-             benchmark::DoNotOptimize(len);
-             done.store(true);
-           },
-           xproc::ipc::copy_policy::zero_copy);
+    rt.run(
+        executor,
+        [&](const std::uint8_t*, std::size_t len) {
+          benchmark::DoNotOptimize(len);
+          done.store(true);
+        },
+        xproc::ipc::copy_policy::zero_copy);
   });
 
   std::vector<std::byte> payload(payload_len, std::byte{0x5a});
@@ -153,12 +154,13 @@ static void BM_RuntimeSbo(benchmark::State& state) {
   std::atomic<bool> done{true};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor,
-           [&](const std::uint8_t*, std::size_t len) {
-             benchmark::DoNotOptimize(len);
-             done.store(true);
-           },
-           xproc::ipc::copy_policy::sbo);
+    rt.run(
+        executor,
+        [&](const std::uint8_t*, std::size_t len) {
+          benchmark::DoNotOptimize(len);
+          done.store(true);
+        },
+        xproc::ipc::copy_policy::sbo);
   });
 
   std::vector<std::byte> payload(payload_len, std::byte{0x5a});

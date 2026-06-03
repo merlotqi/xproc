@@ -73,8 +73,7 @@ void set_test_sock_linger_reset(test_sock_handle sock) noexcept {
   linger reset{};
   reset.l_onoff = 1;
   reset.l_linger = 0;
-  static_cast<void>(
-      ::setsockopt(sock, SOL_SOCKET, SO_LINGER, reinterpret_cast<const char*>(&reset), sizeof(reset)));
+  static_cast<void>(::setsockopt(sock, SOL_SOCKET, SO_LINGER, reinterpret_cast<const char*>(&reset), sizeof(reset)));
 }
 
 void raw_socket_send_and_close(std::uint16_t port, const void* data, std::size_t len) {
@@ -445,9 +444,8 @@ TEST(SocketTransport, SingleListenerServesBothIPv4AndIPv6) {
 
     std::string v4;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll([&](void* p, std::uint32_t len) {
-        v4.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
-      });
+      return cons.poll(
+          [&](void* p, std::uint32_t len) { v4.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
     }));
     EXPECT_EQ(v4, "ipv4-msg");
 
@@ -467,9 +465,8 @@ TEST(SocketTransport, SingleListenerServesBothIPv4AndIPv6) {
 
     std::string v6;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll([&](void* p, std::uint32_t len) {
-        v6.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
-      });
+      return cons.poll(
+          [&](void* p, std::uint32_t len) { v6.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
     }));
     EXPECT_EQ(v6, "ipv6-msg");
   } catch (const std::runtime_error& ex) {

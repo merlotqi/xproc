@@ -155,9 +155,14 @@ inline void polling_wait(const std::atomic<T>* atomic, T old) {
       return;
     }
     ++iteration;
-    if (iteration <= 1000) {
-      XPROC_CPU_PAUSE();
-    } else if (iteration <= 1010) {
+    if (iteration <= tuning.spin_count) {
+      // Exponential backoff: 1, 2, 4, ..., capped at 256 pauses per iter.
+      const std::uint32_t exp = std::min(iteration - 1, 8u);
+      const std::uint32_t delay = 1u << exp;
+      for (std::uint32_t i = 0; i < delay; ++i) {
+        XPROC_CPU_PAUSE();
+      }
+    } else if (iteration <= tuning.spin_count + tuning.yield_count) {
       ::SwitchToThread();
     } else {
       global_wait_stats().polling_sleep_calls.fetch_add(1, std::memory_order_relaxed);
@@ -208,11 +213,9 @@ inline void atomic_wait_win32_reset_stats() {
   s.notify_all_calls.store(0, std::memory_order_relaxed);
 }
 
-// WaitOnAddress / WakeByAddress* are native address-wait primitives, but Microsoft documents them
-// as same-process synchronization. xproc therefore uses a three-stage wait: spin, yield, then a
-// short timed wait. Nearby same-process hand-offs usually complete in the spin/yield window, and
-// cross-process shared-memory hand-offs avoid falling into a coarse kernel timeout on every round.
-
+// atomic_wait is a pure blocking primitive.
+// Spin/yield backoff is handled by atomic_backoff — callers that spin before
+// blocking should use atomic_backoff::pause() instead of calling atomic_wait directly.
 template <typename T>
 inline void atomic_wait(const std::atomic<T>* atomic, T old) {
   static_assert(sizeof(T) == 4, "atomic_wait(win32): only 32-bit atomics are supported");
@@ -227,20 +230,6 @@ inline void atomic_wait(const std::atomic<T>* atomic, T old) {
   const details::wait_api& api = details::native_wait_api();
   const details::wait_tuning& tuning = details::native_wait_tuning();
   while (atomic->load(std::memory_order_acquire) == old) {
-    for (std::uint32_t spin = 0; spin < tuning.spin_count; ++spin) {
-      details::global_wait_stats().spin_iterations.fetch_add(1, std::memory_order_relaxed);
-      XPROC_CPU_PAUSE();
-      if (atomic->load(std::memory_order_acquire) != old) {
-        return;
-      }
-    }
-    for (std::uint32_t yield = 0; yield < tuning.yield_count; ++yield) {
-      details::global_wait_stats().yield_iterations.fetch_add(1, std::memory_order_relaxed);
-      ::SwitchToThread();
-      if (atomic->load(std::memory_order_acquire) != old) {
-        return;
-      }
-    }
     details::global_wait_stats().native_wait_calls.fetch_add(1, std::memory_order_relaxed);
     const BOOL ok = api.wait_on_address(details::wait_address(atomic), &old, sizeof(T), tuning.wait_timeout_ms);
     if (!ok && ::GetLastError() == ERROR_TIMEOUT) {

@@ -175,8 +175,7 @@ class SharedHeaderInterfaceConsumer final : public xproc::ipc::consumer_channel_
 };
 
 bool stop_shared_header_runtime_until_returned(xproc::ipc::runtime& rt, SharedHeaderInterfaceConsumer& cons,
-                                               const std::atomic<bool>& returned,
-                                               std::chrono::milliseconds timeout) {
+                                               const std::atomic<bool>& returned, std::chrono::milliseconds timeout) {
   const auto deadline = std::chrono::steady_clock::now() + timeout;
   while (std::chrono::steady_clock::now() < deadline) {
     rt.stop();
@@ -463,7 +462,8 @@ TEST(RuntimeAllocation, StopInterruptsSharedHeaderInterfaceWait) {
   const bool entered_wait = cons->wait_entered_for(std::chrono::milliseconds(250));
   EXPECT_TRUE(entered_wait);
   if (!entered_wait) {
-    const bool cleaned = stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+    const bool cleaned =
+        stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
     EXPECT_TRUE(cleaned);
     rt_thread.join();
     return;
@@ -495,7 +495,8 @@ TEST(RuntimeAllocation, StopBeforeSharedHeaderWaitSnapshotDoesNotHang) {
   const bool entered_wait = cons->wait_entered_for(std::chrono::milliseconds(250));
   EXPECT_TRUE(entered_wait);
   if (!entered_wait) {
-    const bool cleaned = stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
+    const bool cleaned =
+        stop_shared_header_runtime_until_returned(*rt, *cons, *returned, std::chrono::milliseconds(250));
     EXPECT_TRUE(cleaned);
     rt_thread.join();
     return;

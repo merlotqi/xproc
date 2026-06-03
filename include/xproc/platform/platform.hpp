@@ -53,14 +53,15 @@
 #include <intrin.h>
 #define XPROC_CPU_PAUSE() _mm_pause()
 #else
-#define XPROC_CPU_PAUSE() __asm__ __volatile__("pause")
+#define XPROC_CPU_PAUSE() __builtin_ia32_pause()
 #endif
 #elif defined(XPROC_ARCH_ARM64) || defined(XPROC_ARCH_ARM)
 #if defined(XPROC_COMPILER_MSVC)
 #include <intrin.h>
 #define XPROC_CPU_PAUSE() __yield()
 #else
-#define XPROC_CPU_PAUSE() __asm__ __volatile__("yield")
+#include <arm_acle.h>
+#define XPROC_CPU_PAUSE() __yield()
 #endif
 #else
 #include <thread>

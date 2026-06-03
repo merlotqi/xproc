@@ -189,8 +189,7 @@ static void BM_FixedTrySendFull(benchmark::State& state) {
   for (auto _ : state) {
     const auto sent = producer.try_send_fixed_bytes(payload.data(), static_cast<std::uint32_t>(payload_len));
     benchmark::DoNotOptimize(sent);
-    if (sent != xproc::ipc::send_result::full &&
-        sent != xproc::ipc::send_result::message_too_large) {
+    if (sent != xproc::ipc::send_result::full && sent != xproc::ipc::send_result::message_too_large) {
       state.SkipWithError("expected full or oversized result");
       break;
     }

@@ -205,8 +205,8 @@ struct windows_named_pipe_stream {
 
     HANDLE client_handle = INVALID_HANDLE_VALUE;
     std::thread client_connector([&] {
-      client_handle = CreateFileA(name_.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                                  nullptr);
+      client_handle =
+          CreateFileA(name_.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     });
 
     const BOOL connected = ConnectNamedPipe(server_.get(), nullptr);

@@ -388,9 +388,7 @@ TEST(ApiSurface, SocketBuildersProduceExpectedOptions) {
   EXPECT_EQ(varlen_listener_opts.socket_port, 0u);
   EXPECT_EQ(varlen_listener_opts.item_size, 0u);
 
-  const auto fixed_listener_opts = xproc::ipc::listen_fixed_socket(sizeof(std::uint32_t))
-                                       .with_port(12345)
-                                       .options();
+  const auto fixed_listener_opts = xproc::ipc::listen_fixed_socket(sizeof(std::uint32_t)).with_port(12345).options();
   EXPECT_EQ(fixed_listener_opts.backend, xproc::ipc::transport_backend::socket);
   EXPECT_EQ(fixed_listener_opts.type, xproc::ipc::channel_type::fixed);
   EXPECT_TRUE(fixed_listener_opts.socket_listen);
@@ -398,10 +396,8 @@ TEST(ApiSurface, SocketBuildersProduceExpectedOptions) {
   EXPECT_EQ(fixed_listener_opts.socket_port, 12345u);
   EXPECT_EQ(fixed_listener_opts.item_size, sizeof(std::uint32_t));
 
-  const auto varlen_connector_opts = xproc::ipc::connect_varlen_socket("127.0.0.1", 54321)
-                                         .with_connect_retries(7)
-                                         .with_connect_retry_ms(3)
-                                         .options();
+  const auto varlen_connector_opts =
+      xproc::ipc::connect_varlen_socket("127.0.0.1", 54321).with_connect_retries(7).with_connect_retry_ms(3).options();
   EXPECT_EQ(varlen_connector_opts.backend, xproc::ipc::transport_backend::socket);
   EXPECT_EQ(varlen_connector_opts.type, xproc::ipc::channel_type::varlen);
   EXPECT_FALSE(varlen_connector_opts.socket_listen);
