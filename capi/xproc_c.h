@@ -107,6 +107,15 @@ typedef struct xproc_c_producer xproc_c_producer;
 typedef struct xproc_c_consumer xproc_c_consumer;
 typedef struct xproc_c_observer xproc_c_observer;
 
+typedef struct xproc_c_message_meta {
+  uint64_t user_data;
+  uint64_t timestamp_ns;
+  uint32_t schema_id;
+  uint32_t flags;
+} xproc_c_message_meta;
+
+typedef void (*xproc_c_poll_handler)(const xproc_c_message_meta* meta, void* payload, uint32_t len, void* user_data);
+
 /**
  * @brief Fills an option struct with library defaults.
  *
@@ -303,6 +312,14 @@ XPROC_C_API xproc_c_status xproc_c_producer_send_fixed_sized(xproc_c_producer* p
  */
 XPROC_C_API xproc_c_status xproc_c_producer_send_varlen(xproc_c_producer* producer, const void* data, uint32_t len);
 
+XPROC_C_API xproc_c_status xproc_c_producer_send_fixed_sized_with_meta(
+    xproc_c_producer* producer, const void* data, uint32_t byte_length,
+    const xproc_c_message_meta* meta);
+
+XPROC_C_API xproc_c_status xproc_c_producer_send_varlen_with_meta(
+    xproc_c_producer* producer, const void* data, uint32_t byte_length,
+    const xproc_c_message_meta* meta);
+
 /**
  * @brief Returns the socket port currently associated with a producer handle.
  *
@@ -449,6 +466,10 @@ XPROC_C_API xproc_c_status xproc_c_observer_snapshot(const xproc_c_observer* obs
  */
 XPROC_C_API xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer, void* buffer,
                                                       uint32_t buffer_capacity, uint32_t* out_len);
+
+XPROC_C_API xproc_c_status xproc_c_observer_peek_copy_with_meta(
+    xproc_c_observer* observer, xproc_c_message_meta* out_meta,
+    void* buffer, uint32_t buffer_capacity, uint32_t* out_len);
 
 /**
  * @brief Returns the ring occupancy ratio visible to an observer.
