@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <thread>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ringbuffer/detail/fixed_header.hpp>
 #include <xproc/ringbuffer/reserve_result.hpp>
 #include <xproc/ringbuffer/ringbuffer_view.hpp>
@@ -18,12 +19,16 @@ class fixed_writer : public ringbuffer_view {
   using ringbuffer_view::ringbuffer_view;
 
   void* reserve(uint32_t item_size, uint64_t& out_pos) {
+    return reserve(item_size, out_pos, xproc::ipc::message_meta{});
+  }
+
+  void* reserve(uint32_t item_size, uint64_t& out_pos, const xproc::ipc::message_meta& meta) {
     const uint32_t total_len = aligned_total_len(item_size);
     if (total_len > header_->data_capacity) {
       throw std::length_error("fixed_writer::reserve: message is larger than ring capacity");
     }
     while (true) {
-      reserve_result rr = try_reserve(item_size);
+      reserve_result rr = try_reserve(item_size, meta);
       if (rr) {
         out_pos = rr.position;
         return rr.payload;
@@ -34,6 +39,10 @@ class fixed_writer : public ringbuffer_view {
   }
 
   reserve_result try_reserve(uint32_t item_size) {
+    return try_reserve(item_size, xproc::ipc::message_meta{});
+  }
+
+  reserve_result try_reserve(uint32_t item_size, const xproc::ipc::message_meta& meta) {
     const uint32_t total_len = aligned_total_len(item_size);
     if (total_len > header_->data_capacity) {
       return {reserve_status::message_too_large, nullptr, 0};
@@ -50,6 +59,12 @@ class fixed_writer : public ringbuffer_view {
     }
 
     auto* h = reinterpret_cast<detail::fixed_message_header*>(get_ptr(curr_write));
+    h->meta = meta;
+    if (h->meta.timestamp_ns == 0) {
+      h->meta.timestamp_ns = static_cast<uint64_t>(
+          std::chrono::steady_clock::now().time_since_epoch().count());
+    }
+    std::atomic_thread_fence(std::memory_order_release);
     h->status.store(0, std::memory_order_relaxed);
     return {reserve_status::ok, get_ptr(curr_write + sizeof(detail::fixed_message_header)), curr_write};
   }

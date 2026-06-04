@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ringbuffer/detail/fixed_header.hpp>
 #include <xproc/ringbuffer/ringbuffer_view.hpp>
 #include <xproc/sync/atomic_wait.hpp>
@@ -24,7 +25,7 @@ class fixed_reader : public ringbuffer_view {
 
     auto* h = reinterpret_cast<detail::fixed_message_header*>(get_ptr(curr_read));
     if (h->status.load(std::memory_order_acquire) == 1) {
-      handler(get_ptr(curr_read + sizeof(detail::fixed_message_header)));
+      handler(h->meta, get_ptr(curr_read + sizeof(detail::fixed_message_header)));
       h->status.store(0, std::memory_order_relaxed);
       header_->rb_meta.read_pos.store(curr_read + total_len, std::memory_order_release);
       header_->rb_meta.read_wake_seq.fetch_add(1, std::memory_order_release);
@@ -47,7 +48,8 @@ class fixed_reader : public ringbuffer_view {
 
     const auto* h = reinterpret_cast<const detail::fixed_message_header*>(get_ptr(curr_read));
     if (h->status.load(std::memory_order_acquire) == 1) {
-      std::forward<F>(handler)(static_cast<const void*>(get_ptr(curr_read + sizeof(detail::fixed_message_header))),
+      std::forward<F>(handler)(h->meta,
+                               static_cast<const void*>(get_ptr(curr_read + sizeof(detail::fixed_message_header))),
                                item_size);
       (void)total_len;
       return true;

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <thread>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ringbuffer/detail/varlen_header.hpp>
 #include <xproc/ringbuffer/reserve_result.hpp>
 #include <xproc/ringbuffer/ringbuffer_view.hpp>
@@ -18,12 +19,16 @@ class varlen_writer : public ringbuffer_view {
   using ringbuffer_view::ringbuffer_view;
 
   void* reserve(uint32_t len, uint64_t& out_pos) {
+    return reserve(len, out_pos, xproc::ipc::message_meta{});
+  }
+
+  void* reserve(uint32_t len, uint64_t& out_pos, const xproc::ipc::message_meta& meta) {
     const uint32_t total_len = aligned_total_len(len);
     if (total_len > header_->data_capacity) {
       throw std::length_error("varlen_writer::reserve: message is larger than ring capacity");
     }
     while (true) {
-      reserve_result rr = try_reserve(len);
+      reserve_result rr = try_reserve(len, meta);
       if (rr) {
         out_pos = rr.position;
         return rr.payload;
@@ -34,6 +39,10 @@ class varlen_writer : public ringbuffer_view {
   }
 
   reserve_result try_reserve(uint32_t len) {
+    return try_reserve(len, xproc::ipc::message_meta{});
+  }
+
+  reserve_result try_reserve(uint32_t len, const xproc::ipc::message_meta& meta) {
     const uint32_t total_len = aligned_total_len(len);
     if (total_len > header_->data_capacity) {
       return {reserve_status::message_too_large, nullptr, 0};
@@ -61,6 +70,12 @@ class varlen_writer : public ringbuffer_view {
 
     auto* h = reinterpret_cast<detail::varlen_message_header*>(get_ptr(curr_write));
     h->length = len;
+    h->meta = meta;
+    if (h->meta.timestamp_ns == 0) {
+      h->meta.timestamp_ns = static_cast<uint64_t>(
+          std::chrono::steady_clock::now().time_since_epoch().count());
+    }
+    std::atomic_thread_fence(std::memory_order_release);
     h->status.store(0, std::memory_order_relaxed);
     return {reserve_status::ok, get_ptr(curr_write + sizeof(detail::varlen_message_header)), curr_write};
   }
@@ -82,7 +97,7 @@ class varlen_writer : public ringbuffer_view {
 
   void commit(uint64_t pos) {
     auto* h = reinterpret_cast<detail::varlen_message_header*>(get_ptr(pos));
-    h->status.store(1, std::memory_order_release);  // 1 = Ready
+    h->status.store(1, std::memory_order_release);
 
     header_->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
     sync::atomic_notify_one(&header_->rb_meta.commit_seq);
