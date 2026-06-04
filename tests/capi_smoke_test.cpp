@@ -866,3 +866,128 @@ TEST(CApiSmoke, CTrackerProducerAlive) {
   xproc_c_producer_close(prod);
   xproc_c_shm_unlink(path);
 }
+
+TEST(CApiSmoke, CMetaStructSize) {
+  EXPECT_EQ(sizeof(xproc_c_message_meta), 24u);
+}
+
+TEST(CApiSmoke, CSendFixedSizedWithMeta) {
+  const std::string path = "/xproc_capi_fixed_with_meta";
+  ASSERT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+
+  xproc_c_options producer_opts;
+  xproc_c_options_init(&producer_opts);
+  producer_opts.path = path.c_str();
+  producer_opts.shm_size = xproc_c_shm_size_for_data_capacity(8192);
+  producer_opts.channel_type = XPROC_C_CHANNEL_FIXED;
+  producer_opts.item_size = sizeof(std::uint32_t);
+  producer_opts.schema_id = 0xCAFEF00D;
+
+  xproc_c_producer* producer = nullptr;
+  xproc_c_consumer* consumer = nullptr;
+  xproc_c_observer* observer = nullptr;
+
+  ASSERT_EQ(xproc_c_producer_open(&producer_opts, &producer), XPROC_C_STATUS_OK);
+
+  xproc_c_options attacher_opts = producer_opts;
+  attacher_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  attacher_opts.create_if_missing = 0;
+
+  ASSERT_EQ(xproc_c_consumer_open(&attacher_opts, &consumer), XPROC_C_STATUS_OK);
+  ASSERT_EQ(xproc_c_observer_open(&attacher_opts, &observer), XPROC_C_STATUS_OK);
+
+  xproc_c_message_meta meta{};
+  meta.user_data = 123;
+  meta.flags = 0x5;
+
+  const std::uint32_t expected = 0xDEADBEEFu;
+  ASSERT_EQ(xproc_c_producer_send_fixed_sized_with_meta(producer, &expected, sizeof(expected), &meta),
+            XPROC_C_STATUS_OK);
+
+  xproc_c_message_meta received_meta{};
+  std::uint32_t actual = 0;
+  std::uint32_t out_len = 0;
+
+  xproc_c_status status = XPROC_C_STATUS_AGAIN;
+  for (int i = 0; i < 100 && status == XPROC_C_STATUS_AGAIN; ++i) {
+    status = xproc_c_observer_peek_copy_with_meta(observer, &received_meta, &actual, sizeof(actual), &out_len);
+  }
+  ASSERT_EQ(status, XPROC_C_STATUS_OK);
+  EXPECT_EQ(out_len, sizeof(actual));
+  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(received_meta.user_data, 123u);
+  EXPECT_EQ(received_meta.flags, 0x5u);
+
+  std::uint32_t consumed = 0;
+  std::uint32_t consumed_len = 0;
+  ASSERT_EQ(xproc_c_consumer_poll_copy(consumer, &consumed, sizeof(consumed), &consumed_len), XPROC_C_STATUS_OK);
+  EXPECT_EQ(consumed_len, sizeof(consumed));
+  EXPECT_EQ(consumed, expected);
+
+  xproc_c_observer_close(observer);
+  xproc_c_consumer_close(consumer);
+  xproc_c_producer_close(producer);
+  EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+}
+
+TEST(CApiSmoke, CSendVarlenWithMeta) {
+  const std::string path = "/xproc_capi_varlen_with_meta";
+  ASSERT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+
+  xproc_c_options producer_opts;
+  xproc_c_options_init(&producer_opts);
+  producer_opts.path = path.c_str();
+  producer_opts.shm_size = xproc_c_shm_size_for_data_capacity(8192);
+  producer_opts.channel_type = XPROC_C_CHANNEL_VARLEN;
+  producer_opts.schema_id = 0xBEEF;
+
+  xproc_c_producer* producer = nullptr;
+  xproc_c_consumer* consumer = nullptr;
+  xproc_c_observer* observer = nullptr;
+
+  ASSERT_EQ(xproc_c_producer_open(&producer_opts, &producer), XPROC_C_STATUS_OK);
+
+  xproc_c_options attacher_opts = producer_opts;
+  attacher_opts.shm_size = XPROC_C_INFER_EXISTING_SHM_SIZE;
+  attacher_opts.create_if_missing = 0;
+
+  ASSERT_EQ(xproc_c_consumer_open(&attacher_opts, &consumer), XPROC_C_STATUS_OK);
+  ASSERT_EQ(xproc_c_observer_open(&attacher_opts, &observer), XPROC_C_STATUS_OK);
+
+  xproc_c_message_meta meta{};
+  meta.user_data = 456;
+  meta.flags = 0xA;
+
+  const std::array<std::uint8_t, 6> expected{{1u, 2u, 3u, 4u, 5u, 6u}};
+  ASSERT_EQ(xproc_c_producer_send_varlen_with_meta(producer, expected.data(), static_cast<std::uint32_t>(expected.size()),
+                                                    &meta),
+            XPROC_C_STATUS_OK);
+
+  xproc_c_message_meta received_meta{};
+  std::array<std::uint8_t, 6> actual{};
+  std::uint32_t out_len = 0;
+
+  xproc_c_status status = XPROC_C_STATUS_AGAIN;
+  for (int i = 0; i < 100 && status == XPROC_C_STATUS_AGAIN; ++i) {
+    status = xproc_c_observer_peek_copy_with_meta(observer, &received_meta, actual.data(),
+                                                   static_cast<std::uint32_t>(actual.size()), &out_len);
+  }
+  ASSERT_EQ(status, XPROC_C_STATUS_OK);
+  EXPECT_EQ(out_len, expected.size());
+  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(received_meta.user_data, 456u);
+  EXPECT_EQ(received_meta.flags, 0xAu);
+
+  std::array<std::uint8_t, 6> consumed{};
+  std::uint32_t consumed_len = 0;
+  ASSERT_EQ(xproc_c_consumer_poll_copy(consumer, consumed.data(), static_cast<std::uint32_t>(consumed.size()),
+                                       &consumed_len),
+            XPROC_C_STATUS_OK);
+  EXPECT_EQ(consumed_len, expected.size());
+  EXPECT_EQ(consumed, expected);
+
+  xproc_c_observer_close(observer);
+  xproc_c_consumer_close(consumer);
+  xproc_c_producer_close(producer);
+  EXPECT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
+}
