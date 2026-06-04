@@ -6,6 +6,7 @@
 #include <xproc/ipc/codec_exception.hpp>
 #include <xproc/ipc/endpoint.hpp>
 #include <xproc/ipc/inspector.hpp>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ipc/messaging.hpp>
 #include <xproc/ipc/observer.hpp>
 #include <xproc/ipc/options.hpp>
