@@ -129,15 +129,6 @@ if(TARGET xproc_run_tests)
     endif()
 endif()
 
-set(XPROC_EXPORT_WITH_NLOHMANN_JSON 0)
-if(XPROC_WITH_NLOHMANN_JSON)
-    set(XPROC_EXPORT_WITH_NLOHMANN_JSON 1)
-endif()
-set(XPROC_EXPORT_WITH_PROTOBUF 0)
-if(XPROC_WITH_PROTOBUF)
-    set(XPROC_EXPORT_WITH_PROTOBUF 1)
-endif()
-
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/xprocConfig.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/xprocConfig.cmake"
