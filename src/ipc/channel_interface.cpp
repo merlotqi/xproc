@@ -16,9 +16,23 @@ void shm_producer::send_fixed_sized(const void* data, std::uint32_t byte_length)
 
 void shm_producer::send_varlen(const void* data, std::uint32_t len) { ch_.send_varlen(data, len); }
 
+void shm_producer::send_fixed_bytes(const void* data, std::uint32_t payload_len, const message_meta& meta) {
+  ch_.send_fixed_bytes(data, payload_len, meta);
+}
+
+void shm_producer::send_fixed_sized(const void* data, std::uint32_t byte_length, const message_meta& meta) {
+  ch_.send_fixed_sized(data, byte_length, meta);
+}
+
+void shm_producer::send_varlen(const void* data, std::uint32_t len, const message_meta& meta) {
+  ch_.send_varlen(data, len, meta);
+}
+
 shm_consumer::shm_consumer(const transport_options& opts) : ch_(opts) {}
 
-bool shm_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>& handler) { return ch_.poll(handler); }
+bool shm_consumer::poll_impl(const std::function<void(const message_meta&, void*, std::uint32_t)>& handler) {
+  return ch_.poll(handler);
+}
 
 void shm_consumer::wait() {
   core::control_block* h = ch_.header();

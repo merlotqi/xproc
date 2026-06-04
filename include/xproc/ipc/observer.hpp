@@ -10,6 +10,7 @@
 #include <xproc/core/layout_manager.hpp>
 #include <xproc/core/shm.hpp>
 #include <xproc/ipc/inspector.hpp>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/ringbuffer/fixed_reader.hpp>
 #include <xproc/ringbuffer/varlen_reader.hpp>
@@ -88,7 +89,7 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
     return header_ ? header_->attach_count.load(std::memory_order_acquire) : 0;
   }
 
-  // Fixed: handler(const void *payload, uint32_t len) with len == item_size. Variable: same as channel::poll.
+  // Handler receives (meta, payload, len). Fixed channels pass item_size as len.
   template <typename F>
   bool peek(F&& handler) {
     if (opts_.type == channel_type::fixed) {

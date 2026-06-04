@@ -9,6 +9,7 @@
 #include <vector>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/channel_interface.hpp>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
 namespace xproc::ipc {
@@ -27,7 +28,7 @@ enum class copy_policy {
 //   to a thread pool queue. The callable may be destroyed after it returns.
 //
 // Handler contract:
-//   void(const std::uint8_t* data, std::size_t len)
+//   void(const message_meta& meta, const std::uint8_t* data, std::size_t len)
 //   Under reuse_buffer and zero_copy, data is a BORROWED pointer valid only for the
 //   duration of the handler call — same contract as channel::poll(). Callers that
 //   need ownership beyond the handler return must copy explicitly. Under sbo, small
@@ -196,35 +197,36 @@ class runtime {
 
   template <typename Executor, typename Handler>
   bool poll_with_reuse(channel& ch, Executor& exec, Handler& h) {
-    return ch.poll([&](void* ptr, uint32_t len) {
+    return ch.poll([&](const message_meta& meta, void* ptr, uint32_t len) {
       const auto n = static_cast<std::size_t>(len);
       if (reuse_buf_.size() < n) {
         reuse_buf_.resize(n);
       }
       std::memcpy(reuse_buf_.data(), ptr, n);
       auto* p = reuse_buf_.data();
-      exec([p, n, h]() { h(static_cast<const std::uint8_t*>(p), n); });
+      exec([meta, p, n, h]() { h(meta, static_cast<const std::uint8_t*>(p), n); });
     });
   }
 
   template <typename Executor, typename Handler>
   bool poll_zero_copy(channel& ch, Executor& exec, Handler& h) {
-    return ch.poll(
-        [&](void* ptr, uint32_t len) { exec([ptr, len, h]() { h(static_cast<const std::uint8_t*>(ptr), len); }); });
+    return ch.poll([&](const message_meta& meta, void* ptr, uint32_t len) {
+      exec([meta, ptr, len, h]() { h(meta, static_cast<const std::uint8_t*>(ptr), len); });
+    });
   }
 
   template <typename Executor, typename Handler>
   bool poll_with_sbo(channel& ch, Executor& exec, Handler& h) {
-    return ch.poll([&](void* ptr, uint32_t len) {
+    return ch.poll([&](const message_meta& meta, void* ptr, uint32_t len) {
       const auto n = static_cast<std::size_t>(len);
       if (n <= kSboThreshold) {
         std::array<std::uint8_t, kSboThreshold> buf{};
         std::memcpy(buf.data(), ptr, n);
-        exec([buf, n, h]() mutable { h(buf.data(), n); });
+        exec([meta, buf, n, h]() mutable { h(meta, buf.data(), n); });
       } else {
         auto heap = std::make_shared<std::vector<std::uint8_t>>(static_cast<const std::uint8_t*>(ptr),
                                                                 static_cast<const std::uint8_t*>(ptr) + n);
-        exec([heap, h]() { h(heap->data(), heap->size()); });
+        exec([meta, heap, h]() { h(meta, heap->data(), heap->size()); });
       }
     });
   }
@@ -235,29 +237,30 @@ class runtime {
   bool dispatch_poll_iface(Executor& exec, Handler& h, copy_policy policy) {
     switch (policy) {
       case copy_policy::reuse_buffer:
-        return iface_->poll([&](void* ptr, uint32_t len) {
+        return iface_->poll([&](const message_meta& meta, void* ptr, uint32_t len) {
           const auto n = static_cast<std::size_t>(len);
           if (reuse_buf_.size() < n) {
             reuse_buf_.resize(n);
           }
           std::memcpy(reuse_buf_.data(), ptr, n);
           auto* p = reuse_buf_.data();
-          exec([p, n, h]() { h(static_cast<const std::uint8_t*>(p), n); });
+          exec([meta, p, n, h]() { h(meta, static_cast<const std::uint8_t*>(p), n); });
         });
       case copy_policy::zero_copy:
-        return iface_->poll(
-            [&](void* ptr, uint32_t len) { exec([ptr, len, h]() { h(static_cast<const std::uint8_t*>(ptr), len); }); });
+        return iface_->poll([&](const message_meta& meta, void* ptr, uint32_t len) {
+          exec([meta, ptr, len, h]() { h(meta, static_cast<const std::uint8_t*>(ptr), len); });
+        });
       case copy_policy::sbo:
-        return iface_->poll([&](void* ptr, uint32_t len) {
+        return iface_->poll([&](const message_meta& meta, void* ptr, uint32_t len) {
           const auto n = static_cast<std::size_t>(len);
           if (n <= kSboThreshold) {
             std::array<std::uint8_t, kSboThreshold> buf{};
             std::memcpy(buf.data(), ptr, n);
-            exec([buf, n, h]() mutable { h(buf.data(), n); });
+            exec([meta, buf, n, h]() mutable { h(meta, buf.data(), n); });
           } else {
             auto heap = std::make_shared<std::vector<std::uint8_t>>(static_cast<const std::uint8_t*>(ptr),
                                                                     static_cast<const std::uint8_t*>(ptr) + n);
-            exec([heap, h]() { h(heap->data(), heap->size()); });
+            exec([meta, heap, h]() { h(meta, heap->data(), heap->size()); });
           }
         });
     }

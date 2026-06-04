@@ -7,6 +7,7 @@
 #include <vector>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/channel_interface.hpp>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ipc/codec_exception.hpp>
 #include <xproc/protocol/codec_traits.hpp>
 #include <xproc/protocol/protocol.hpp>
@@ -19,6 +20,11 @@ inline constexpr std::size_t send_encoded_stack_buf_max_v = 4096;
 
 template <typename Codec>
 void send_encoded_dispatch(channel& ch, const typename Codec::message_type& msg) {
+  send_encoded_dispatch(ch, msg, message_meta{});
+}
+
+template <typename Codec>
+void send_encoded_dispatch(channel& ch, const typename Codec::message_type& msg, const message_meta& meta) {
   constexpr std::size_t cap = Codec::max_encoded_size();
   std::size_t out_len = 0;
   if constexpr (cap <= send_encoded_stack_buf_max_v) {
@@ -27,13 +33,13 @@ void send_encoded_dispatch(channel& ch, const typename Codec::message_type& msg)
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
     if (ch.options().type == channel_type::varlen) {
-      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
         throw codec_exception(codec_error::wire_exceeds_item_size,
                               "send_encoded: encoded size exceeds item_size for fixed channel");
       }
-      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     }
   } else {
     std::vector<std::byte> buf(cap);
@@ -41,19 +47,25 @@ void send_encoded_dispatch(channel& ch, const typename Codec::message_type& msg)
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
     if (ch.options().type == channel_type::varlen) {
-      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
         throw codec_exception(codec_error::wire_exceeds_item_size,
                               "send_encoded: encoded size exceeds item_size for fixed channel");
       }
-      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     }
   }
 }
 
 template <typename Codec>
 void send_encoded_dispatch(producer_channel_interface& ch, const typename Codec::message_type& msg) {
+  send_encoded_dispatch(ch, msg, message_meta{});
+}
+
+template <typename Codec>
+void send_encoded_dispatch(producer_channel_interface& ch, const typename Codec::message_type& msg,
+                           const message_meta& meta) {
   constexpr std::size_t cap = Codec::max_encoded_size();
   std::size_t out_len = 0;
   if constexpr (cap <= send_encoded_stack_buf_max_v) {
@@ -62,13 +74,13 @@ void send_encoded_dispatch(producer_channel_interface& ch, const typename Codec:
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
     if (ch.options().type == channel_type::varlen) {
-      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
         throw codec_exception(codec_error::wire_exceeds_item_size,
                               "send_encoded: encoded size exceeds item_size for fixed channel");
       }
-      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     }
   } else {
     std::vector<std::byte> buf(cap);
@@ -76,13 +88,13 @@ void send_encoded_dispatch(producer_channel_interface& ch, const typename Codec:
       throw codec_exception(codec_error::encode_failed, "send_encoded: encode failed");
     }
     if (ch.options().type == channel_type::varlen) {
-      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_varlen(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     } else {
       if (out_len > static_cast<std::size_t>(ch.options().item_size)) {
         throw codec_exception(codec_error::wire_exceeds_item_size,
                               "send_encoded: encoded size exceeds item_size for fixed channel");
       }
-      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len));
+      ch.send_fixed_bytes(buf.data(), static_cast<std::uint32_t>(out_len), meta);
     }
   }
 }
@@ -91,24 +103,39 @@ void send_encoded_dispatch(producer_channel_interface& ch, const typename Codec:
 
 template <typename Codec>
 void send_encoded(channel& ch, const typename Codec::message_type& msg) {
+  send_encoded(ch, msg, message_meta{});
+}
+
+template <typename Codec>
+void send_encoded(channel& ch, const typename Codec::message_type& msg, const message_meta& meta) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
                 "send_encoded requires a type satisfying xproc::protocol::is_codec");
-  detail::send_encoded_dispatch<Codec>(ch, msg);
+  detail::send_encoded_dispatch<Codec>(ch, msg, meta);
 }
 
 template <typename Codec>
 void send_encoded(producer& ch, const typename Codec::message_type& msg) {
-  send_encoded<Codec>(ch.as_channel(), msg);
+  send_encoded<Codec>(ch.as_channel(), msg, message_meta{});
+}
+
+template <typename Codec>
+void send_encoded(producer& ch, const typename Codec::message_type& msg, const message_meta& meta) {
+  send_encoded<Codec>(ch.as_channel(), msg, meta);
 }
 
 template <typename Codec>
 void send_encoded(producer_channel_interface& ch, const typename Codec::message_type& msg) {
-  static_assert(xproc::protocol::is_codec_v<Codec>,
-                "send_encoded requires a type satisfying xproc::protocol::is_codec");
-  detail::send_encoded_dispatch<Codec>(ch, msg);
+  send_encoded(ch, msg, message_meta{});
 }
 
-// Decodes into message_type and passes to handler. Decode failures throw codec_exception.
+template <typename Codec>
+void send_encoded(producer_channel_interface& ch, const typename Codec::message_type& msg, const message_meta& meta) {
+  static_assert(xproc::protocol::is_codec_v<Codec>,
+                "send_encoded requires a type satisfying xproc::protocol::is_codec");
+  detail::send_encoded_dispatch<Codec>(ch, msg, meta);
+}
+
+// Decodes into message_type and passes (meta, msg) to handler. Decode failures throw codec_exception.
 // If decode uses a view into ring memory (e.g. span_codec / string_view), copy out inside the handler
 // before returning if you use msg async.
 template <typename Codec, typename F>
@@ -116,11 +143,11 @@ bool poll_decoded(channel& ch, F&& handler) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
                 "poll_decoded requires a type satisfying xproc::protocol::is_codec");
   typename Codec::message_type msg{};
-  return ch.poll([&](void* p, std::uint32_t len) {
+  return ch.poll([&](const message_meta& meta, void* p, std::uint32_t len) {
     if (!Codec::decode(static_cast<const std::byte*>(p), static_cast<std::size_t>(len), msg)) {
       throw codec_exception(codec_error::decode_failed, "poll_decoded: decode failed");
     }
-    std::forward<F>(handler)(msg);
+    std::forward<F>(handler)(meta, msg);
   });
 }
 
@@ -134,11 +161,11 @@ bool poll_decoded(consumer_channel_interface& ch, F&& handler) {
   static_assert(xproc::protocol::is_codec_v<Codec>,
                 "poll_decoded requires a type satisfying xproc::protocol::is_codec");
   typename Codec::message_type msg{};
-  return ch.poll([&](void* p, std::uint32_t len) {
+  return ch.poll([&](const message_meta& meta, void* p, std::uint32_t len) {
     if (!Codec::decode(static_cast<const std::byte*>(p), static_cast<std::size_t>(len), msg)) {
       throw codec_exception(codec_error::decode_failed, "poll_decoded: decode failed");
     }
-    std::forward<F>(handler)(msg);
+    std::forward<F>(handler)(meta, msg);
   });
 }
 
@@ -169,9 +196,40 @@ inline void send_encoded(channel& ch, const protocol::IByteCodec& codec, const s
   }
 }
 
+inline void send_encoded(channel& ch, const protocol::IByteCodec& codec, const std::byte* logical,
+                         std::size_t logical_len, const message_meta& meta, std::vector<std::byte>& scratch) {
+  std::size_t cap = logical_len < 64 ? 64 : logical_len;
+  while (true) {
+    scratch.resize(cap);
+    std::size_t wire_len = 0;
+    if (codec.wrap(logical, logical_len, scratch.data(), scratch.size(), wire_len)) {
+      if (ch.options().type == channel_type::varlen) {
+        ch.send_varlen(scratch.data(), static_cast<std::uint32_t>(wire_len), meta);
+      } else {
+        if (wire_len > static_cast<std::size_t>(ch.options().item_size)) {
+          throw codec_exception(codec_error::wire_exceeds_item_size,
+                                "send_encoded(IByteCodec): wire length exceeds item_size");
+        }
+        ch.send_fixed_bytes(scratch.data(), static_cast<std::uint32_t>(wire_len), meta);
+      }
+      return;
+    }
+    cap *= 2;
+    if (cap > 16 * 1024 * 1024) {
+      throw codec_exception(codec_error::wrap_scratch_cap_exceeded,
+                            "send_encoded(IByteCodec): wrap failed (scratch cap)");
+    }
+  }
+}
+
 inline void send_encoded(producer& ch, const protocol::IByteCodec& codec, const std::byte* logical,
                          std::size_t logical_len, std::vector<std::byte>& scratch) {
   send_encoded(ch.as_channel(), codec, logical, logical_len, scratch);
+}
+
+inline void send_encoded(producer& ch, const protocol::IByteCodec& codec, const std::byte* logical,
+                         std::size_t logical_len, const message_meta& meta, std::vector<std::byte>& scratch) {
+  send_encoded(ch.as_channel(), codec, logical, logical_len, meta, scratch);
 }
 
 inline void send_encoded(producer_channel_interface& ch, const protocol::IByteCodec& codec, const std::byte* logical,
@@ -189,6 +247,32 @@ inline void send_encoded(producer_channel_interface& ch, const protocol::IByteCo
                                 "send_encoded(IByteCodec): wire length exceeds item_size");
         }
         ch.send_fixed_bytes(scratch.data(), static_cast<std::uint32_t>(wire_len));
+      }
+      return;
+    }
+    cap *= 2;
+    if (cap > 16 * 1024 * 1024) {
+      throw codec_exception(codec_error::wrap_scratch_cap_exceeded,
+                            "send_encoded(IByteCodec): wrap failed (scratch cap)");
+    }
+  }
+}
+
+inline void send_encoded(producer_channel_interface& ch, const protocol::IByteCodec& codec, const std::byte* logical,
+                         std::size_t logical_len, const message_meta& meta, std::vector<std::byte>& scratch) {
+  std::size_t cap = logical_len < 64 ? 64 : logical_len;
+  while (true) {
+    scratch.resize(cap);
+    std::size_t wire_len = 0;
+    if (codec.wrap(logical, logical_len, scratch.data(), scratch.size(), wire_len)) {
+      if (ch.options().type == channel_type::varlen) {
+        ch.send_varlen(scratch.data(), static_cast<std::uint32_t>(wire_len), meta);
+      } else {
+        if (wire_len > static_cast<std::size_t>(ch.options().item_size)) {
+          throw codec_exception(codec_error::wire_exceeds_item_size,
+                                "send_encoded(IByteCodec): wire length exceeds item_size");
+        }
+        ch.send_fixed_bytes(scratch.data(), static_cast<std::uint32_t>(wire_len), meta);
       }
       return;
     }
