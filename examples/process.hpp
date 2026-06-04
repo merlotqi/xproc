@@ -112,17 +112,8 @@ class process {
     STARTUPINFOA startup_info{};
     startup_info.cb = sizeof(startup_info);
 
-    if (!::CreateProcessA(
-            nullptr,
-            mutable_cmd.data(),
-            nullptr,
-            nullptr,
-            FALSE,
-            0,
-            nullptr,
-            nullptr,
-            &startup_info,
-            &child.process_info_)) {
+    if (!::CreateProcessA(nullptr, mutable_cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startup_info,
+                          &child.process_info_)) {
       throw std::runtime_error("CreateProcessA failed");
     }
 #else

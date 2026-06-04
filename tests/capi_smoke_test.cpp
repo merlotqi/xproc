@@ -31,8 +31,8 @@ extern "C" {
 #include <xproc_c.h>
 }
 
-#include <xproc/core/shm.hpp>
 #include <xproc/core/layout_types.hpp>
+#include <xproc/core/shm.hpp>
 
 namespace {
 
@@ -867,9 +867,7 @@ TEST(CApiSmoke, CTrackerProducerAlive) {
   xproc_c_shm_unlink(path);
 }
 
-TEST(CApiSmoke, CMetaStructSize) {
-  EXPECT_EQ(sizeof(xproc_c_message_meta), 24u);
-}
+TEST(CApiSmoke, CMetaStructSize) { EXPECT_EQ(sizeof(xproc_c_message_meta), 24u); }
 
 TEST(CApiSmoke, CSendFixedSizedWithMeta) {
   const std::string path = "/xproc_capi_fixed_with_meta";
@@ -959,8 +957,8 @@ TEST(CApiSmoke, CSendVarlenWithMeta) {
   meta.flags = 0xA;
 
   const std::array<std::uint8_t, 6> expected{{1u, 2u, 3u, 4u, 5u, 6u}};
-  ASSERT_EQ(xproc_c_producer_send_varlen_with_meta(producer, expected.data(), static_cast<std::uint32_t>(expected.size()),
-                                                    &meta),
+  ASSERT_EQ(xproc_c_producer_send_varlen_with_meta(producer, expected.data(),
+                                                   static_cast<std::uint32_t>(expected.size()), &meta),
             XPROC_C_STATUS_OK);
 
   xproc_c_message_meta received_meta{};
@@ -970,7 +968,7 @@ TEST(CApiSmoke, CSendVarlenWithMeta) {
   xproc_c_status status = XPROC_C_STATUS_AGAIN;
   for (int i = 0; i < 100 && status == XPROC_C_STATUS_AGAIN; ++i) {
     status = xproc_c_observer_peek_copy_with_meta(observer, &received_meta, actual.data(),
-                                                   static_cast<std::uint32_t>(actual.size()), &out_len);
+                                                  static_cast<std::uint32_t>(actual.size()), &out_len);
   }
   ASSERT_EQ(status, XPROC_C_STATUS_OK);
   EXPECT_EQ(out_len, expected.size());
@@ -980,9 +978,9 @@ TEST(CApiSmoke, CSendVarlenWithMeta) {
 
   std::array<std::uint8_t, 6> consumed{};
   std::uint32_t consumed_len = 0;
-  ASSERT_EQ(xproc_c_consumer_poll_copy(consumer, consumed.data(), static_cast<std::uint32_t>(consumed.size()),
-                                       &consumed_len),
-            XPROC_C_STATUS_OK);
+  ASSERT_EQ(
+      xproc_c_consumer_poll_copy(consumer, consumed.data(), static_cast<std::uint32_t>(consumed.size()), &consumed_len),
+      XPROC_C_STATUS_OK);
   EXPECT_EQ(consumed_len, expected.size());
   EXPECT_EQ(consumed, expected);
 

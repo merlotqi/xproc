@@ -9,14 +9,12 @@
 #include <string>
 #include <thread>
 #include <vector>
-
 #include <xproc/xproc.hpp>
 
 namespace {
 
 std::string unique_path(const char* name) {
-  return std::string("/xproc_message_meta_") + name + "_" +
-         std::to_string(xproc::platform::current_process_id());
+  return std::string("/xproc_message_meta_") + name + "_" + std::to_string(xproc::platform::current_process_id());
 }
 
 xproc::ipc::transport_options fixed_opts(const std::string& path, std::uint32_t item_size, std::size_t cap) {
@@ -162,8 +160,7 @@ TEST(Meta, FlagsRoundtrip) {
     bool got = false;
     ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& meta, void*, std::uint32_t) {
       got = true;
-      EXPECT_EQ(meta.flags,
-                static_cast<std::uint32_t>(xproc::ipc::flag_priority_high | xproc::ipc::flag_compressed));
+      EXPECT_EQ(meta.flags, static_cast<std::uint32_t>(xproc::ipc::flag_priority_high | xproc::ipc::flag_compressed));
       EXPECT_NE(meta.timestamp_ns, 0u);
     }));
     EXPECT_TRUE(got);
@@ -350,12 +347,11 @@ TEST(Meta, ConcurrentMultiWriterMultiReader) {
   std::vector<std::thread> writers;
   writers.reserve(kWriters);
   for (int w = 0; w < kWriters; ++w) {
-    writers.emplace_back([&opts, w]() {
+    writers.emplace_back([&opts, w, kMsgsPerWriter]() {
       xproc::ipc::producer prod(opts);
       for (int i = 0; i < kMsgsPerWriter; ++i) {
         char buf[32];
-        const int n =
-            std::snprintf(buf, sizeof(buf), "w%d_msg_%d", w, i);
+        const int n = std::snprintf(buf, sizeof(buf), "w%d_msg_%d", w, i);
         xproc::ipc::message_meta meta;
         meta.user_data = static_cast<std::uint64_t>(w * kMsgsPerWriter + i);
         meta.schema_id = static_cast<std::uint32_t>(w);

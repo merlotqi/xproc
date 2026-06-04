@@ -88,6 +88,8 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   close(pipefd[0]);
   close(pipefd[1]);
 
-  EXPECT_TRUE(r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
-  EXPECT_TRUE(r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
+  EXPECT_TRUE(
+      r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
+  EXPECT_TRUE(
+      r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
 }

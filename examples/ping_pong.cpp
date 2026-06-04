@@ -62,8 +62,7 @@ int main(int argc, char** argv) {
   }
 
   xproc::core::shm::unlink(shm_path);
-  const auto channel =
-      xproc::ipc::make_fixed_channel(shm_path, sizeof(std::uint32_t)).with_data_align(8).create(65536);
+  const auto channel = xproc::ipc::make_fixed_channel(shm_path, sizeof(std::uint32_t)).with_data_align(8).create(65536);
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, shm_path});

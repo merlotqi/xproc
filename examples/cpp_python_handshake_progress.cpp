@@ -411,13 +411,11 @@ int main(int argc, char** argv) {
     cleanup_shm(upstream_path);
     cleanup_shm(downstream_path);
 
-    const auto upstream_channel = xproc::ipc::make_varlen_channel(upstream_path)
-                                      .with_schema_id(kUpstreamSchemaId)
-                                      .create(kDataCapacity);
+    const auto upstream_channel =
+        xproc::ipc::make_varlen_channel(upstream_path).with_schema_id(kUpstreamSchemaId).create(kDataCapacity);
     xproc::ipc::consumer upstream = upstream_channel.open_consumer();
-    const auto downstream_channel = xproc::ipc::make_varlen_channel(downstream_path)
-                                        .with_schema_id(kDownstreamSchemaId)
-                                        .create(kDataCapacity);
+    const auto downstream_channel =
+        xproc::ipc::make_varlen_channel(downstream_path).with_schema_id(kDownstreamSchemaId).create(kDataCapacity);
     xproc::ipc::producer downstream = downstream_channel.open_producer();
 
     const std::vector<std::string> child_argv = make_child_argv(cli, upstream_path, downstream_path, session);

@@ -163,7 +163,6 @@ TEST(LayoutValidate, CreatorMetadataFieldsDefaultToZero) {
   EXPECT_EQ(opts.creator_flags, 0u);
 }
 
-
 TEST(LayoutValidate, FixedItemSizeMismatchOnAttach) {
   const std::string path = "/xproc_layout_fixed_item_size_attach";
   xproc::core::shm::unlink(path);

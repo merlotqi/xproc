@@ -26,8 +26,7 @@ std::string make_message(int i) {
 }
 
 int run_child_writer(const std::string& shm_path) {
-  xproc::ipc::producer producer =
-      xproc::ipc::attach_varlen_channel(shm_path).open_producer();
+  xproc::ipc::producer producer = xproc::ipc::attach_varlen_channel(shm_path).open_producer();
 
   std::thread writer([&] {
     for (int i = 0; i <= 20; ++i) {

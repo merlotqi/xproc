@@ -444,8 +444,9 @@ TEST(SocketTransport, SingleListenerServesBothIPv4AndIPv6) {
 
     std::string v4;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll(
-          [&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) { v4.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
+        v4.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      });
     }));
     EXPECT_EQ(v4, "ipv4-msg");
 
@@ -465,8 +466,9 @@ TEST(SocketTransport, SingleListenerServesBothIPv4AndIPv6) {
 
     std::string v6;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll(
-          [&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) { v6.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
+        v6.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
+      });
     }));
     EXPECT_EQ(v6, "ipv6-msg");
   } catch (const std::runtime_error& ex) {

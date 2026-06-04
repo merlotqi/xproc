@@ -21,8 +21,7 @@ constexpr const char* kChildFlag = "--pc-counter-child";
 constexpr std::size_t kDataCapacity = 16384;
 
 int run_child_writer(const std::string& shm_path) {
-  xproc::ipc::producer producer =
-      xproc::ipc::attach_fixed_channel(shm_path).open_producer();
+  xproc::ipc::producer producer = xproc::ipc::attach_fixed_channel(shm_path).open_producer();
 
   std::thread writer([&] {
     for (std::uint32_t v = 0; v <= 100; ++v) {
