@@ -94,9 +94,7 @@ class channel : public endpoint {
     fw->commit(pos);
   }
 
-  void send_varlen(const void* data, uint32_t len) {
-    send_varlen(data, len, message_meta{});
-  }
+  void send_varlen(const void* data, uint32_t len) { send_varlen(data, len, message_meta{}); }
 
   void send_varlen(const void* data, uint32_t len, const message_meta& meta) {
     if (get_role() != role::producer) {
@@ -182,8 +180,7 @@ class channel : public endpoint {
 
   template <typename Rep, typename Period>
   send_result send_fixed_sized_for(const void* data, std::uint32_t byte_length,
-                                   const std::chrono::duration<Rep, Period>& timeout,
-                                   const message_meta& meta) {
+                                   const std::chrono::duration<Rep, Period>& timeout, const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::send_fixed_sized_for requires producer role");
     }
@@ -244,8 +241,7 @@ class channel : public endpoint {
 
   template <typename Rep, typename Period>
   send_result send_fixed_bytes_for(const void* data, std::uint32_t payload_len,
-                                   const std::chrono::duration<Rep, Period>& timeout,
-                                   const message_meta& meta) {
+                                   const std::chrono::duration<Rep, Period>& timeout, const message_meta& meta) {
     return send_fixed_sized_for(data, payload_len, timeout, meta);
   }
 
@@ -278,8 +274,7 @@ class channel : public endpoint {
   }
 
   template <typename Rep, typename Period>
-  send_result send_varlen_for(const void* data, std::uint32_t len,
-                              const std::chrono::duration<Rep, Period>& timeout,
+  send_result send_varlen_for(const void* data, std::uint32_t len, const std::chrono::duration<Rep, Period>& timeout,
                               const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::send_varlen_for requires producer role");
@@ -313,9 +308,7 @@ class channel : public endpoint {
     if (get_role() != role::consumer) {
       throw std::logic_error("channel::poll requires consumer role");
     }
-    auto invoke = [&](const message_meta& meta, void* p, std::uint32_t len) {
-      std::forward<F>(handler)(meta, p, len);
-    };
+    auto invoke = [&](const message_meta& meta, void* p, std::uint32_t len) { std::forward<F>(handler)(meta, p, len); };
     if (opts_.type == channel_type::fixed) {
       auto* fr = static_cast<ringbuffer::fixed_reader*>(reader_.get());
       const std::uint32_t item = opts_.item_size;

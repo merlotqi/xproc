@@ -18,9 +18,7 @@ class varlen_writer : public ringbuffer_view {
  public:
   using ringbuffer_view::ringbuffer_view;
 
-  void* reserve(uint32_t len, uint64_t& out_pos) {
-    return reserve(len, out_pos, xproc::ipc::message_meta{});
-  }
+  void* reserve(uint32_t len, uint64_t& out_pos) { return reserve(len, out_pos, xproc::ipc::message_meta{}); }
 
   void* reserve(uint32_t len, uint64_t& out_pos, const xproc::ipc::message_meta& meta) {
     const uint32_t total_len = aligned_total_len(len);
@@ -38,9 +36,7 @@ class varlen_writer : public ringbuffer_view {
     }
   }
 
-  reserve_result try_reserve(uint32_t len) {
-    return try_reserve(len, xproc::ipc::message_meta{});
-  }
+  reserve_result try_reserve(uint32_t len) { return try_reserve(len, xproc::ipc::message_meta{}); }
 
   reserve_result try_reserve(uint32_t len, const xproc::ipc::message_meta& meta) {
     const uint32_t total_len = aligned_total_len(len);
@@ -72,8 +68,7 @@ class varlen_writer : public ringbuffer_view {
     h->length = len;
     h->meta = meta;
     if (h->meta.timestamp_ns == 0) {
-      h->meta.timestamp_ns = static_cast<uint64_t>(
-          std::chrono::steady_clock::now().time_since_epoch().count());
+      h->meta.timestamp_ns = static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
     }
     std::atomic_thread_fence(std::memory_order_release);
     h->status.store(0, std::memory_order_relaxed);

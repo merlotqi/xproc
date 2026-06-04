@@ -48,9 +48,8 @@ class fixed_reader : public ringbuffer_view {
 
     const auto* h = reinterpret_cast<const detail::fixed_message_header*>(get_ptr(curr_read));
     if (h->status.load(std::memory_order_acquire) == 1) {
-      std::forward<F>(handler)(h->meta,
-                               static_cast<const void*>(get_ptr(curr_read + sizeof(detail::fixed_message_header))),
-                               item_size);
+      std::forward<F>(handler)(
+          h->meta, static_cast<const void*>(get_ptr(curr_read + sizeof(detail::fixed_message_header))), item_size);
       (void)total_len;
       return true;
     }

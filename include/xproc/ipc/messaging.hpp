@@ -7,8 +7,8 @@
 #include <vector>
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/channel_interface.hpp>
-#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ipc/codec_exception.hpp>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/protocol/codec_traits.hpp>
 #include <xproc/protocol/protocol.hpp>
 

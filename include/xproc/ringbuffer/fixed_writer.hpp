@@ -38,9 +38,7 @@ class fixed_writer : public ringbuffer_view {
     }
   }
 
-  reserve_result try_reserve(uint32_t item_size) {
-    return try_reserve(item_size, xproc::ipc::message_meta{});
-  }
+  reserve_result try_reserve(uint32_t item_size) { return try_reserve(item_size, xproc::ipc::message_meta{}); }
 
   reserve_result try_reserve(uint32_t item_size, const xproc::ipc::message_meta& meta) {
     const uint32_t total_len = aligned_total_len(item_size);
@@ -61,8 +59,7 @@ class fixed_writer : public ringbuffer_view {
     auto* h = reinterpret_cast<detail::fixed_message_header*>(get_ptr(curr_write));
     h->meta = meta;
     if (h->meta.timestamp_ns == 0) {
-      h->meta.timestamp_ns = static_cast<uint64_t>(
-          std::chrono::steady_clock::now().time_since_epoch().count());
+      h->meta.timestamp_ns = static_cast<uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count());
     }
     std::atomic_thread_fence(std::memory_order_release);
     h->status.store(0, std::memory_order_relaxed);

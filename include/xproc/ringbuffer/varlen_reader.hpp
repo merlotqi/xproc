@@ -56,8 +56,7 @@ class varlen_reader : public ringbuffer_view {
       const uint32_t status = h->status.load(std::memory_order_acquire);
 
       if (status == 1) {
-        std::forward<F>(handler)(h->meta,
-                                 static_cast<const void*>(get_ptr(r + sizeof(detail::varlen_message_header))),
+        std::forward<F>(handler)(h->meta, static_cast<const void*>(get_ptr(r + sizeof(detail::varlen_message_header))),
                                  h->length);
         return true;
       }

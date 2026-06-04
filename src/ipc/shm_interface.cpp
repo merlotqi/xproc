@@ -1,5 +1,5 @@
 #include <xproc/ipc/channel.hpp>
-#include <xproc/ipc/channel_interface.hpp>
+#include <xproc/ipc/shm_channel.hpp>
 #include <xproc/sync/atomic_wait.hpp>
 
 namespace xproc::ipc {

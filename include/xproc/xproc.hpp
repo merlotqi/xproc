@@ -13,6 +13,7 @@
 #include <xproc/ipc/runtime.hpp>
 #include <xproc/ipc/send_result.hpp>
 #include <xproc/ipc/shm_builders.hpp>
+#include <xproc/ipc/shm_channel.hpp>
 #include <xproc/ipc/socket_builders.hpp>
 #include <xproc/ipc/socket_channel.hpp>
 #include <xproc/ipc/transport_factory.hpp>

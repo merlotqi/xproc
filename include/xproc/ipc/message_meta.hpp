@@ -12,11 +12,11 @@ struct message_meta {
 };
 
 enum message_flags : std::uint32_t {
-  flag_none          = 0,
+  flag_none = 0,
   flag_priority_high = 1u << 0,
-  flag_compressed    = 1u << 1,
-  flag_response      = 1u << 2,
-  flag_cancel        = 1u << 3,
+  flag_compressed = 1u << 1,
+  flag_response = 1u << 2,
+  flag_cancel = 1u << 3,
 };
 
 }  // namespace xproc::ipc
