@@ -24,8 +24,6 @@
 // protocol include files.
 #include <xproc/protocol/codec_traits.hpp>
 #include <xproc/protocol/codecs.hpp>
-#include <xproc/protocol/json_codec_stub.hpp>
-#include <xproc/protocol/protobuf_stub.hpp>
 #include <xproc/protocol/protocol.hpp>
 
 // ringbuffer include files.
