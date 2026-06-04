@@ -1,36 +1,6 @@
 Advanced topics
 ===============
 
-Custom codecs
--------------
-
-Implement encode/decode with a known maximum wire size, then use ``send_encoded`` / ``poll_decoded``:
-
-.. code-block:: cpp
-
-   struct my_point { int x, y; };
-
-   struct point_codec {
-     using message_type = my_point;
-     static constexpr std::size_t max_encoded_size() { return 8; }
-
-     static bool encode(const my_point& src, std::uint8_t* dst, std::size_t dst_len,
-                        std::size_t& out_len) {
-       if (dst_len < sizeof(my_point)) return false;
-       std::memcpy(dst, &src, sizeof(my_point));
-       out_len = sizeof(my_point);
-       return true;
-     }
-
-     static bool decode(const std::uint8_t* src, std::size_t src_len, my_point& dst) {
-       if (src_len < sizeof(my_point)) return false;
-       std::memcpy(&dst, src, sizeof(my_point));
-       return true;
-     }
-   };
-
-   xproc::ipc::send_encoded<point_codec>(producer, my_point{10, 20});
-
 Observer (read-only)
 --------------------
 
@@ -63,11 +33,10 @@ Observer (read-only)
    rt.stop();
 
 Error handling (summary)
-------------------------
+-------------------------
 
 * ``validate_transport_options``: path, ``shm_size``, ``item_size`` (fixed), ``data_align``; on Windows, ``win32_object_namespace`` must be ``Local`` or ``Global``
 * Layout failures: ``layout_exception`` + ``validate_error``
-* Codec failures: ``codec_exception`` + ``codec_error``
 * Role misuse on channels: ``std::logic_error``
 * Failed SHM open: ``last_os_error()``
 

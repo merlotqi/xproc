@@ -5,8 +5,9 @@ Prerequisites
 -------------
 
 * C++17 compiler
-* CMake 3.14 or later (README currently mentions 3.16+ for contributors; the project minimum is 3.14)
-* Optional: nlohmann/json, Protocol Buffers (for reference codecs)
+* CMake 3.14 or later
+* On Linux/macOS: POSIX shared memory support
+* On Windows: a 64-bit toolchain is recommended
 
 Basic configure and build
 -------------------------
@@ -46,7 +47,7 @@ This installs headers, the library, the CMake package, and ``lib/pkgconfig/xproc
    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
    pkg-config --cflags --libs xproc
 
-On Linux, ``Libs.private`` includes ``-pthread`` and ``-lrt`` where applicable so ``pkg-config --libs --static xproc`` can link a static ``libxproc.a``. Optional JSON/Protobuf builds are not fully reflected in ``xproc.pc``; use ``find_package(xproc)`` or add those dependencies manually.
+On Linux, ``Libs.private`` includes ``-pthread`` and ``-lrt`` where applicable so ``pkg-config --libs --static xproc`` can link a static ``libxproc.a``.
 
 CMake consumers
 ---------------
@@ -55,8 +56,6 @@ CMake consumers
 
    find_package(xproc CONFIG REQUIRED)
    target_link_libraries(my_target PRIVATE xproc::xproc)
-
-If xproc was built with JSON or Protobuf enabled, the generated ``xprocConfig.cmake`` runs ``find_dependency`` for those packages.
 
 Docker
 ------
@@ -73,8 +72,6 @@ Optional CMake flags
 
 .. code-block:: bash
 
-   cmake -S . -B build -DXPROC_WITH_NLOHMANN_JSON=ON
-   cmake -S . -B build -DXPROC_WITH_PROTOBUF=ON
    cmake -S . -B build -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON
    cmake -S . -B build -DXPROC_BUILD_BENCHMARKS=ON
 

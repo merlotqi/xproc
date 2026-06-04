@@ -50,9 +50,6 @@ find_package(xproc CONFIG REQUIRED)
 target_link_libraries(my_target PRIVATE xproc::xproc_c)
 ```
 
-If xproc was built with `-DXPROC_WITH_NLOHMANN_JSON=ON` or `-DXPROC_WITH_PROTOBUF=ON`,
-the generated package config will load those dependencies transitively.
-
 ## Use with pkg-config
 
 Point `PKG_CONFIG_PATH` at the installed `pkgconfig` directory if needed:
@@ -76,5 +73,3 @@ pkg-config --libs --static xproc
 - On Linux, downstream CMake consumers automatically pick up `Threads`.
 - `xproc_c.h` is installed at the include root by design so bindings can use a
   short include path.
-- Optional JSON and Protobuf dependencies are represented in the generated CMake
-  package, but not mirrored into `xproc.pc`.
