@@ -87,41 +87,6 @@ static void BM_VarlenSendPoll(benchmark::State& state) {
   xproc::core::shm::unlink(path);
 }
 
-static void BM_SendEncodedRawPod(benchmark::State& state) {
-  const std::string path = unique_path("encoded", 0);
-  xproc::core::shm::unlink(path);
-
-  xproc::ipc::transport_options opts;
-  opts.path = path;
-  opts.shm_size = sizeof(xproc::core::control_block) + 512 * 1024;
-  opts.type = xproc::ipc::channel_type::varlen;
-  opts.create_if_missing = true;
-
-  xproc::ipc::producer producer(opts);
-  xproc::ipc::consumer consumer(opts);
-  std::uint64_t value = 0;
-
-  for (auto _ : state) {
-    xproc::ipc::send_encoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(producer, value++);
-    bool got = false;
-    while (!got) {
-      got = xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(consumer,
-                                                                                    [&](const xproc::ipc::message_meta&, const std::uint64_t& v) {
-                                                                                      std::uint64_t sink = v;
-                                                                                      benchmark::DoNotOptimize(sink);
-                                                                                    });
-      if (!got) {
-        const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
-      }
-    }
-  }
-
-  state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(static_cast<int64_t>(state.iterations() * sizeof(std::uint64_t)));
-  xproc::core::shm::unlink(path);
-}
-
 static void BM_FixedTrySendPoll(benchmark::State& state) {
   const std::size_t payload_len = static_cast<std::size_t>(state.range(0));
   if (payload_len == 0 || payload_len > 1024) {
@@ -203,6 +168,5 @@ static void BM_FixedTrySendFull(benchmark::State& state) {
 
 BENCHMARK(BM_FixedSendPoll)->Arg(16)->Arg(64)->Arg(256)->Unit(benchmark::kMicrosecond);
 BENCHMARK(BM_VarlenSendPoll)->Arg(32)->Arg(128)->Arg(1024)->Unit(benchmark::kMicrosecond);
-BENCHMARK(BM_SendEncodedRawPod)->Unit(benchmark::kMicrosecond);
 BENCHMARK(BM_FixedTrySendPoll)->Arg(16)->Arg(64)->Arg(256)->Unit(benchmark::kNanosecond);
 BENCHMARK(BM_FixedTrySendFull)->Arg(16)->Arg(32)->Unit(benchmark::kNanosecond);

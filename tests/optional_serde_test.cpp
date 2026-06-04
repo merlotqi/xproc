@@ -1,18 +1,32 @@
+// optional_serde_test.cpp previously tested send_encoded / poll_decoded with optional
+// third-party codecs (nlohmann::json, protobuf).
+//
+// xproc is now a pure buffer transport layer — codec abstractions were removed.
+// Users serialise/deserialise in their own application code.
+//
+// This file demonstrates the recommended pattern:
+//   1. Serialise struct → bytes in user code.
+//   2. Send via ch.send_varlen / ch.send_fixed_bytes.
+//   3. Receive via ch.poll and deserialise in the handler.
+
 #include <gtest/gtest.h>
 
 #include <atomic>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <thread>
+#include <vector>
 #include <xproc/xproc.hpp>
-
-#if defined(XPROC_WITH_PROTOBUF)
-#include "test_point.pb.h"
-#endif
 
 namespace {
 
+// -----------------------------------------------------------------------
+//  nlohmann::json roundtrip using raw send/poll — no framework codec.
+// -----------------------------------------------------------------------
 #if defined(XPROC_WITH_NLOHMANN_JSON)
+#include <nlohmann/json.hpp>
+
 TEST(OptionalSerde, NlohmannJsonRoundtrip) {
   const std::string path = "/xproc_optional_json_test";
   xproc::core::shm::unlink(path);
@@ -32,8 +46,10 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
     }
     xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
-      if (xproc::ipc::poll_decoded<xproc::protocol::nlohmann_json_codec<4096>>(ch, [&](const xproc::ipc::message_meta&, const nlohmann::json& m) {
-            received = m;
+      if (ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
+            auto* bytes = static_cast<const std::byte*>(p);
+            // User deserialisation: parse bytes → json
+            received = nlohmann::json::parse(bytes, bytes + len);
             got_msg.store(true, std::memory_order_release);
           })) {
         continue;
@@ -46,10 +62,13 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
   {
     xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     producer_ready.store(true, std::memory_order_release);
+
+    // User serialisation: json → bytes
     nlohmann::json msg;
     msg["x"] = 42;
     msg["y"] = "ipc";
-    xproc::ipc::send_encoded<xproc::protocol::nlohmann_json_codec<4096>>(prod, msg);
+    std::string json_str = msg.dump();
+    prod.send_varlen(json_str.data(), static_cast<std::uint32_t>(json_str.size()));
   }
 
   consumer.join();
@@ -60,7 +79,12 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
 }
 #endif
 
+// -----------------------------------------------------------------------
+//  protobuf roundtrip using raw send/poll — no framework codec.
+// -----------------------------------------------------------------------
 #if defined(XPROC_WITH_PROTOBUF)
+#include "test_point.pb.h"
+
 TEST(OptionalSerde, ProtobufRoundtrip) {
   const std::string path = "/xproc_optional_proto_test";
   xproc::core::shm::unlink(path);
@@ -74,16 +98,16 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
   xproc::test::TestPoint received;
   std::atomic<bool> got_msg{false};
 
-  using codec = xproc::protocol::protobuf_message_codec<xproc::test::TestPoint, 256>;
-
   std::thread consumer([&] {
     while (!producer_ready.load(std::memory_order_acquire)) {
       std::this_thread::yield();
     }
     xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
-      if (xproc::ipc::poll_decoded<codec>(ch, [&](const xproc::ipc::message_meta&, const xproc::test::TestPoint& m) {
-            received = m;
+      if (ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
+            auto* bytes = static_cast<const std::byte*>(p);
+            // User deserialisation: bytes → protobuf
+            received.ParseFromArray(bytes, static_cast<int>(len));
             got_msg.store(true, std::memory_order_release);
           })) {
         continue;
@@ -96,10 +120,14 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
   {
     xproc::ipc::channel prod(opts, xproc::ipc::endpoint::role::producer);
     producer_ready.store(true, std::memory_order_release);
+
+    // User serialisation: protobuf → bytes
     xproc::test::TestPoint msg;
     msg.set_x(7);
     msg.set_y(-3);
-    xproc::ipc::send_encoded<codec>(prod, msg);
+    std::string serialised;
+    msg.SerializeToString(&serialised);
+    prod.send_varlen(serialised.data(), static_cast<std::uint32_t>(serialised.size()));
   }
 
   consumer.join();

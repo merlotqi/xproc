@@ -3,11 +3,9 @@
 // ipc include files.
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/channel_interface.hpp>
-#include <xproc/ipc/codec_exception.hpp>
 #include <xproc/ipc/endpoint.hpp>
 #include <xproc/ipc/inspector.hpp>
 #include <xproc/ipc/message_meta.hpp>
-#include <xproc/ipc/messaging.hpp>
 #include <xproc/ipc/observer.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/ipc/runtime.hpp>
@@ -22,10 +20,6 @@
 #include <xproc/platform/platform.hpp>
 #include <xproc/platform/process.hpp>
 
-// protocol include files.
-#include <xproc/protocol/codec_traits.hpp>
-#include <xproc/protocol/codecs.hpp>
-#include <xproc/protocol/protocol.hpp>
 
 // ringbuffer include files.
 #include <xproc/ringbuffer/fixed_reader.hpp>
@@ -50,7 +44,6 @@ namespace xproc {
 
 using namespace ipc;
 using namespace platform;
-using namespace protocol;
 using namespace ringbuffer;
 using namespace core;
 using namespace sync;
