@@ -45,7 +45,7 @@ TEST(ObserverDiagnostics, OccupancyRatioPartialFill) {
 
 TEST(ObserverDiagnostics, OccupancyRatioFullRing) {
   const std::string path = "/xproc_diag_occ_ratio_full";
-  auto opts = make_test_opts(path, 64);
+  auto opts = make_test_opts(path, 80);
   {
     xproc::ipc::producer prod(opts);
     xproc::ipc::observer obs(opts);

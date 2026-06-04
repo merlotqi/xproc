@@ -68,7 +68,7 @@ TEST(ProducerBackpressure, WatermarksTrackFixedOccupancy) {
 TEST(ProducerBackpressure, TrySendFixedReportsFullWithoutBlocking) {
   const std::string path = unique_path("fixed_full");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 32);
+  auto opts = fixed_opts(path, 8, 80);
 
   xproc::ipc::producer producer(opts);
   const std::uint64_t a = 1;
@@ -85,7 +85,7 @@ TEST(ProducerBackpressure, TrySendFixedReportsFullWithoutBlocking) {
 TEST(ProducerBackpressure, FixedSendForTimesOutWhenRingStaysFull) {
   const std::string path = unique_path("fixed_timeout");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 32);
+  auto opts = fixed_opts(path, 8, 80);
 
   xproc::ipc::producer producer(opts);
   const std::uint64_t a = 1;
@@ -116,7 +116,7 @@ TEST(ProducerBackpressure, FixedOversizedMessageFailsImmediately) {
 TEST(ProducerBackpressure, SendFixedSizedUsesConfiguredSlotStride) {
   const std::string path = unique_path("fixed_stride");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 16, 48);
+  auto opts = fixed_opts(path, 16, 96);
 
   xproc::ipc::producer producer(opts);
   xproc::ipc::consumer consumer(opts);
@@ -148,7 +148,7 @@ TEST(ProducerBackpressure, SendFixedSizedUsesConfiguredSlotStride) {
 TEST(ProducerBackpressure, TrySendFixedBytesPadsPayload) {
   const std::string path = unique_path("fixed_bytes");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 32);
+  auto opts = fixed_opts(path, 8, 40);
 
   xproc::ipc::producer producer(opts);
   xproc::ipc::consumer consumer(opts);
@@ -172,7 +172,7 @@ TEST(ProducerBackpressure, TrySendFixedBytesPadsPayload) {
 TEST(ProducerBackpressure, SendFixedBytesForCanTimeout) {
   const std::string path = unique_path("fixed_bytes_timeout");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 32);
+  auto opts = fixed_opts(path, 8, 80);
 
   xproc::ipc::producer producer(opts);
   const std::uint64_t value = 7;
@@ -190,7 +190,7 @@ TEST(ProducerBackpressure, SendFixedBytesForCanTimeout) {
 TEST(ProducerBackpressure, TrySendVarlenReportsFullWithoutBlocking) {
   const std::string path = unique_path("varlen_full");
   xproc::core::shm::unlink(path);
-  auto opts = varlen_opts(path, 32);
+  auto opts = varlen_opts(path, 80);
 
   xproc::ipc::producer producer(opts);
   const char payload[8] = {'x', 'p', 'r', 'o', 'c', '1', '2', '3'};
@@ -205,7 +205,7 @@ TEST(ProducerBackpressure, TrySendVarlenReportsFullWithoutBlocking) {
 TEST(ProducerBackpressure, VarlenSendForTimesOutWhenRingStaysFull) {
   const std::string path = unique_path("varlen_timeout");
   xproc::core::shm::unlink(path);
-  auto opts = varlen_opts(path, 32);
+  auto opts = varlen_opts(path, 80);
 
   xproc::ipc::producer producer(opts);
   const char payload[8] = {'x', 'p', 'r', 'o', 'c', '1', '2', '3'};
@@ -236,7 +236,7 @@ TEST(ProducerBackpressure, VarlenOversizedMessageFailsImmediately) {
 TEST(ProducerBackpressure, FixedSendForSucceedsWhenConsumerDrains) {
   const std::string path = unique_path("fixed_timeout_success");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 32);
+  auto opts = fixed_opts(path, 8, 80);
 
   xproc::ipc::producer producer(opts);
   xproc::ipc::consumer consumer(opts);

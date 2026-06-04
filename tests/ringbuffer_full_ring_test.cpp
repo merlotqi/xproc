@@ -41,7 +41,7 @@ struct alignas(xproc::core::control_block) ring_arena {
 
 TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   constexpr std::uint32_t item = 8;
-  constexpr std::uint64_t cap = 32;
+  constexpr std::uint64_t cap = 80;
   constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
   auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
