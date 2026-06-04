@@ -22,6 +22,7 @@ endfunction()
 # Portable tests (all supported platforms).
 set(XPROC_GTEST_TEST_FILES_COMMON
     api_surface_test.cpp
+    message_meta_test.cpp
     ringbuffer_spsc_test.cpp
     layout_validate_test.cpp
     ipc_observer_attach_test.cpp
