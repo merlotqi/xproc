@@ -108,7 +108,7 @@ TEST(ProtocolCodec, TemplateCodecsVarlenShm) {
       xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
       consumer_attached_promise.set_value();
       while (!got_msg.load(std::memory_order_acquire)) {
-        if (xproc::ipc::poll_decoded<point_codec>(ch, [&](const point_codec::message_type& m) {
+        if (xproc::ipc::poll_decoded<point_codec>(ch, [&](const xproc::ipc::message_meta&, const point_codec::message_type& m) {
               received = m;
               got_msg.store(true, std::memory_order_release);
             })) {
@@ -154,7 +154,7 @@ TEST(ProtocolCodec, SpanCodecVarlenTypedChannels) {
       consumer_attached_promise.set_value();
       while (true) {
         if (xproc::ipc::poll_decoded<xproc::protocol::span_codec<128>>(
-                ch, [&](const xproc::protocol::span_codec<128>::message_type& m) {
+                ch, [&](const xproc::ipc::message_meta&, const xproc::protocol::span_codec<128>::message_type& m) {
                   received.assign(m.data(), m.data() + static_cast<std::ptrdiff_t>(m.size()));
                 })) {
           break;
@@ -194,7 +194,7 @@ TEST(ProtocolCodec, RawPodAndBoundedBytes) {
       consumer_attached_promise.set_value();
       while (true) {
         if (xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(
-                ch, [&](const std::uint64_t& v) { got = v; })) {
+                ch, [&](const xproc::ipc::message_meta&, const std::uint64_t& v) { got = v; })) {
           break;
         }
         std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
@@ -232,7 +232,7 @@ TEST(ProtocolCodec, IdentityIcodecVarlen) {
       xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
       consumer_attached_promise.set_value();
       while (got.empty()) {
-        if (ch.poll([&](void* p, std::uint32_t len) {
+        if (ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
               got.assign(static_cast<std::uint8_t*>(p), static_cast<std::uint8_t*>(p) + len);
             })) {
           continue;

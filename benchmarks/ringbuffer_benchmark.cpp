@@ -93,7 +93,7 @@ static void BM_FixedRingReserveCommit(benchmark::State& state) {
     void* buf = w.reserve(item, pos);
     std::memcpy(buf, pattern, item);
     w.commit(pos);
-    bool drained = r.read(item, [](void* p) { benchmark::DoNotOptimize(p); });
+    bool drained = r.read(item, [](const xproc::ipc::message_meta&, void* p) { benchmark::DoNotOptimize(p); });
     if (!drained) {
       state.SkipWithError("expected immediate read after same-thread commit");
       break;
@@ -124,7 +124,7 @@ static void BM_VarlenRingReserveCommit(benchmark::State& state) {
     void* buf = w.reserve(len, pos);
     std::memcpy(buf, payload.data(), len);
     w.commit(pos);
-    bool drained = rd.read([&](void* p, std::uint32_t n) {
+    bool drained = rd.read([&](const xproc::ipc::message_meta&, void* p, std::uint32_t n) {
       benchmark::DoNotOptimize(p);
       benchmark::DoNotOptimize(n);
     });

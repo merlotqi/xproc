@@ -17,7 +17,7 @@ int main() {
   std::thread t([&] {
     while (!done.load(std::memory_order_acquire)) {
       bool got = xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(
-          consumer, [&](const std::uint64_t& v) {
+          consumer, [&](const xproc::ipc::message_meta&, const std::uint64_t& v) {
             std::cout << "decoded value: " << v << "\n";
             done.store(true, std::memory_order_release);
           });

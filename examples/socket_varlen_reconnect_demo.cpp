@@ -14,7 +14,7 @@ bool poll_until(xproc::ipc::socket_consumer& consumer, const std::string& expect
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
   while (std::chrono::steady_clock::now() < deadline) {
     bool matched = false;
-    const bool got = consumer.poll([&](void* data, std::uint32_t len) {
+    const bool got = consumer.poll([&](const xproc::ipc::message_meta&, void* data, std::uint32_t len) {
       const std::string message(static_cast<const char*>(data), static_cast<std::size_t>(len));
       std::cout << "consumer received: " << message << "\n";
       matched = (message == expected);
@@ -33,7 +33,7 @@ bool wait_until_consumer_drops_stale_peer(xproc::ipc::socket_consumer& consumer)
     if (!consumer.is_connected()) {
       return true;
     }
-    const bool got_message = consumer.poll([](void*, std::uint32_t) {});
+    const bool got_message = consumer.poll([](const xproc::ipc::message_meta&, void*, std::uint32_t) {});
     if (!got_message && !consumer.is_connected()) {
       return true;
     }

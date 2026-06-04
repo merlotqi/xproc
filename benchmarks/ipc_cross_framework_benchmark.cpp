@@ -415,7 +415,7 @@ void run_native_benchmark(benchmark::State& state, xproc::ipc::channel_type type
 
     bool got = false;
     while (!got) {
-      got = consumer.poll([&](void* data, std::uint32_t len) {
+      got = consumer.poll([&](const xproc::ipc::message_meta&, void* data, std::uint32_t len) {
         std::memcpy(sink.data(), data, len);
         benchmark::DoNotOptimize(sink.data());
       });

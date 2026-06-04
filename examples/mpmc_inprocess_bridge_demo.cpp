@@ -182,7 +182,7 @@ int main() {
   std::thread bridge_rx([&] {
     int n = 0;
     while (n < kBridgeMessages) {
-      const bool got = consumer.poll([&](void* p, std::uint32_t len) {
+      const bool got = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         if (len != sizeof(std::uint32_t)) {
           return;
         }

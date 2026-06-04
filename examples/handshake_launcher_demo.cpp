@@ -140,7 +140,7 @@ void parent_consume_until_child_done(xproc::ipc::consumer& consumer, xproc::exam
   bool has_last = false;
 
   for (;;) {
-    consumer.poll([&](void* p, std::uint32_t len) {
+    consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       if (len != sizeof(telemetry_packet)) {
         return;
       }

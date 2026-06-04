@@ -39,7 +39,7 @@ static void BM_FixedSendPoll(benchmark::State& state) {
     producer.send_fixed_bytes(payload.data(), static_cast<std::uint32_t>(payload_len));
     bool got = false;
     while (!got) {
-      got = consumer.poll([&](void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
+      got = consumer.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
         const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
         xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
@@ -75,7 +75,7 @@ static void BM_VarlenSendPoll(benchmark::State& state) {
     producer.send_varlen(payload.data(), static_cast<std::uint32_t>(payload_len));
     bool got = false;
     while (!got) {
-      got = consumer.poll([&](void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
+      got = consumer.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
         const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
         xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
@@ -106,7 +106,7 @@ static void BM_SendEncodedRawPod(benchmark::State& state) {
     bool got = false;
     while (!got) {
       got = xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<std::uint64_t>>(consumer,
-                                                                                    [&](const std::uint64_t& v) {
+                                                                                    [&](const xproc::ipc::message_meta&, const std::uint64_t& v) {
                                                                                       std::uint64_t sink = v;
                                                                                       benchmark::DoNotOptimize(sink);
                                                                                     });
@@ -151,7 +151,7 @@ static void BM_FixedTrySendPoll(benchmark::State& state) {
     }
     bool got = false;
     while (!got) {
-      got = consumer.poll([&](void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
+      got = consumer.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
         const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
         xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);

@@ -254,7 +254,7 @@ void send_message(xproc::ipc::producer& producer, const parsed_message& message)
 
 std::optional<parsed_message> poll_message(xproc::ipc::consumer& consumer) {
   std::optional<parsed_message> message;
-  consumer.poll([&](void* ptr, std::uint32_t len) {
+  consumer.poll([&](const xproc::ipc::message_meta&, void* ptr, std::uint32_t len) {
     const std::string payload(static_cast<const char*>(ptr), static_cast<std::size_t>(len));
     message = parse_message(payload);
   });

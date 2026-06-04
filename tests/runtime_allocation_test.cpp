@@ -64,9 +64,9 @@ class BlockingInterfaceConsumer final : public xproc::ipc::consumer_channel_inte
   }
 
  protected:
-  bool poll_impl(const std::function<void(void*, std::uint32_t)>& handler) override {
+  bool poll_impl(const std::function<void(const xproc::ipc::message_meta&, void*, std::uint32_t)>& handler) override {
     if (emit_exit_message_.exchange(false, std::memory_order_acq_rel)) {
-      handler(&dummy_, 0);
+      handler(xproc::ipc::message_meta{}, &dummy_, 0);
       return true;
     }
     return false;
@@ -149,9 +149,9 @@ class SharedHeaderInterfaceConsumer final : public xproc::ipc::consumer_channel_
   }
 
  protected:
-  bool poll_impl(const std::function<void(void*, std::uint32_t)>& handler) override {
+  bool poll_impl(const std::function<void(const xproc::ipc::message_meta&, void*, std::uint32_t)>& handler) override {
     if (emit_exit_message_.exchange(false, std::memory_order_acq_rel)) {
-      handler(&dummy_, 0);
+      handler(xproc::ipc::message_meta{}, &dummy_, 0);
       return true;
     }
     entered_wait_.store(true, std::memory_order_release);
@@ -205,7 +205,7 @@ TEST(RuntimeAllocation, ReuseBufferInlineExecutor) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 4u);
           std::uint32_t v = 0;
           std::memcpy(&v, data, sizeof(v));
@@ -235,7 +235,7 @@ TEST(RuntimeAllocation, ReuseBufferDefaultPolicy) {
   std::atomic<bool> got{false};
   std::thread rt_thread([&] {
     auto executor = [](auto task) { task(); };
-    rt.run(executor, [&](const std::uint8_t* data, std::size_t len) {
+    rt.run(executor, [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
       EXPECT_EQ(len, 4u);
       got.store(true);
       rt.stop();
@@ -260,7 +260,7 @@ TEST(RuntimeAllocation, ZeroCopyInlineExecutor) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 4u);
           std::uint32_t v = 0;
           std::memcpy(&v, data, sizeof(v));
@@ -289,7 +289,7 @@ TEST(RuntimeAllocation, SboSmallMessage) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 4u);
           got.store(true);
           rt.stop();
@@ -316,7 +316,7 @@ TEST(RuntimeAllocation, SboLargeMessageHeapFallback) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 512u);
           got.store(true);
           rt.stop();
@@ -344,7 +344,7 @@ TEST(RuntimeAllocation, RunBatchedCollectsMultipleMessages) {
     auto executor = [](auto task) { task(); };
     rt.run_batched(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 8u);
           ++received;
           if (received.load() >= 4) {
@@ -377,7 +377,7 @@ TEST(RuntimeAllocation, BackpressureCallbackFires) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 8u);
           got_msg.store(true);
           rt.stop();
@@ -404,7 +404,7 @@ TEST(RuntimeAllocation, ReuseBufferViaInterface) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 4u);
           got.store(true);
           rt.stop();
@@ -424,7 +424,7 @@ TEST(RuntimeAllocation, StopInterruptsInterfaceWait) {
 
   std::thread rt_thread([rt, cons, returned] {
     auto executor = [](auto task) { task(); };
-    rt->run(executor, [rt](const std::uint8_t*, std::size_t) { rt->stop(); });
+    rt->run(executor, [rt](const xproc::ipc::message_meta&, const std::uint8_t*, std::size_t) { rt->stop(); });
     returned->store(true, std::memory_order_release);
   });
 
@@ -455,7 +455,7 @@ TEST(RuntimeAllocation, StopInterruptsSharedHeaderInterfaceWait) {
 
   std::thread rt_thread([rt, cons, returned] {
     auto executor = [](auto task) { task(); };
-    rt->run(executor, [rt](const std::uint8_t*, std::size_t) { rt->stop(); });
+    rt->run(executor, [rt](const xproc::ipc::message_meta&, const std::uint8_t*, std::size_t) { rt->stop(); });
     returned->store(true, std::memory_order_release);
   });
 
@@ -488,7 +488,7 @@ TEST(RuntimeAllocation, StopBeforeSharedHeaderWaitSnapshotDoesNotHang) {
 
   std::thread rt_thread([rt, cons, returned] {
     auto executor = [](auto task) { task(); };
-    rt->run(executor, [rt](const std::uint8_t*, std::size_t) { rt->stop(); });
+    rt->run(executor, [rt](const xproc::ipc::message_meta&, const std::uint8_t*, std::size_t) { rt->stop(); });
     returned->store(true, std::memory_order_release);
   });
 
@@ -533,7 +533,7 @@ TEST(RuntimeAllocation, ReuseBufferVarlen) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           EXPECT_EQ(len, 11u);
           got.store(true);
           rt.stop();

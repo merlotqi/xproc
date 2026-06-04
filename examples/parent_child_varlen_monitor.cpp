@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
   bool has_last = false;
 
   while (true) {
-    consumer.poll([&](void* p, std::uint32_t len) {
+    consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       const std::string cur(static_cast<const char*>(p), static_cast<std::size_t>(len));
       if (!has_last || cur != last) {
         std::cout << "message(" << len << " bytes)=" << cur << "\n";

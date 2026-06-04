@@ -118,7 +118,7 @@ TEST(ObserverDiagnostics, ConsumerLagBytesAfterConsume) {
     const auto lag_before = obs.consumer_lag_bytes();
     EXPECT_GT(lag_before, 0u);
 
-    cons.poll([](void*, std::uint32_t) {});
+    cons.poll([](const xproc::ipc::message_meta&, void*, std::uint32_t) {});
     const auto lag_after = obs.consumer_lag_bytes();
     EXPECT_LT(lag_after, lag_before);
   }

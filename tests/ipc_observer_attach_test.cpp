@@ -27,7 +27,7 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
 
     bool peeked = false;
     while (!peeked) {
-      peeked = obs.peek([&](const void* p, std::uint32_t len) {
+      peeked = obs.peek([&](const xproc::ipc::message_meta&, const void* p, std::uint32_t len) {
         EXPECT_EQ(len, sizeof(std::uint32_t));
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));
@@ -41,7 +41,7 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
 
     bool consumed = false;
     while (!consumed) {
-      consumed = cons.poll([&](void* p, std::uint32_t len) {
+      consumed = cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         EXPECT_EQ(len, sizeof(std::uint32_t));
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));

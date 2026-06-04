@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   bool has_last = false;
 
   while (true) {
-    consumer.poll([&](void* p, std::uint32_t len) {
+    consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       if (len != sizeof(telemetry_packet)) {
         return;
       }

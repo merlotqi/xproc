@@ -39,7 +39,7 @@ static void BM_FixedPollCopyLikeRuntime(benchmark::State& state) {
     producer.send_fixed_bytes(payload.data(), static_cast<std::uint32_t>(payload_len));
     bool got = false;
     while (!got) {
-      got = consumer.poll([&](void* ptr, std::uint32_t len) {
+      got = consumer.poll([&](const xproc::ipc::message_meta&, void* ptr, std::uint32_t len) {
         std::vector<std::uint8_t> copy(static_cast<std::uint8_t*>(ptr), static_cast<std::uint8_t*>(ptr) + len);
         benchmark::DoNotOptimize(copy.data());
         benchmark::DoNotOptimize(copy.size());

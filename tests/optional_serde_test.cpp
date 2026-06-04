@@ -32,7 +32,7 @@ TEST(OptionalSerde, NlohmannJsonRoundtrip) {
     }
     xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
-      if (xproc::ipc::poll_decoded<xproc::protocol::nlohmann_json_codec<4096>>(ch, [&](const nlohmann::json& m) {
+      if (xproc::ipc::poll_decoded<xproc::protocol::nlohmann_json_codec<4096>>(ch, [&](const xproc::ipc::message_meta&, const nlohmann::json& m) {
             received = m;
             got_msg.store(true, std::memory_order_release);
           })) {
@@ -82,7 +82,7 @@ TEST(OptionalSerde, ProtobufRoundtrip) {
     }
     xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
     while (!got_msg.load(std::memory_order_acquire)) {
-      if (xproc::ipc::poll_decoded<codec>(ch, [&](const xproc::test::TestPoint& m) {
+      if (xproc::ipc::poll_decoded<codec>(ch, [&](const xproc::ipc::message_meta&, const xproc::test::TestPoint& m) {
             received = m;
             got_msg.store(true, std::memory_order_release);
           })) {

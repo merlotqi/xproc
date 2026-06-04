@@ -19,7 +19,7 @@ int main() {
 
   bool peeked = false;
   while (!peeked) {
-    peeked = observer.peek([&](const void* p, std::uint32_t len) {
+    peeked = observer.peek([&](const xproc::ipc::message_meta&, const void* p, std::uint32_t len) {
       if (len != 4u) {
         std::cerr << "observer unexpected len\n";
         return;
@@ -36,7 +36,7 @@ int main() {
 
   bool consumed = false;
   while (!consumed) {
-    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+    consumed = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       std::uint32_t v = 0;
       std::memcpy(&v, p, sizeof(v));
       std::cout << "consumer got: " << v << ", len=" << len << "\n";

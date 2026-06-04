@@ -27,7 +27,7 @@ int child_main(const char* shm_path) {
   for (int i = 0; i < 100; ++i) {
     bool got = false;
     while (!got) {
-      got = ch.poll([&](void* p, std::uint32_t len) {
+      got = ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         (void)len;
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));

@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
   std::uint32_t last_value = 0;
 
   while (true) {
-    const bool got = consumer.poll([&](void* p, std::uint32_t len) {
+    const bool got = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       if (len != sizeof(std::uint32_t)) {
         return;
       }

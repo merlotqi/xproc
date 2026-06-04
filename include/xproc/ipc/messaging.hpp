@@ -103,7 +103,7 @@ void send_encoded_dispatch(producer_channel_interface& ch, const typename Codec:
 
 template <typename Codec>
 void send_encoded(channel& ch, const typename Codec::message_type& msg) {
-  send_encoded(ch, msg, message_meta{});
+  detail::send_encoded_dispatch<Codec>(ch, msg, message_meta{});
 }
 
 template <typename Codec>
@@ -125,7 +125,7 @@ void send_encoded(producer& ch, const typename Codec::message_type& msg, const m
 
 template <typename Codec>
 void send_encoded(producer_channel_interface& ch, const typename Codec::message_type& msg) {
-  send_encoded(ch, msg, message_meta{});
+  detail::send_encoded_dispatch<Codec>(ch, msg, message_meta{});
 }
 
 template <typename Codec>

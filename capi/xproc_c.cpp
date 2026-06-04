@@ -606,7 +606,7 @@ xproc_c_status xproc_c_consumer_poll_copy(xproc_c_consumer* consumer, void* buff
     std::uint32_t message_len = 0;
     std::vector<std::uint8_t> pending;
 
-    const bool has_message = consumer->impl->poll([&](void* ptr, std::uint32_t len) {
+    const bool has_message = consumer->impl->poll([&](const xproc::ipc::message_meta&, void* ptr, std::uint32_t len) {
       message_len = len;
       if (len > buffer_capacity) {
         too_small = true;
@@ -729,7 +729,7 @@ xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer, void* buff
     bool too_small = false;
     std::uint32_t message_len = 0;
 
-    const bool has_message = observer->impl->peek([&](const void* ptr, std::uint32_t len) {
+    const bool has_message = observer->impl->peek([&](const xproc::ipc::message_meta&, const void* ptr, std::uint32_t len) {
       message_len = len;
       if (len > buffer_capacity) {
         too_small = true;

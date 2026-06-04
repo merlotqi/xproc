@@ -274,7 +274,7 @@ void run_varlen_loopback(const std::string& producer_host) {
 
     std::vector<std::string> copies;
     while (copies.size() < 3u) {
-      const bool got = cons.poll([&](void* p, std::uint32_t len) {
+      const bool got = cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         copies.emplace_back(static_cast<const char*>(p), static_cast<std::size_t>(len));
       });
       if (!got) {
@@ -318,7 +318,7 @@ void run_fixed_loopback(const std::string& producer_host) {
 
     std::vector<std::uint32_t> actual;
     while (actual.size() < expected.size()) {
-      const bool got = cons.poll([&](void* p, std::uint32_t len) {
+      const bool got = cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         ASSERT_EQ(len, sizeof(std::uint32_t));
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));
@@ -353,7 +353,7 @@ void drive_partial_disconnect_cleanup(xproc::ipc::socket_consumer& cons) {
   bool unexpected_complete_message = false;
   ASSERT_TRUE(spin_until([&] {
     for (int i = 0; i < 4; ++i) {
-      const bool got = cons.poll([&](void*, std::uint32_t) { ++complete_messages; });
+      const bool got = cons.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t) { ++complete_messages; });
       unexpected_complete_message = unexpected_complete_message || got;
     }
     return !cons.is_connected();
@@ -397,7 +397,7 @@ TEST(SocketTransport, FixedBytesZeroPaddedRoundtrip) {
 
     std::array<char, 8> received{};
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll([&](void* p, std::uint32_t len) {
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         ASSERT_EQ(len, 8u);
         std::memcpy(received.data(), p, 8);
       });
@@ -445,7 +445,7 @@ TEST(SocketTransport, SingleListenerServesBothIPv4AndIPv6) {
     std::string v4;
     ASSERT_TRUE(spin_until([&] {
       return cons.poll(
-          [&](void* p, std::uint32_t len) { v4.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
+          [&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) { v4.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
     }));
     EXPECT_EQ(v4, "ipv4-msg");
 
@@ -466,7 +466,7 @@ TEST(SocketTransport, SingleListenerServesBothIPv4AndIPv6) {
     std::string v6;
     ASSERT_TRUE(spin_until([&] {
       return cons.poll(
-          [&](void* p, std::uint32_t len) { v6.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
+          [&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) { v6.assign(static_cast<const char*>(p), static_cast<std::size_t>(len)); });
     }));
     EXPECT_EQ(v6, "ipv6-msg");
   } catch (const std::runtime_error& ex) {
@@ -503,7 +503,7 @@ TEST(SocketTransport, ReconnectAfterPeerDisconnect) {
 
     std::vector<std::uint32_t> observed;
     auto poll_once = [&]() -> bool {
-      return cons.poll([&](void* p, std::uint32_t len) {
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         ASSERT_EQ(len, sizeof(std::uint32_t));
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));
@@ -558,7 +558,7 @@ TEST(SocketTransport, ProducerReconnectClosesOldPeerAndSendsOnNewConnection) {
 
     std::uint32_t actual = 0;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll([&](void* p, std::uint32_t len) {
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         ASSERT_EQ(len, sizeof(actual));
         std::memcpy(&actual, p, sizeof(actual));
       });
@@ -573,7 +573,7 @@ TEST(SocketTransport, ProducerReconnectClosesOldPeerAndSendsOnNewConnection) {
 
     actual = 0;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll([&](void* p, std::uint32_t len) {
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         ASSERT_EQ(len, sizeof(actual));
         std::memcpy(&actual, p, sizeof(actual));
       });
@@ -687,7 +687,7 @@ TEST(SocketTransport, ConsumerRecoversAfterPartialFixedFrameDisconnect) {
 
     std::uint32_t actual = 0;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll([&](void* p, std::uint32_t len) {
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         ASSERT_EQ(len, sizeof(actual));
         std::memcpy(&actual, p, sizeof(actual));
       });
@@ -725,7 +725,7 @@ TEST(SocketTransport, ConsumerRecoversAfterPartialVarlenFrameDisconnect) {
 
     std::string actual;
     ASSERT_TRUE(spin_until([&] {
-      return cons.poll([&](void* p, std::uint32_t len) {
+      return cons.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         actual.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
       });
     }));
@@ -760,7 +760,7 @@ TEST(SocketTransport, RuntimeProcessesSocketMessages) {
 
     auto executor = [](auto&& task) { task(); };
     std::thread worker([&] {
-      rt.run(executor, [&](const std::uint8_t* data, std::size_t len) {
+      rt.run(executor, [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
         std::lock_guard<std::mutex> lock(mu);
         messages.emplace_back(reinterpret_cast<const char*>(data), len);
         handled.fetch_add(1, std::memory_order_relaxed);

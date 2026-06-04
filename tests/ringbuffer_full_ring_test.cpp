@@ -80,7 +80,7 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
   EXPECT_FALSE(third_done.load(std::memory_order_acquire));
 
-  EXPECT_TRUE(r.read(item, [](void*) {}));
+  EXPECT_TRUE(r.read(item, [](const xproc::ipc::message_meta&, void*) {}));
 
   producer.join();
   EXPECT_TRUE(third_done.load());
@@ -88,6 +88,6 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   close(pipefd[0]);
   close(pipefd[1]);
 
-  EXPECT_TRUE(r.read(item, [](void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
-  EXPECT_TRUE(r.read(item, [](void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
+  EXPECT_TRUE(r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
+  EXPECT_TRUE(r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
 }

@@ -56,7 +56,7 @@ TEST(ProducerBackpressure, WatermarksTrackFixedOccupancy) {
   EXPECT_LT(producer.available_bytes(), producer.capacity_bytes());
   EXPECT_GT(producer.fill_ratio(), 0.0);
 
-  ASSERT_TRUE(consumer.poll([](void*, std::uint32_t) {}));
+  ASSERT_TRUE(consumer.poll([](const xproc::ipc::message_meta&, void*, std::uint32_t) {}));
   EXPECT_EQ(producer.used_bytes(), 0u);
   EXPECT_EQ(producer.available_bytes(), 64u);
 
@@ -128,11 +128,11 @@ TEST(ProducerBackpressure, SendFixedSizedUsesConfiguredSlotStride) {
 
   std::uint32_t seen_one = 0;
   std::uint32_t seen_two = 0;
-  ASSERT_TRUE(consumer.poll([&](void* p, std::uint32_t len) {
+  ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
     EXPECT_EQ(len, 16u);
     std::memcpy(&seen_one, p, sizeof(seen_one));
   }));
-  ASSERT_TRUE(consumer.poll([&](void* p, std::uint32_t len) {
+  ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
     EXPECT_EQ(len, 16u);
     std::memcpy(&seen_two, p, sizeof(seen_two));
   }));
@@ -156,7 +156,7 @@ TEST(ProducerBackpressure, TrySendFixedBytesPadsPayload) {
   const char payload[3] = {'a', 'b', 'c'};
   ASSERT_EQ(producer.try_send_fixed_bytes(payload, sizeof(payload)), xproc::ipc::send_result::ok);
 
-  ASSERT_TRUE(consumer.poll([&](void* p, std::uint32_t len) {
+  ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
     ASSERT_EQ(len, 8u);
     const auto* bytes = static_cast<const char*>(p);
     EXPECT_EQ(bytes[0], 'a');
@@ -249,7 +249,7 @@ TEST(ProducerBackpressure, FixedSendForSucceedsWhenConsumerDrains) {
 
   std::thread drain([&] {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    ASSERT_TRUE(consumer.poll([](void*, std::uint32_t) {}));
+    ASSERT_TRUE(consumer.poll([](const xproc::ipc::message_meta&, void*, std::uint32_t) {}));
   });
 
   EXPECT_EQ(producer.send_fixed_sized_for(&c, sizeof(c), std::chrono::milliseconds(100)), xproc::ipc::send_result::ok);

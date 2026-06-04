@@ -105,7 +105,7 @@ int main() {
       bool received = false;
 
       while (!received) {
-        const bool has_data = consumer.poll([&](void* data, std::uint32_t length) {
+        const bool has_data = consumer.poll([&](const xproc::ipc::message_meta&, void* data, std::uint32_t length) {
           if (length != kSlotBytes) {
             return;
           }

@@ -39,7 +39,7 @@ static void BM_ObserverPeekFixed(benchmark::State& state) {
   producer.send_fixed_bytes(payload.data(), item);
 
   for (auto _ : state) {
-    bool ok = observer.peek([&](const void* p, std::uint32_t len) {
+    bool ok = observer.peek([&](const xproc::ipc::message_meta&, const void* p, std::uint32_t len) {
       benchmark::DoNotOptimize(p);
       benchmark::DoNotOptimize(len);
     });
