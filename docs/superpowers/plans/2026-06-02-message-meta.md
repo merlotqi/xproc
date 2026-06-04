@@ -43,6 +43,43 @@
 
 ---
 
+## Risks & Mitigations
+
+### R1: Intermediate build breakage between header/writer/reader changes
+
+Changing slot header sizes (Task 2) before updating writers (Task 3) and readers (Task 4) creates a window where `sizeof(header)` changes but read/write offsets are inconsistent. **Mitigation:** Tasks 2, 3, and 4 are merged into a single atomic task (Task 2). All three layers must be committed together so the ring buffer is never in an inconsistent state.
+
+### R2: Memory ordering — meta written before status published
+
+`message_meta` is 24 bytes of non-atomic storage. On weakly-ordered architectures (ARM, POWER), a reader could observe `status == ready` before all 24 meta bytes have landed. **Mitigation:** Writers must issue `std::atomic_thread_fence(std::memory_order_release)` after writing meta and before storing `status` with `memory_order_release`. Readers load `status` with `memory_order_acquire`, which pairs with the writer's release and guarantees meta visibility. This is enforced in the implementation code of Task 2.
+
+```cpp
+// Writer (reserve):
+h->meta = meta;
+std::atomic_thread_fence(std::memory_order_release);
+h->status.store(status_ready, std::memory_order_release);
+
+// Reader (read/peek):
+if (h->status.load(std::memory_order_acquire) == status_ready) {
+  // fence is implicit in the acquire load — meta is now visible
+  handler(h->meta, payload_ptr, length);
+}
+```
+
+### R3: Fixed 24-byte per-slot overhead
+
+For small payloads (e.g. 4-byte integers), meta overhead is 87.5% (28/32 bytes per slot). **Acknowledged.** This is acceptable for the target use case (control-plane IPC). Data-plane channels with tiny payloads can use a dedicated lightweight channel type in the future.
+
+### R4: Mechanical callback migration (45+ sites, error-prone)
+
+Adding `const message_meta&` to every lambda is repetitive and prone to typos. **Mitigation:** A `sed` one-liner is provided in the merged Task 4 to batch-rewrite callback signatures. Manual review follows.
+
+### R5: Protocol stub deletion may break optional_serde_test
+
+`optional_serde_test.cpp` may depend on the stubs being deleted. **Mitigation:** A pre-check step in Task 5 (protocol cleanup) verifies this before deletion.
+
+---
+
 ### Task 1: message_meta struct
 
 **Files:**
@@ -52,8 +89,8 @@
 - [ ] **Step 0: Create feature branch from main**
 
 ```bash
-git -C /Users/merlot/codes/xproc checkout main
-git -C /Users/merlot/codes/xproc checkout -b feat/message-meta
+git -C ${PROJECT_ROOT} checkout main
+git -C ${PROJECT_ROOT} checkout -b feat/message-meta
 ```
 
 - [ ] **Step 1: Create `include/xproc/ipc/message_meta.hpp`**
@@ -89,23 +126,29 @@ Add `#include <xproc/ipc/message_meta.hpp>` in the IPC section (after the existi
 
 - [ ] **Step 3: Verify it compiles**
 
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc 2>&1 | tail -5`
+Run: `cmake --build ${PROJECT_ROOT}/build --target xproc 2>&1 | tail -5`
 Expected: Build succeeds (header is standalone, no dependencies).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git -C /Users/merlot/codes/xproc add include/xproc/ipc/message_meta.hpp include/xproc/xproc.hpp
-git -C /Users/merlot/codes/xproc commit -m "feat: add message_meta struct and message_flags enum"
+git -C ${PROJECT_ROOT} add include/xproc/ipc/message_meta.hpp include/xproc/xproc.hpp
+git -C ${PROJECT_ROOT} commit -m "feat: add message_meta struct and message_flags enum"
 ```
 
 ---
 
-### Task 2: Ring layout change — embed meta in slot headers
+### Task 2: Core ring buffer — embed meta, write with ordering, read back
+
+> **CRITICAL:** This task must be committed as a single atomic commit. The header size change, writer update, and reader update are interdependent — splitting them creates a broken intermediate state where `sizeof(header)` has changed but read/write offsets are inconsistent.
 
 **Files:**
 - Modify: `include/xproc/ringbuffer/detail/fixed_header.hpp`
 - Modify: `include/xproc/ringbuffer/detail/varlen_header.hpp`
+- Modify: `include/xproc/ringbuffer/fixed_writer.hpp`
+- Modify: `include/xproc/ringbuffer/varlen_writer.hpp`
+- Modify: `include/xproc/ringbuffer/fixed_reader.hpp`
+- Modify: `include/xproc/ringbuffer/varlen_reader.hpp`
 
 - [ ] **Step 1: Update `fixed_header.hpp`**
 
@@ -152,27 +195,7 @@ struct varlen_message_header {
 
 New size: `4 + 4 + 24 = 32` bytes. Payload offset shifts from 8 to 32 bytes.
 
-- [ ] **Step 3: Verify it compiles**
-
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc 2>&1 | tail -5`
-Expected: Build succeeds. Payload offsets in writers/readers are computed from `sizeof(header)`, so they automatically adjust. Existing tests may fail because callback signatures haven't changed yet — that's expected.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git -C /Users/merlot/codes/xproc add include/xproc/ringbuffer/detail/fixed_header.hpp include/xproc/ringbuffer/detail/varlen_header.hpp
-git -C /Users/merlot/codes/xproc commit -m "feat: embed message_meta in ring slot headers"
-```
-
----
-
-### Task 3: Writers — write meta during reserve, auto-fill timestamp
-
-**Files:**
-- Modify: `include/xproc/ringbuffer/fixed_writer.hpp`
-- Modify: `include/xproc/ringbuffer/varlen_writer.hpp`
-
-- [ ] **Step 1: Update `fixed_writer.hpp`**
+- [ ] **Step 3: Update `fixed_writer.hpp`**
 
 Add `#include <chrono>` and `#include <xproc/ipc/message_meta.hpp>` at the top.
 
@@ -180,15 +203,18 @@ Add new `reserve` and `try_reserve` overloads that accept `const message_meta&`:
 
 ```cpp
 void* reserve(uint32_t item_size, uint64_t& out_pos, const xproc::ipc::message_meta& meta) {
-  // Same as existing reserve() but also writes meta into the slot
-  // After writing status=0, write meta:
-  //   auto* h = reinterpret_cast<detail::fixed_message_header*>(get_ptr(curr_write));
-  //   h->meta = meta;
-  //   if (h->meta.timestamp_ns == 0) {
-  //     h->meta.timestamp_ns = static_cast<uint64_t>(
-  //         std::chrono::steady_clock::now().time_since_epoch().count());
-  //   }
-  // Return payload at curr_write + sizeof(detail::fixed_message_header)
+  // ... existing reserve() logic to claim a slot ...
+  // Write meta into the slot BEFORE publishing status (see memory ordering below):
+  auto* h = reinterpret_cast<detail::fixed_message_header*>(get_ptr(curr_write));
+  h->meta = meta;
+  if (h->meta.timestamp_ns == 0) {
+    h->meta.timestamp_ns = static_cast<uint64_t>(
+        std::chrono::steady_clock::now().time_since_epoch().count());
+  }
+  // Memory ordering: fence before status store so reader sees full meta
+  std::atomic_thread_fence(std::memory_order_release);
+  h->status.store(status_ready, std::memory_order_release);
+  return get_ptr(curr_write + sizeof(detail::fixed_message_header));
 }
 ```
 
@@ -196,43 +222,26 @@ The existing `reserve(item_size, out_pos)` delegates to the new overload with `m
 
 Same pattern for `try_reserve` — new overload with meta parameter.
 
-- [ ] **Step 2: Update `varlen_writer.hpp`**
+- [ ] **Step 4: Update `varlen_writer.hpp`**
 
 Same pattern. Add `#include <chrono>` and `#include <xproc/ipc/message_meta.hpp>`.
 
-New `reserve(len, out_pos, meta)` and `try_reserve(len, meta)` overloads that write meta after the varlen header. Existing overloads delegate with `message_meta{}`.
+New `reserve(len, out_pos, meta)` and `try_reserve(len, meta)` overloads that write meta after the varlen header. Apply the same `atomic_thread_fence(release)` before the `status.store(release)`. Existing overloads delegate with `message_meta{}`.
 
-- [ ] **Step 3: Verify it compiles**
-
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc 2>&1 | tail -5`
-
-- [ ] **Step 4: Commit**
-
-```bash
-git -C /Users/merlot/codes/xproc add include/xproc/ringbuffer/fixed_writer.hpp include/xproc/ringbuffer/varlen_writer.hpp
-git -C /Users/merlot/codes/xproc commit -m "feat: writers write message_meta during reserve"
-```
-
----
-
-### Task 4: Readers — read meta during read/peek, pass to handler
-
-**Files:**
-- Modify: `include/xproc/ringbuffer/fixed_reader.hpp`
-- Modify: `include/xproc/ringbuffer/varlen_reader.hpp`
-
-- [ ] **Step 1: Update `fixed_reader.hpp`**
+- [ ] **Step 5: Update `fixed_reader.hpp`**
 
 Add `#include <xproc/ipc/message_meta.hpp>`.
 
-Change `read()` handler to pass meta:
+Change `read()` handler to load status with acquire semantics and pass meta:
 
 ```cpp
-// Before: handler(get_ptr(curr_read + sizeof(detail::fixed_message_header)))
-// After:  handler(h->meta, get_ptr(curr_read + sizeof(detail::fixed_message_header)))
-```
+auto* h = reinterpret_cast<detail::fixed_message_header*>(get_ptr(curr_read));
 
-Where `h` is `reinterpret_cast<detail::fixed_message_header*>(get_ptr(curr_read))`.
+// Acquire load pairs with writer's release — guarantees full meta visibility
+if (h->status.load(std::memory_order_acquire) == status_ready) {
+  handler(h->meta, get_ptr(curr_read + sizeof(detail::fixed_message_header)));
+}
+```
 
 Change `peek()` handler similarly:
 
@@ -241,29 +250,44 @@ Change `peek()` handler similarly:
 // After:  handler(h->meta, payload_ptr, item_size)
 ```
 
-- [ ] **Step 2: Update `varlen_reader.hpp`**
+- [ ] **Step 6: Update `varlen_reader.hpp`**
 
 Add `#include <xproc/ipc/message_meta.hpp>`.
 
-Change `read()` handler:
+Change `read()` handler with acquire load:
 
 ```cpp
-// Before: handler(get_ptr(curr_read + sizeof(detail::varlen_message_header)), h->length)
-// After:  handler(h->meta, get_ptr(curr_read + sizeof(detail::varlen_message_header)), h->length)
+auto* h = reinterpret_cast<detail::varlen_message_header*>(get_ptr(curr_read));
+if (h->status.load(std::memory_order_acquire) == status_ready) {
+  handler(h->meta, get_ptr(curr_read + sizeof(detail::varlen_message_header)), h->length);
+}
 ```
 
-Change `peek()` handler similarly.
+Change `peek()` handler similarly with acquire semantics.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 7: Verify it compiles**
+
+Run: `cmake --build ${PROJECT_ROOT}/build --target xproc 2>&1 | tail -10`
+Expected: Build succeeds. Tests will fail due to unchanged callback signatures at higher layers — that's expected and will be fixed in Tasks 3 and 4.
+
+- [ ] **Step 8: Single atomic commit**
 
 ```bash
-git -C /Users/merlot/codes/xproc add include/xproc/ringbuffer/fixed_reader.hpp include/xproc/ringbuffer/varlen_reader.hpp
-git -C /Users/merlot/codes/xproc commit -m "feat: readers pass message_meta to handler callbacks"
+git -C ${PROJECT_ROOT} add \
+  include/xproc/ringbuffer/detail/fixed_header.hpp \
+  include/xproc/ringbuffer/detail/varlen_header.hpp \
+  include/xproc/ringbuffer/fixed_writer.hpp \
+  include/xproc/ringbuffer/varlen_writer.hpp \
+  include/xproc/ringbuffer/fixed_reader.hpp \
+  include/xproc/ringbuffer/varlen_reader.hpp
+git -C ${PROJECT_ROOT} commit -m "feat: embed message_meta in ring buffer with release/acquire ordering"
 ```
 
 ---
 
-### Task 5: Channel send/poll API — add meta overloads, change poll signature
+### Task 3: API layer — channel, observer, runtime, and codec integration
+
+> **RECOMMENDED:** Commit this as a single atomic commit. The channel, observer, runtime, and codec layers all depend on the new ring buffer signatures from Task 2 and form one coherent API surface change.
 
 **Files:**
 - Modify: `include/xproc/ipc/channel.hpp`
@@ -271,6 +295,9 @@ git -C /Users/merlot/codes/xproc commit -m "feat: readers pass message_meta to h
 - Modify: `src/ipc/channel_interface.cpp`
 - Modify: `include/xproc/ipc/producer.hpp` (re-export)
 - Modify: `include/xproc/ipc/consumer.hpp` (re-export)
+- Modify: `include/xproc/ipc/observer.hpp`
+- Modify: `include/xproc/ipc/runtime.hpp`
+- Modify: `include/xproc/ipc/messaging.hpp`
 
 - [ ] **Step 1: Add meta send overloads to `channel.hpp`**
 
@@ -314,27 +341,11 @@ Change `poll_impl` signature:
 
 Update `poll()` template to wrap handler with the new signature.
 
-- [ ] **Step 4: Verify it compiles (tests will fail — expected)**
+- [ ] **Step 4: Update `producer.hpp` and `consumer.hpp` re-exports**
 
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc 2>&1 | tail -10`
-Expected: Library compiles, but tests fail because poll callbacks still have old signature.
+Re-export the new meta send overloads in `producer.hpp`. Re-export the updated `poll()` signature in `consumer.hpp`. These are thin forwarding headers — add includes and `using` declarations as needed.
 
-- [ ] **Step 5: Commit**
-
-```bash
-git -C /Users/merlot/codes/xproc add include/xproc/ipc/channel.hpp include/xproc/ipc/channel_interface.hpp src/ipc/channel_interface.cpp
-git -C /Users/merlot/codes/xproc commit -m "feat: channel send meta overloads, poll callback gains message_meta"
-```
-
----
-
-### Task 6: Observer peek + runtime dispatch — change callback signatures
-
-**Files:**
-- Modify: `include/xproc/ipc/observer.hpp`
-- Modify: `include/xproc/ipc/runtime.hpp`
-
-- [ ] **Step 1: Update `observer.hpp` peek signature**
+- [ ] **Step 5: Update `observer.hpp` peek signature**
 
 ```cpp
 // Before: handler(const void* payload, uint32_t len)
@@ -343,7 +354,7 @@ git -C /Users/merlot/codes/xproc commit -m "feat: channel send meta overloads, p
 
 Add `#include <xproc/ipc/message_meta.hpp>`.
 
-- [ ] **Step 2: Update `runtime.hpp` dispatch callbacks**
+- [ ] **Step 6: Update `runtime.hpp` dispatch callbacks**
 
 All dispatch methods (`poll_with_reuse`, `poll_zero_copy`, `poll_with_sbo`) change:
 
@@ -360,22 +371,9 @@ The user-facing handler signature changes:
 // After:  void(const message_meta& meta, const std::uint8_t* data, std::size_t len)
 ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 7: Update `messaging.hpp` — poll_decoded and send_encoded**
 
-```bash
-git -C /Users/merlot/codes/xproc add include/xproc/ipc/observer.hpp include/xproc/ipc/runtime.hpp
-git -C /Users/merlot/codes/xproc commit -m "feat: observer peek and runtime dispatch gain message_meta"
-```
-
----
-
-### Task 7: Codec integration — update send_encoded / poll_decoded
-
-**Files:**
-- Modify: `include/xproc/ipc/messaging.hpp`
-
-- [ ] **Step 1: Update `poll_decoded` handler signature**
-
+Update `poll_decoded` handler signature:
 ```cpp
 // Before: handler(const typename Codec::message_type& msg)
 // After:  handler(const message_meta& meta, const typename Codec::message_type& msg)
@@ -383,8 +381,7 @@ git -C /Users/merlot/codes/xproc commit -m "feat: observer peek and runtime disp
 
 Inside `poll_decoded`, the inner `ch.poll` lambda receives `(const message_meta& m, void* p, uint32_t len)`, decodes, and calls `handler(m, msg)`.
 
-- [ ] **Step 2: Add `send_encoded` with meta overload**
-
+Add `send_encoded` with meta overload:
 ```cpp
 template <typename Codec>
 void send_encoded(channel& ch, const typename Codec::message_type& msg, const message_meta& meta);
@@ -392,18 +389,33 @@ void send_encoded(channel& ch, const typename Codec::message_type& msg, const me
 
 Delegates to the underlying `ch.send_*` with meta.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 8: Verify it compiles (tests will fail — expected)**
+
+Run: `cmake --build ${PROJECT_ROOT}/build --target xproc 2>&1 | tail -10`
+Expected: Library compiles, but tests and examples fail because poll/peek/runtime callbacks still have the old signature. Fixed in Task 4.
+
+- [ ] **Step 9: Single atomic commit**
 
 ```bash
-git -C /Users/merlot/codes/xproc add include/xproc/ipc/messaging.hpp
-git -C /Users/merlot/codes/xproc commit -m "feat: codec layer gains message_meta in poll_decoded and send_encoded"
+git -C ${PROJECT_ROOT} add \
+  include/xproc/ipc/channel.hpp \
+  include/xproc/ipc/channel_interface.hpp \
+  src/ipc/channel_interface.cpp \
+  include/xproc/ipc/producer.hpp \
+  include/xproc/ipc/consumer.hpp \
+  include/xproc/ipc/observer.hpp \
+  include/xproc/ipc/runtime.hpp \
+  include/xproc/ipc/messaging.hpp
+git -C ${PROJECT_ROOT} commit -m "feat: channel, observer, runtime, and codec all carry message_meta"
 ```
 
 ---
 
-### Task 8: Update all test callback signatures (breaking change migration)
+### Task 4: Update all test and example callback signatures (scripted migration)
 
-**Files:**
+> **Strategy:** Use `sed` one-liners to batch-rewrite the ~45+ callback sites, then manually review the diff for edge cases (captures, multi-line lambdas, template callbacks). This prevents typos from hand-editing each site.
+
+**Files (tests):**
 - Modify: `tests/ipc_observer_attach_test.cpp` (1 poll, 1 peek)
 - Modify: `tests/producer_backpressure_test.cpp` (4 poll)
 - Modify: `tests/ipc_diagnostics_test.cpp` (1 poll)
@@ -415,55 +427,7 @@ git -C /Users/merlot/codes/xproc commit -m "feat: codec layer gains message_meta
 - Modify: `tests/runtime_allocation_test.cpp` (8 runtime::run)
 - Modify: `tests/optional_serde_test.cpp` (2 poll_decoded, 2 send_encoded)
 
-- [ ] **Step 1: Update poll callbacks in all test files**
-
-For every `[](void* p, uint32_t len)` or `[&](void* p, uint32_t len)`, add `const message_meta&` as first parameter:
-
-```cpp
-// Before: [&](void* p, std::uint32_t len)
-// After:  [&](const xproc::ipc::message_meta&, void* p, std::uint32_t len)
-```
-
-For unused meta in discards: `[](const xproc::ipc::message_meta&, void*, std::uint32_t) {}`
-
-- [ ] **Step 2: Update peek callbacks in all test files**
-
-```cpp
-// Before: [&](const void* p, std::uint32_t len)
-// After:  [&](const xproc::ipc::message_meta&, const void* p, std::uint32_t len)
-```
-
-- [ ] **Step 3: Update runtime::run callbacks in test files**
-
-```cpp
-// Before: [&](const std::uint8_t* data, std::size_t len)
-// After:  [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len)
-```
-
-- [ ] **Step 4: Update poll_decoded callbacks in test files**
-
-```cpp
-// Before: [&](const Codec::message_type& m)
-// After:  [&](const xproc::ipc::message_meta&, const Codec::message_type& m)
-```
-
-- [ ] **Step 5: Build and run all tests**
-
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc_run_tests 2>&1 | tail -10`
-Expected: All tests PASS.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git -C /Users/merlot/codes/xproc add tests/
-git -C /Users/merlot/codes/xproc commit -m "fix: update all test callbacks for message_meta signature change"
-```
-
----
-
-### Task 9: Update all example callback signatures
-
-**Files:**
+**Files (examples):**
 - Modify: `examples/socket_varlen_reconnect_demo.cpp` (2 poll)
 - Modify: `examples/parent_child_varlen_monitor.cpp` (1 poll)
 - Modify: `examples/parent_child_counter_monitor.cpp` (1 poll)
@@ -485,29 +449,105 @@ git -C /Users/merlot/codes/xproc commit -m "fix: update all test callbacks for m
 - Modify: `examples/runtime_dispatch_demo.cpp` (1 runtime::run)
 - Modify: `examples/codec_roundtrip_demo.cpp` (1 poll_decoded, 1 send_encoded)
 
-- [ ] **Step 1: Update all example poll/peek/runtime callbacks**
+- [ ] **Step 1: Batch-rewrite poll callbacks with sed**
 
-Same pattern as Task 8: add `const xproc::ipc::message_meta&` as first parameter to every callback.
-
-- [ ] **Step 2: Build examples**
-
-Run: `cmake --build /Users/merlot/codes/xproc/build 2>&1 | tail -5`
-
-- [ ] **Step 3: Commit**
+This handles the common `(void* p, uint32_t len)` and `(void* p, std::uint32_t len)` patterns:
 
 ```bash
-git -C /Users/merlot/codes/xproc add examples/
-git -C /Users/merlot/codes/xproc commit -m "fix: update all example callbacks for message_meta signature change"
+# Add const xproc::ipc::message_meta& as first parameter to poll-style callbacks
+# Pattern: (void* <name>, uint32_t <name>) or (void* <name>, std::uint32_t <name>)
+for f in $(grep -rl 'void\*.*uint32_t' tests/ examples/); do
+  sed -i -E \
+    -e 's/\(void\* ([a-z_][a-z0-9_]*), (std::)?uint32_t ([a-z_][a-z0-9_]*)\)/(const xproc::ipc::message_meta\&, void* \1, \2uint32_t \3)/g' \
+    -e 's/\[&\]\(void\* ([a-z_][a-z0-9_]*), (std::)?uint32_t/\[&](const xproc::ipc::message_meta\&, void* \1, \2uint32_t/g' \
+    "$f"
+done
+```
+
+- [ ] **Step 2: Batch-rewrite peek callbacks with sed**
+
+```bash
+# Pattern: (const void* <name>, uint32_t <name>)
+for f in $(grep -rl 'const void\*.*uint32_t' tests/ examples/); do
+  sed -i -E \
+    -e 's/\(const void\* ([a-z_][a-z0-9_]*), (std::)?uint32_t ([a-z_][a-z0-9_]*)\)/(const xproc::ipc::message_meta\&, const void* \1, \2uint32_t \3)/g' \
+    "$f"
+done
+```
+
+- [ ] **Step 3: Batch-rewrite runtime::run callbacks with sed**
+
+```bash
+# Pattern: (const std::uint8_t* <name>, std::size_t <name>)
+for f in $(grep -rl 'const std::uint8_t\*.*std::size_t' tests/ examples/); do
+  sed -i -E \
+    -e 's/\(const std::uint8_t\* ([a-z_][a-z0-9_]*), std::size_t ([a-z_][a-z0-9_]*)\)/(const xproc::ipc::message_meta\&, const std::uint8_t* \1, std::size_t \2)/g' \
+    "$f"
+done
+```
+
+- [ ] **Step 4: Batch-rewrite poll_decoded callbacks with sed**
+
+```bash
+# Pattern: (const Codec::message_type& <name>) — captures single template arg
+for f in $(grep -rl 'const.*::message_type&' tests/ examples/); do
+  sed -i -E \
+    -e 's/\(const ([a-zA-Z_:]+)\& ([a-z_][a-z0-9_]*)\)/(const xproc::ipc::message_meta\&, const \1\& \2)/g' \
+    "$f"
+done
+```
+
+- [ ] **Step 5: Manual review of the diff**
+
+```bash
+git -C ${PROJECT_ROOT} diff tests/ examples/
+```
+
+Look for:
+- Multi-line lambdas that sed couldn't match (the lambda body spans lines after the capture)
+- `send_encoded` call sites (added `message_meta` parameter to the call, not the callback)
+- Template-deduced callbacks where the type isn't spelled out explicitly
+- Discard patterns: replace `(void*, std::uint32_t)` with `(const xproc::ipc::message_meta&, void*, std::uint32_t)` if sed missed them
+
+Fix any mismatches manually.
+
+- [ ] **Step 6: Build, run tests, and build examples**
+
+```bash
+cmake --build ${PROJECT_ROOT}/build --target xproc_run_tests 2>&1 | tail -10
+cmake --build ${PROJECT_ROOT}/build 2>&1 | tail -5
+```
+Expected: All tests PASS. All examples compile.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git -C ${PROJECT_ROOT} add tests/ examples/
+git -C ${PROJECT_ROOT} commit -m "fix: update all test and example callbacks for message_meta signature change"
 ```
 
 ---
 
-### Task 10: Protocol cleanup — delete stubs
+### Task 5: Protocol cleanup — delete stubs
 
 **Files:**
 - Delete: `include/xproc/protocol/json_codec_stub.hpp`
 - Delete: `include/xproc/protocol/protobuf_stub.hpp`
 - Modify: `include/xproc/xproc.hpp` (remove stub includes)
+
+- [ ] **Step 0: Pre-check — verify `optional_serde_test` does not depend on stubs**
+
+```bash
+# Check if the test includes either stub
+grep -rE 'json_codec_stub|protobuf_stub' ${PROJECT_ROOT}/tests/optional_serde_test.cpp
+```
+
+If matches are found, the test must be refactored before proceeding. Options:
+- Replace stub types with real codec types from `codecs.hpp`
+- Gate the affected test cases behind `#ifdef XPROC_WITH_NLOHMANN_JSON`
+- Inline the stub's thin wrapping logic directly in the test
+
+Do NOT proceed past this step until `optional_serde_test.cpp` compiles without the stubs.
 
 - [ ] **Step 1: Remove stub includes from `xproc.hpp`**
 
@@ -520,24 +560,24 @@ Remove these two lines:
 - [ ] **Step 2: Delete the stub files**
 
 ```bash
-git -C /Users/merlot/codes/xproc rm include/xproc/protocol/json_codec_stub.hpp include/xproc/protocol/protobuf_stub.hpp
+git -C ${PROJECT_ROOT} rm include/xproc/protocol/json_codec_stub.hpp include/xproc/protocol/protobuf_stub.hpp
 ```
 
 - [ ] **Step 3: Build and verify**
 
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc_run_tests 2>&1 | tail -5`
+Run: `cmake --build ${PROJECT_ROOT}/build --target xproc_run_tests 2>&1 | tail -5`
 Expected: Build succeeds. If `optional_serde_test.cpp` uses `nlohmann_json_codec`, check whether it's gated behind `XPROC_WITH_NLOHMANN_JSON`. If so, it may need the stub — verify before deleting. (The stub is a thin wrapper; the test may need to inline the codec or use `codecs.hpp` types instead.)
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git -C /Users/merlot/codes/xproc add include/xproc/protocol/ include/xproc/xproc.hpp
-git -C /Users/merlot/codes/xproc commit -m "chore: remove json_codec_stub and protobuf_stub from protocol module"
+git -C ${PROJECT_ROOT} add include/xproc/protocol/ include/xproc/xproc.hpp
+git -C ${PROJECT_ROOT} commit -m "chore: remove json_codec_stub and protobuf_stub from protocol module"
 ```
 
 ---
 
-### Task 11: C API — add meta struct, send-with-meta, update poll callback
+### Task 6: C API — add meta struct, send-with-meta, update poll callback
 
 **Files:**
 - Modify: `capi/xproc_c.h`
@@ -601,19 +641,19 @@ Update existing `xproc_c_consumer_poll_copy` to pass meta to the C callback.
 
 - [ ] **Step 6: Build and run C API tests**
 
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc_capi_smoke_tests && /Users/merlot/codes/xproc/build/tests/xproc_capi_smoke_tests`
+Run: `cmake --build ${PROJECT_ROOT}/build --target xproc_capi_smoke_tests && ${PROJECT_ROOT}/build/tests/xproc_capi_smoke_tests`
 Expected: All tests PASS.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git -C /Users/merlot/codes/xproc add capi/xproc_c.h capi/xproc_c.cpp
-git -C /Users/merlot/codes/xproc commit -m "feat: C API gains message_meta struct, send-with-meta, updated poll callback"
+git -C ${PROJECT_ROOT} add capi/xproc_c.h capi/xproc_c.cpp
+git -C ${PROJECT_ROOT} commit -m "feat: C API gains message_meta struct, send-with-meta, updated poll callback"
 ```
 
 ---
 
-### Task 12: New meta-specific tests
+### Task 7: New meta-specific tests
 
 **Files:**
 - Create: `tests/message_meta_test.cpp`
@@ -761,23 +801,126 @@ TEST(MessageMeta, DefaultMetaHasZeroUserData) {
   }
   xproc::core::shm::unlink(path);
 }
+
+// --- Concurrent stress tests ---
+
+TEST(MessageMeta, ConcurrentSingleWriterMultipleReaders) {
+  const std::string path = "/xproc_meta_conc_swmr";
+  auto opts = make_opts(path, 65536, xproc::ipc::channel_type::fixed);
+  xproc::core::shm::unlink(path);
+
+  constexpr int kMessages = 1000;
+  std::atomic<int> received{0};
+  std::atomic<int> meta_checks_passed{0};
+
+  auto writer = std::thread([&] {
+    xproc::ipc::producer prod(opts);
+    for (int i = 0; i < kMessages; ++i) {
+      xproc::ipc::message_meta m{};
+      m.user_data = static_cast<uint64_t>(i);
+      m.flags = xproc::ipc::flag_priority_high;
+      while (!prod.try_send_fixed(static_cast<uint32_t>(i), m)) {
+        std::this_thread::yield();
+      }
+    }
+  });
+
+  auto reader = std::thread([&] {
+    xproc::ipc::consumer cons(opts);
+    while (received.load(std::memory_order_acquire) < kMessages) {
+      cons.poll([&](const xproc::ipc::message_meta& m, void* p, std::uint32_t) {
+        auto val = *static_cast<uint32_t*>(p);
+        if (m.user_data == val && (m.flags & xproc::ipc::flag_priority_high)) {
+          meta_checks_passed.fetch_add(1, std::memory_order_relaxed);
+        }
+        received.fetch_add(1, std::memory_order_release);
+      });
+    }
+  });
+
+  writer.join();
+  reader.join();
+
+  EXPECT_EQ(received.load(), kMessages);
+  EXPECT_EQ(meta_checks_passed.load(), kMessages);
+  xproc::core::shm::unlink(path);
+}
+
+TEST(MessageMeta, ConcurrentMultiWriterMultiReader) {
+  const std::string path = "/xproc_meta_conc_mwmr";
+  auto opts = make_opts(path, 65536, xproc::ipc::channel_type::varlen);
+  xproc::core::shm::unlink(path);
+
+  constexpr int kWriters = 3;
+  constexpr int kReaders = 2;
+  constexpr int kMsgsPerWriter = 200;
+  std::atomic<int> total_sent{0};
+  std::atomic<int> total_received{0};
+  std::atomic<int> meta_mismatches{0};
+
+  std::vector<std::thread> writers;
+  for (int w = 0; w < kWriters; ++w) {
+    writers.emplace_back([&, w] {
+      xproc::ipc::producer prod(opts);
+      for (int i = 0; i < kMsgsPerWriter; ++i) {
+        xproc::ipc::message_meta m{};
+        m.user_data = static_cast<uint64_t>(w * 10000 + i);
+        m.schema_id = static_cast<uint32_t>(w);
+        std::string payload = "writer_" + std::to_string(w) + "_msg_" + std::to_string(i);
+        while (!prod.try_send_varlen(payload.data(), static_cast<uint32_t>(payload.size()), m)) {
+          std::this_thread::yield();
+        }
+        total_sent.fetch_add(1, std::memory_order_release);
+      }
+    });
+  }
+
+  std::vector<std::thread> readers;
+  for (int r = 0; r < kReaders; ++r) {
+    readers.emplace_back([&] {
+      xproc::ipc::consumer cons(opts);
+      while (total_received.load(std::memory_order_acquire) < kWriters * kMsgsPerWriter) {
+        cons.poll([&](const xproc::ipc::message_meta& m, void* p, std::uint32_t len) {
+          // Verify meta integrity: schema_id should be < kWriters
+          if (m.schema_id >= static_cast<uint32_t>(kWriters)) {
+            meta_mismatches.fetch_add(1, std::memory_order_relaxed);
+          }
+          // Verify timestamp was filled
+          if (m.timestamp_ns == 0) {
+            meta_mismatches.fetch_add(1, std::memory_order_relaxed);
+          }
+          total_received.fetch_add(1, std::memory_order_release);
+          (void)p;
+          (void)len;
+        });
+      }
+    });
+  }
+
+  for (auto& t : writers) t.join();
+  for (auto& t : readers) t.join();
+
+  EXPECT_EQ(total_received.load(), kWriters * kMsgsPerWriter);
+  EXPECT_EQ(meta_mismatches.load(), 0);
+  xproc::core::shm::unlink(path);
+}
 ```
 
 - [ ] **Step 3: Build and run**
 
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc_message_meta_test && /Users/merlot/codes/xproc/build/tests/xproc_message_meta_test`
-Expected: All 8 tests PASS.
+Run: `cmake --build ${PROJECT_ROOT}/build --target xproc_message_meta_test && ${PROJECT_ROOT}/build/tests/xproc_message_meta_test`
+Expected: All 10 tests PASS (8 unit + 2 concurrent stress).
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git -C /Users/merlot/codes/xproc add tests/message_meta_test.cpp tests/CMakeLists.txt
-git -C /Users/merlot/codes/xproc commit -m "test: add message_meta roundtrip and default-value tests"
+git -C ${PROJECT_ROOT} add tests/message_meta_test.cpp tests/CMakeLists.txt
+git -C ${PROJECT_ROOT} commit -m "test: add message_meta roundtrip, default-value, and concurrent stress tests"
 ```
 
 ---
 
-### Task 13: C API meta tests
+### Task 8: C API meta tests
 
 **Files:**
 - Modify: `tests/capi_smoke_test.cpp`
@@ -820,15 +963,15 @@ TEST(CApiSmoke, CSendWithMetaSmoke) {
 }
 ```
 
-(Final test code depends on the exact C API poll_copy signature update in Task 11.)
+(Final test code depends on the exact C API poll_copy signature update in Task 6.)
 
 - [ ] **Step 2: Build and run**
 
-Run: `cmake --build /Users/merlot/codes/xproc/build --target xproc_capi_smoke_tests && /Users/merlot/codes/xproc/build/tests/xproc_capi_smoke_tests`
+Run: `cmake --build ${PROJECT_ROOT}/build --target xproc_capi_smoke_tests && ${PROJECT_ROOT}/build/tests/xproc_capi_smoke_tests`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git -C /Users/merlot/codes/xproc add tests/capi_smoke_test.cpp
-git -C /Users/merlot/codes/xproc commit -m "test: add C API message_meta smoke tests"
+git -C ${PROJECT_ROOT} add tests/capi_smoke_test.cpp
+git -C ${PROJECT_ROOT} commit -m "test: add C API message_meta smoke tests"
 ```
