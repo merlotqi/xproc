@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/options.hpp>
+#include <xproc/ipc/shm_channel.hpp>
 #include <xproc/ipc/socket_channel.hpp>
 
 namespace xproc::ipc {

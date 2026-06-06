@@ -39,7 +39,7 @@ int main() {
       });
       fut.wait();
     };
-    runtime.run(pool_executor, [&](const std::uint8_t* data, std::size_t len) {
+    runtime.run(pool_executor, [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
       if (len != sizeof(std::uint32_t)) {
         std::cerr << "unexpected len: " << len << "\n";
         runtime.stop();

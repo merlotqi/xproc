@@ -133,7 +133,7 @@ TEST(ApiSurface, IpcRuntimeRunAndStop) {
   std::atomic<bool> got{false};
   std::thread rt([&] {
     auto executor = [](auto task) { task(); };
-    runtime.run(executor, [&](const std::uint8_t* data, std::size_t len) {
+    runtime.run(executor, [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
       EXPECT_EQ(len, 4u);
       std::uint32_t v = 0;
       std::memcpy(&v, data, sizeof(v));
@@ -221,7 +221,7 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
 
   bool peeked = false;
   while (!peeked) {
-    peeked = observer.peek([&](const void* p, std::uint32_t len) {
+    peeked = observer.peek([&](const xproc::ipc::message_meta&, const void* p, std::uint32_t len) {
       EXPECT_EQ(len, sizeof(std::uint32_t));
       std::uint32_t value = 0;
       std::memcpy(&value, p, sizeof(value));
@@ -235,7 +235,7 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
 
   bool consumed = false;
   while (!consumed) {
-    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+    consumed = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       EXPECT_EQ(len, sizeof(std::uint32_t));
       std::uint32_t value = 0;
       std::memcpy(&value, p, sizeof(value));
@@ -282,7 +282,7 @@ TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
 
   bool consumed = false;
   while (!consumed) {
-    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+    consumed = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       std::string actual(static_cast<const char*>(p), static_cast<std::size_t>(len));
       EXPECT_EQ(actual, expected);
     });
@@ -444,7 +444,7 @@ TEST(ApiSurface, SocketBuildersOpenSpecificEndpointsAndRoundTrip) {
     std::string actual;
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
     while (actual.empty() && std::chrono::steady_clock::now() < deadline) {
-      const bool got = consumer.poll([&](void* p, std::uint32_t len) {
+      const bool got = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         actual.assign(static_cast<const char*>(p), static_cast<std::size_t>(len));
       });
       if (!got) {

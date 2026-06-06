@@ -5,7 +5,6 @@
 #include <climits>
 #include <cstring>
 #include <memory>
-#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -565,6 +564,18 @@ void socket_producer::send_varlen(const void* data, std::uint32_t len) {
   }
 }
 
+void socket_producer::send_fixed_bytes(const void* data, std::uint32_t payload_len, const message_meta& /*meta*/) {
+  send_fixed_bytes(data, payload_len);
+}
+
+void socket_producer::send_fixed_sized(const void* data, std::uint32_t byte_length, const message_meta& /*meta*/) {
+  send_fixed_sized(data, byte_length);
+}
+
+void socket_producer::send_varlen(const void* data, std::uint32_t len, const message_meta& /*meta*/) {
+  send_varlen(data, len);
+}
+
 void socket_consumer::close_listen() noexcept {
 #if defined(_WIN32)
   close_handle(static_cast<SOCKET>(listen_));
@@ -727,7 +738,7 @@ void socket_consumer::interrupt_wait() noexcept {
   }
 }
 
-bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>& handler) {
+bool socket_consumer::poll_impl(const std::function<void(const message_meta&, void*, std::uint32_t)>& handler) {
   if (!ensure_peer_connected()) {
     return false;
   }
@@ -763,7 +774,8 @@ bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>&
 #else
       read_exact_sock(sock_, buf.data(), buf.size());
 #endif
-      handler(buf.data(), static_cast<std::uint32_t>(buf.size()));
+      // Socket transport has no wire format for metadata; pass empty meta
+      handler(message_meta{}, buf.data(), static_cast<std::uint32_t>(buf.size()));
       return true;
     }
     std::uint32_t len_le = 0;
@@ -784,7 +796,8 @@ bool socket_consumer::poll_impl(const std::function<void(void*, std::uint32_t)>&
       read_exact_sock(sock_, payload.data(), len);
 #endif
     }
-    handler(payload.data(), len);
+    // Socket transport has no wire format for metadata; pass empty meta
+    handler(message_meta{}, payload.data(), len);
     return true;
   } catch (const std::runtime_error&) {
     // A closed/reset peer leaves sock_ stale; drop it so the next poll can accept a new connection.

@@ -111,7 +111,7 @@ TEST(IpcIntegration, RoleSendPoll) {
   o.item_size = 4;
   xproc::core::shm::unlink(o.path);
   xproc::ipc::channel prod(o, xproc::ipc::endpoint::role::producer);
-  EXPECT_THROW(prod.poll([](void*, std::uint32_t) {}), std::logic_error);
+  EXPECT_THROW(prod.poll([](const xproc::ipc::message_meta&, void*, std::uint32_t) {}), std::logic_error);
   xproc::core::shm::unlink(o.path);
 }
 
@@ -139,7 +139,7 @@ TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
 
   bool peeked = false;
   while (!peeked) {
-    peeked = observer.peek([&](const void* p, std::uint32_t len) {
+    peeked = observer.peek([&](const xproc::ipc::message_meta&, const void* p, std::uint32_t len) {
       EXPECT_EQ(len, sizeof(std::uint32_t));
       std::uint32_t v = 0;
       std::memcpy(&v, p, sizeof(v));
@@ -153,7 +153,7 @@ TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
 
   bool consumed = false;
   while (!consumed) {
-    consumed = consumer.poll([&](void* p, std::uint32_t len) {
+    consumed = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       EXPECT_EQ(len, sizeof(std::uint32_t));
       std::uint32_t v = 0;
       std::memcpy(&v, p, sizeof(v));
@@ -192,7 +192,7 @@ int cross_process_futex_block_main(const char* shm_path) {
     std::uint32_t val = 0;
     bool got = false;
     while (!got) {
-      got = ch.poll([&](void* p, std::uint32_t len) {
+      got = ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         (void)len;
         std::memcpy(&val, p, sizeof(val));
       });
@@ -247,7 +247,7 @@ int cross_process_varlen_main(const char* shm_path) {
 
     bool got = false;
     while (!got) {
-      got = ch.poll([&](void* p, std::uint32_t len) {
+      got = ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         if (len != std::strlen(msg) || std::memcmp(p, msg, len) != 0) {
           _exit(3);
         }
@@ -313,7 +313,7 @@ int consumer_creates_then_forked_producer_main(const char* shm_path) {
   std::uint32_t value = 0;
   bool got = false;
   while (!got) {
-    got = consumer.poll([&](void* p, std::uint32_t len) {
+    got = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       if (len != sizeof(value)) {
         value = 0;
         return;

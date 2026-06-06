@@ -26,8 +26,7 @@ std::string make_message(int i) {
 }
 
 int run_child_writer(const std::string& shm_path) {
-  xproc::ipc::producer producer =
-      xproc::ipc::attach_varlen_channel(shm_path).open_producer();
+  xproc::ipc::producer producer = xproc::ipc::attach_varlen_channel(shm_path).open_producer();
 
   std::thread writer([&] {
     for (int i = 0; i <= 20; ++i) {
@@ -67,7 +66,7 @@ int main(int argc, char** argv) {
   bool has_last = false;
 
   while (true) {
-    consumer.poll([&](void* p, std::uint32_t len) {
+    consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       const std::string cur(static_cast<const char*>(p), static_cast<std::size_t>(len));
       if (!has_last || cur != last) {
         std::cout << "message(" << len << " bytes)=" << cur << "\n";

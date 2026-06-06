@@ -80,8 +80,7 @@ std::uint64_t current_pid() {
 }
 
 int run_child_data_writer(const std::string& ipc_path) {
-  xproc::ipc::producer producer =
-      xproc::ipc::attach_fixed_channel(ipc_path).open_producer();
+  xproc::ipc::producer producer = xproc::ipc::attach_fixed_channel(ipc_path).open_producer();
 
   std::thread writer([&] {
     for (int i = 0; i <= 100; ++i) {
@@ -140,7 +139,7 @@ void parent_consume_until_child_done(xproc::ipc::consumer& consumer, xproc::exam
   bool has_last = false;
 
   for (;;) {
-    consumer.poll([&](void* p, std::uint32_t len) {
+    consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       if (len != sizeof(telemetry_packet)) {
         return;
       }

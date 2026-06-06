@@ -27,7 +27,7 @@ int child_main(const char* shm_path) {
   for (int i = 0; i < 100; ++i) {
     bool got = false;
     while (!got) {
-      got = ch.poll([&](void* p, std::uint32_t len) {
+      got = ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         (void)len;
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));
@@ -62,8 +62,7 @@ int main(int argc, char** argv) {
   }
 
   xproc::core::shm::unlink(shm_path);
-  const auto channel =
-      xproc::ipc::make_fixed_channel(shm_path, sizeof(std::uint32_t)).with_data_align(8).create(65536);
+  const auto channel = xproc::ipc::make_fixed_channel(shm_path, sizeof(std::uint32_t)).with_data_align(8).create(65536);
 
   const std::string exe = xproc::examples::process::self_exe();
   auto child = xproc::examples::process::spawn({exe, kChildFlag, shm_path});

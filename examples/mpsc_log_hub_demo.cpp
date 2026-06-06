@@ -130,7 +130,7 @@ int main() {
 
   int received = 0;
   while (received < total_lines) {
-    const bool has_data = consumer.poll([&](void* data, std::uint32_t length) {
+    const bool has_data = consumer.poll([&](const xproc::ipc::message_meta&, void* data, std::uint32_t length) {
       if (length != kLineCap) {
         return;
       }

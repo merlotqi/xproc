@@ -45,7 +45,7 @@ TEST(ObserverDiagnostics, OccupancyRatioPartialFill) {
 
 TEST(ObserverDiagnostics, OccupancyRatioFullRing) {
   const std::string path = "/xproc_diag_occ_ratio_full";
-  auto opts = make_test_opts(path, 64);
+  auto opts = make_test_opts(path, 80);
   {
     xproc::ipc::producer prod(opts);
     xproc::ipc::observer obs(opts);
@@ -118,7 +118,7 @@ TEST(ObserverDiagnostics, ConsumerLagBytesAfterConsume) {
     const auto lag_before = obs.consumer_lag_bytes();
     EXPECT_GT(lag_before, 0u);
 
-    cons.poll([](void*, std::uint32_t) {});
+    cons.poll([](const xproc::ipc::message_meta&, void*, std::uint32_t) {});
     const auto lag_after = obs.consumer_lag_bytes();
     EXPECT_LT(lag_after, lag_before);
   }

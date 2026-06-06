@@ -20,7 +20,7 @@ int main() {
     std::uint32_t expected = 1;
     std::uint32_t got_count = 0;
     while (!done.load(std::memory_order_acquire)) {
-      bool got = consumer.poll([&](void* p, std::uint32_t len) {
+      bool got = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         if (len != sizeof(std::uint32_t)) {
           std::cerr << "unexpected payload len: " << len << "\n";
           done.store(true, std::memory_order_release);

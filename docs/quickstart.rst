@@ -55,15 +55,9 @@ Variable-length channel
 For advanced flows, ``transport_options`` remains available when you want to set the layout explicitly or override
 schema / namespace checks yourself.
 
-Codecs
-------
+Note
+----
 
-.. code-block:: cpp
-
-   #include <xproc/protocol/codecs.hpp>
-
-   xproc::ipc::send_encoded<xproc::protocol::raw_pod_codec<int>>(producer, 42);
-   xproc::ipc::poll_decoded<xproc::protocol::raw_pod_codec<int>>(
-       consumer, [](int value) { (void)value; });
-
-See :doc:`advanced` for custom codecs and observer / runtime patterns.
+xproc is a **buffer transport** layer — moving bytes between producer and consumer.
+Serialisation/deserialisation (codec) is a user concern that belongs in application
+code, not in the transport layer. Use :doc:`advanced` for observer / runtime patterns.

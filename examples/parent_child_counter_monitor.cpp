@@ -21,8 +21,7 @@ constexpr const char* kChildFlag = "--pc-counter-child";
 constexpr std::size_t kDataCapacity = 16384;
 
 int run_child_writer(const std::string& shm_path) {
-  xproc::ipc::producer producer =
-      xproc::ipc::attach_fixed_channel(shm_path).open_producer();
+  xproc::ipc::producer producer = xproc::ipc::attach_fixed_channel(shm_path).open_producer();
 
   std::thread writer([&] {
     for (std::uint32_t v = 0; v <= 100; ++v) {
@@ -57,7 +56,7 @@ int main(int argc, char** argv) {
   std::uint32_t last_value = 0;
 
   while (true) {
-    const bool got = consumer.poll([&](void* p, std::uint32_t len) {
+    const bool got = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       if (len != sizeof(std::uint32_t)) {
         return;
       }

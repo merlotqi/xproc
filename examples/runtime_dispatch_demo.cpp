@@ -95,7 +95,7 @@ int main() {
     // overwritten by subsequent polls before the pool worker reads it.
     runtime.run(
         executor,
-        [&](const std::uint8_t* data, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t* data, std::size_t len) {
           // Parse the 16-byte message: [id:4][value:4][padding:8]
           std::uint32_t id = 0;
           std::uint32_t val = 0;

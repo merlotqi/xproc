@@ -55,7 +55,7 @@ TEST(RingbufferSpsc, FixedSpsc) {
 
   std::thread consumer([&] {
     while (received.load(std::memory_order_relaxed) < n) {
-      if (r.read(item, [&](void* p) {
+      if (r.read(item, [&](const xproc::ipc::message_meta&, void* p) {
             EXPECT_EQ(std::memcmp(p, "0123456789abcdef", item), 0);
             received.fetch_add(1, std::memory_order_relaxed);
           })) {
@@ -104,7 +104,7 @@ TEST(RingbufferSpsc, VarlenSpscWrap) {
 
   int msgs = 0;
   while (msgs < 2) {
-    if (rd.read([&](void* ptr, std::uint32_t len) {
+    if (rd.read([&](const xproc::ipc::message_meta&, void* ptr, std::uint32_t len) {
           if (msgs == 0) {
             EXPECT_EQ(len, strlen_a);
             EXPECT_EQ(std::memcmp(ptr, a, len), 0);

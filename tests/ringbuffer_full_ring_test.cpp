@@ -41,7 +41,7 @@ struct alignas(xproc::core::control_block) ring_arena {
 
 TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   constexpr std::uint32_t item = 8;
-  constexpr std::uint64_t cap = 32;
+  constexpr std::uint64_t cap = 80;
   constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
   auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
@@ -80,7 +80,7 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
   EXPECT_FALSE(third_done.load(std::memory_order_acquire));
 
-  EXPECT_TRUE(r.read(item, [](void*) {}));
+  EXPECT_TRUE(r.read(item, [](const xproc::ipc::message_meta&, void*) {}));
 
   producer.join();
   EXPECT_TRUE(third_done.load());
@@ -88,6 +88,8 @@ TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
   close(pipefd[0]);
   close(pipefd[1]);
 
-  EXPECT_TRUE(r.read(item, [](void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
-  EXPECT_TRUE(r.read(item, [](void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
+  EXPECT_TRUE(
+      r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
+  EXPECT_TRUE(
+      r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
 }

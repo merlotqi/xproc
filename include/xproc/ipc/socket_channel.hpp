@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <xproc/ipc/channel_interface.hpp>
+#include <xproc/ipc/message_meta.hpp>
 
 namespace xproc::ipc {
 
@@ -29,6 +30,10 @@ class socket_producer final : public producer_channel_interface {
   void send_fixed_bytes(const void* data, std::uint32_t payload_len) override;
   void send_fixed_sized(const void* data, std::uint32_t byte_length) override;
   void send_varlen(const void* data, std::uint32_t len) override;
+
+  void send_fixed_bytes(const void* data, std::uint32_t payload_len, const message_meta& meta) override;
+  void send_fixed_sized(const void* data, std::uint32_t byte_length, const message_meta& meta) override;
+  void send_varlen(const void* data, std::uint32_t len, const message_meta& meta) override;
 
  private:
   transport_options opts_;
@@ -57,7 +62,7 @@ class socket_consumer final : public consumer_channel_interface {
   void interrupt_wait() noexcept override;
 
  protected:
-  bool poll_impl(const std::function<void(void*, std::uint32_t)>& handler) override;
+  bool poll_impl(const std::function<void(const message_meta&, void*, std::uint32_t)>& handler) override;
 
  private:
   transport_options opts_;

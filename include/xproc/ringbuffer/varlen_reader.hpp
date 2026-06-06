@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstdint>
 #include <utility>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ringbuffer/detail/varlen_header.hpp>
 #include <xproc/ringbuffer/ringbuffer_view.hpp>
 #include <xproc/sync/atomic_wait.hpp>
@@ -25,7 +26,7 @@ class varlen_reader : public ringbuffer_view {
     uint32_t status = h->status.load(std::memory_order_acquire);
 
     if (status == 1) {
-      handler(get_ptr(curr_read + sizeof(detail::varlen_message_header)), h->length);
+      handler(h->meta, get_ptr(curr_read + sizeof(detail::varlen_message_header)), h->length);
 
       uint32_t total_len = align_size(h->length + sizeof(detail::varlen_message_header));
       header_->rb_meta.read_pos.store(curr_read + total_len, std::memory_order_release);
@@ -55,7 +56,7 @@ class varlen_reader : public ringbuffer_view {
       const uint32_t status = h->status.load(std::memory_order_acquire);
 
       if (status == 1) {
-        std::forward<F>(handler)(static_cast<const void*>(get_ptr(r + sizeof(detail::varlen_message_header))),
+        std::forward<F>(handler)(h->meta, static_cast<const void*>(get_ptr(r + sizeof(detail::varlen_message_header))),
                                  h->length);
         return true;
       }

@@ -36,7 +36,7 @@ static void BM_RuntimeBaselineDirectPoll(benchmark::State& state) {
     prod.send_fixed_bytes(payload.data(), static_cast<std::uint32_t>(payload_len));
     bool got = false;
     while (!got) {
-      got = cons.poll([&](void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
+      got = cons.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
         const auto c = cons.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
         xproc::sync::atomic_wait(&cons.header()->rb_meta.commit_seq, c);
@@ -70,7 +70,7 @@ static void BM_RuntimeReuseBuffer(benchmark::State& state) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t*, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t*, std::size_t len) {
           benchmark::DoNotOptimize(len);
           done.store(true);
         },
@@ -113,7 +113,7 @@ static void BM_RuntimeZeroCopy(benchmark::State& state) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t*, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t*, std::size_t len) {
           benchmark::DoNotOptimize(len);
           done.store(true);
         },
@@ -156,7 +156,7 @@ static void BM_RuntimeSbo(benchmark::State& state) {
     auto executor = [](auto task) { task(); };
     rt.run(
         executor,
-        [&](const std::uint8_t*, std::size_t len) {
+        [&](const xproc::ipc::message_meta&, const std::uint8_t*, std::size_t len) {
           benchmark::DoNotOptimize(len);
           done.store(true);
         },

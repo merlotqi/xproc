@@ -12,8 +12,6 @@ consumption, see [INSTALL.md](INSTALL.md).
 
 Optional dependencies:
 
-- `nlohmann_json` for JSON codec support
-- `Protobuf` for Protocol Buffers support
 - `dotnet` for the C# binding
 
 ## Basic Build
@@ -41,19 +39,11 @@ cmake --build build
 -DXPROC_BUILD_BENCHMARKS=ON
 -DXPROC_BUILD_NODE=ON
 -DXPROC_BUILD_PYTHON=ON
--DXPROC_WITH_NLOHMANN_JSON=ON
--DXPROC_WITH_PROTOBUF=ON
 ```
 
 ## Optional Features
 
 ```bash
-# JSON codec support
-cmake -S . -B build -DXPROC_WITH_NLOHMANN_JSON=ON
-
-# Protobuf codec support
-cmake -S . -B build -DXPROC_WITH_PROTOBUF=ON
-
 # Benchmarks
 cmake -S . -B build -DXPROC_BUILD_BENCHMARKS=ON
 ```

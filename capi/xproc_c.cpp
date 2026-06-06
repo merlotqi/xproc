@@ -299,6 +299,19 @@ xproc_c_status producer_socket_port_impl(const ProducerHandle* producer, std::ui
   return XPROC_C_STATUS_OK;
 }
 
+xproc::ipc::message_meta to_cpp_meta(const xproc_c_message_meta* m) {
+  if (!m) return {};
+  return {m->user_data, m->timestamp_ns, m->schema_id, m->flags};
+}
+
+void to_c_meta(const xproc::ipc::message_meta& m, xproc_c_message_meta* out) {
+  if (!out) return;
+  out->user_data = m.user_data;
+  out->timestamp_ns = m.timestamp_ns;
+  out->schema_id = m.schema_id;
+  out->flags = m.flags;
+}
+
 }  // namespace
 
 void xproc_c_options_init(xproc_c_options* options) {
@@ -508,6 +521,25 @@ xproc_c_status xproc_c_producer_send_fixed_sized(xproc_c_producer* producer, con
   });
 }
 
+xproc_c_status xproc_c_producer_send_fixed_sized_with_meta(xproc_c_producer* producer, const void* data,
+                                                           std::uint32_t byte_length,
+                                                           const xproc_c_message_meta* meta) {
+  const xproc_c_status status =
+      validate_handle(producer, "xproc_c_producer_send_fixed_sized_with_meta: producer is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  if (data == nullptr && byte_length != 0u) {
+    return invalid_argument("xproc_c_producer_send_fixed_sized_with_meta: data is null while byte_length is non-zero");
+  }
+
+  return catch_status([&]() -> xproc_c_status {
+    producer->impl->send_fixed_sized(data, byte_length, to_cpp_meta(meta));
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
 xproc_c_status xproc_c_producer_send_varlen(xproc_c_producer* producer, const void* data, std::uint32_t len) {
   const xproc_c_status status = validate_handle(producer, "xproc_c_producer_send_varlen: producer is null");
   if (status != XPROC_C_STATUS_OK) {
@@ -519,6 +551,25 @@ xproc_c_status xproc_c_producer_send_varlen(xproc_c_producer* producer, const vo
 
   return catch_status([&]() -> xproc_c_status {
     producer->impl->send_varlen(data, len);
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_producer_send_varlen_with_meta(xproc_c_producer* producer, const void* data,
+                                                      std::uint32_t byte_length,
+                                                      const xproc_c_message_meta* meta) {
+  const xproc_c_status status =
+      validate_handle(producer, "xproc_c_producer_send_varlen_with_meta: producer is null");
+  if (status != XPROC_C_STATUS_OK) {
+    return status;
+  }
+  if (data == nullptr && byte_length != 0u) {
+    return invalid_argument("xproc_c_producer_send_varlen_with_meta: data is null while byte_length is non-zero");
+  }
+
+  return catch_status([&]() -> xproc_c_status {
+    producer->impl->send_varlen(data, byte_length, to_cpp_meta(meta));
     clear_last_error();
     return XPROC_C_STATUS_OK;
   });
@@ -606,7 +657,7 @@ xproc_c_status xproc_c_consumer_poll_copy(xproc_c_consumer* consumer, void* buff
     std::uint32_t message_len = 0;
     std::vector<std::uint8_t> pending;
 
-    const bool has_message = consumer->impl->poll([&](void* ptr, std::uint32_t len) {
+    const bool has_message = consumer->impl->poll([&](const xproc::ipc::message_meta&, void* ptr, std::uint32_t len) {
       message_len = len;
       if (len > buffer_capacity) {
         too_small = true;
@@ -729,7 +780,7 @@ xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer, void* buff
     bool too_small = false;
     std::uint32_t message_len = 0;
 
-    const bool has_message = observer->impl->peek([&](const void* ptr, std::uint32_t len) {
+    const bool has_message = observer->impl->peek([&](const xproc::ipc::message_meta&, const void* ptr, std::uint32_t len) {
       message_len = len;
       if (len > buffer_capacity) {
         too_small = true;
@@ -749,6 +800,54 @@ xproc_c_status xproc_c_observer_peek_copy(xproc_c_observer* observer, void* buff
     *out_len = message_len;
     if (too_small) {
       return set_last_error(XPROC_C_STATUS_BUFFER_TOO_SMALL, "xproc_c_observer_peek_copy: buffer too small");
+    }
+
+    clear_last_error();
+    return XPROC_C_STATUS_OK;
+  });
+}
+
+xproc_c_status xproc_c_observer_peek_copy_with_meta(xproc_c_observer* observer, xproc_c_message_meta* out_meta,
+                                                     void* buffer, std::uint32_t buffer_capacity,
+                                                     std::uint32_t* out_len) {
+  const xproc_c_status args_status =
+      validate_copy_args(buffer, buffer_capacity, out_len, "xproc_c_observer_peek_copy_with_meta: out_len must not be null");
+  if (args_status != XPROC_C_STATUS_OK) {
+    return args_status;
+  }
+  const xproc_c_status handle_status =
+      validate_handle(observer, "xproc_c_observer_peek_copy_with_meta: observer is null");
+  if (handle_status != XPROC_C_STATUS_OK) {
+    *out_len = 0;
+    return handle_status;
+  }
+
+  return catch_status([&]() -> xproc_c_status {
+    bool too_small = false;
+    std::uint32_t message_len = 0;
+
+    const bool has_message = observer->impl->peek([&](const xproc::ipc::message_meta& m, const void* ptr,
+                                                       std::uint32_t len) {
+      to_c_meta(m, out_meta);
+      message_len = len;
+      if (len > buffer_capacity) {
+        too_small = true;
+        return;
+      }
+      if (len != 0u) {
+        std::memcpy(buffer, ptr, len);
+      }
+    });
+
+    if (!has_message) {
+      *out_len = 0;
+      clear_last_error();
+      return XPROC_C_STATUS_AGAIN;
+    }
+
+    *out_len = message_len;
+    if (too_small) {
+      return set_last_error(XPROC_C_STATUS_BUFFER_TOO_SMALL, "xproc_c_observer_peek_copy_with_meta: buffer too small");
     }
 
     clear_last_error();

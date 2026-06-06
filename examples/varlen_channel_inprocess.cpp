@@ -22,7 +22,7 @@ int main() {
 
   std::thread t([&] {
     while (recv_count.load(std::memory_order_acquire) < msgs.size()) {
-      bool got = consumer.poll([&](void* p, std::uint32_t len) {
+      bool got = consumer.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
         std::string s(static_cast<const char*>(p), static_cast<std::size_t>(len));
         std::cout << "recv: " << s << "\n";
         const std::size_t idx = recv_count.load(std::memory_order_relaxed);

@@ -22,6 +22,7 @@ endfunction()
 # Portable tests (all supported platforms).
 set(XPROC_GTEST_TEST_FILES_COMMON
     api_surface_test.cpp
+    message_meta_test.cpp
     ringbuffer_spsc_test.cpp
     layout_validate_test.cpp
     ipc_observer_attach_test.cpp
@@ -62,24 +63,6 @@ if(TARGET xproc_c)
     set_target_properties(xproc_capi_smoke_tests PROPERTIES FOLDER "Tests")
     gtest_discover_tests(xproc_capi_smoke_tests)
     set_property(GLOBAL APPEND PROPERTY XPROC_ALL_TEST_TARGETS xproc_capi_smoke_tests)
-endif()
-
-if(XPROC_BUILD_TESTS AND (XPROC_WITH_NLOHMANN_JSON OR XPROC_WITH_PROTOBUF))
-    set(_xproc_opt_serde_src optional_serde_test.cpp)
-    set(_xproc_opt_serde_gen "")
-    if(XPROC_WITH_PROTOBUF)
-        find_package(Protobuf REQUIRED)
-        protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS "${CMAKE_SOURCE_DIR}/proto/test_point.proto")
-        set(_xproc_opt_serde_gen ${PROTO_SRCS} ${PROTO_HDRS})
-    endif()
-    add_executable(xproc_optional_serde_tests ${_xproc_opt_serde_src} ${_xproc_opt_serde_gen})
-    set_target_properties(xproc_optional_serde_tests PROPERTIES FOLDER "Tests")
-    target_link_libraries(xproc_optional_serde_tests PRIVATE xproc GTest::gtest_main)
-    if(XPROC_WITH_PROTOBUF)
-        target_include_directories(xproc_optional_serde_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-    endif()
-    gtest_discover_tests(xproc_optional_serde_tests)
-    set_property(GLOBAL APPEND PROPERTY XPROC_ALL_TEST_TARGETS xproc_optional_serde_tests)
 endif()
 
 get_property(XPROC_ALL_TEST_TARGETS GLOBAL PROPERTY XPROC_ALL_TEST_TARGETS)

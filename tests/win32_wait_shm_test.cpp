@@ -39,7 +39,7 @@ int run_win_ipc_child(const char* shm_path) {
   std::uint32_t val = 0;
   bool got = false;
   while (!got) {
-    got = ch.poll([&](void* p, std::uint32_t len) {
+    got = ch.poll([&](const xproc::ipc::message_meta&, void* p, std::uint32_t len) {
       (void)len;
       std::memcpy(&val, p, sizeof(val));
     });
@@ -81,7 +81,7 @@ void test_shm_producer_observer_peek() {
     prod.send_fixed<std::uint32_t>(0x11223344u);
     bool ok = false;
     for (int i = 0; i < 5000 && !ok; ++i) {
-      ok = obs.peek([&](const void* p, std::uint32_t len) {
+      ok = obs.peek([&](const xproc::ipc::message_meta&, const void* p, std::uint32_t len) {
         EXPECT_EQ(len, 4u);
         std::uint32_t v = 0;
         std::memcpy(&v, p, sizeof(v));

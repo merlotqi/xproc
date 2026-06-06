@@ -142,7 +142,7 @@ int main() {
     int sample_count = 0;
 
     while (sample_count < kTelemetryMax) {
-      const bool received = consumer.poll([&](void* data, std::uint32_t length) {
+      const bool received = consumer.poll([&](const xproc::ipc::message_meta&, void* data, std::uint32_t length) {
         if (length != sizeof(std::uint32_t)) {
           return;
         }

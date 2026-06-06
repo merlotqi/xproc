@@ -5,6 +5,7 @@
 #include <memory>
 #include <stdexcept>
 #include <xproc/ipc/endpoint.hpp>
+#include <xproc/ipc/message_meta.hpp>
 #include <xproc/ipc/options.hpp>
 #include <xproc/ipc/send_result.hpp>
 #include <xproc/ringbuffer/fixed_reader.hpp>
@@ -60,11 +61,20 @@ class channel : public endpoint {
 
   template <typename T>
   void send_fixed(const T& data) {
-    send_fixed_sized(&data, static_cast<std::uint32_t>(sizeof(T)));
+    send_fixed_sized(&data, static_cast<std::uint32_t>(sizeof(T)), message_meta{});
+  }
+
+  template <typename T>
+  void send_fixed(const T& data, const message_meta& meta) {
+    send_fixed_sized(&data, static_cast<std::uint32_t>(sizeof(T)), meta);
   }
 
   // Fixed channel: reserve item_size bytes per slot; zero-pad unused tail.
   void send_fixed_sized(const void* data, std::uint32_t byte_length) {
+    send_fixed_sized(data, byte_length, message_meta{});
+  }
+
+  void send_fixed_sized(const void* data, std::uint32_t byte_length, const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::send_fixed_sized requires producer role");
     }
@@ -76,7 +86,7 @@ class channel : public endpoint {
     }
     auto* fw = static_cast<ringbuffer::fixed_writer*>(writer_.get());
     std::uint64_t pos = 0;
-    void* buf = fw->reserve(opts_.item_size, pos);
+    void* buf = fw->reserve(opts_.item_size, pos, meta);
     std::memcpy(buf, data, static_cast<std::size_t>(byte_length));
     if (byte_length < opts_.item_size) {
       std::memset(static_cast<char*>(buf) + byte_length, 0, static_cast<std::size_t>(opts_.item_size - byte_length));
@@ -84,19 +94,25 @@ class channel : public endpoint {
     fw->commit(pos);
   }
 
-  void send_varlen(const void* data, uint32_t len) {
+  void send_varlen(const void* data, uint32_t len) { send_varlen(data, len, message_meta{}); }
+
+  void send_varlen(const void* data, uint32_t len, const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::send_varlen requires producer role");
     }
     auto* vw = static_cast<ringbuffer::varlen_writer*>(writer_.get());
     uint64_t pos;
-    void* buf = vw->reserve(len, pos);
+    void* buf = vw->reserve(len, pos, meta);
     std::memcpy(buf, data, len);
     vw->commit(pos);
   }
 
   // Fixed channel: payload at most item_size bytes; remainder zero-padded in the slot.
   void send_fixed_bytes(const void* data, std::uint32_t payload_len) {
+    send_fixed_bytes(data, payload_len, message_meta{});
+  }
+
+  void send_fixed_bytes(const void* data, std::uint32_t payload_len, const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::send_fixed_bytes requires producer role");
     }
@@ -108,7 +124,7 @@ class channel : public endpoint {
     }
     auto* fw = static_cast<ringbuffer::fixed_writer*>(writer_.get());
     std::uint64_t pos = 0;
-    void* buf = fw->reserve(opts_.item_size, pos);
+    void* buf = fw->reserve(opts_.item_size, pos, meta);
     std::memcpy(buf, data, static_cast<std::size_t>(payload_len));
     if (payload_len < opts_.item_size) {
       std::memset(static_cast<char*>(buf) + payload_len, 0, static_cast<std::size_t>(opts_.item_size - payload_len));
@@ -119,6 +135,10 @@ class channel : public endpoint {
   // ---- non-blocking and bounded-time fixed send ----
 
   send_result try_send_fixed_sized(const void* data, std::uint32_t byte_length) {
+    return try_send_fixed_sized(data, byte_length, message_meta{});
+  }
+
+  send_result try_send_fixed_sized(const void* data, std::uint32_t byte_length, const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::try_send_fixed_sized requires producer role");
     }
@@ -129,7 +149,7 @@ class channel : public endpoint {
       return send_result::invalid_argument;
     }
     auto* fw = static_cast<ringbuffer::fixed_writer*>(writer_.get());
-    auto rr = fw->try_reserve(opts_.item_size);
+    auto rr = fw->try_reserve(opts_.item_size, meta);
     if (!rr) {
       return map_reserve_status(rr.status);
     }
@@ -144,12 +164,23 @@ class channel : public endpoint {
 
   template <typename T>
   bool try_send_fixed(const T& data) {
-    return try_send_fixed_sized(&data, static_cast<std::uint32_t>(sizeof(T))) == send_result::ok;
+    return try_send_fixed_sized(&data, static_cast<std::uint32_t>(sizeof(T)), message_meta{}) == send_result::ok;
+  }
+
+  template <typename T>
+  bool try_send_fixed(const T& data, const message_meta& meta) {
+    return try_send_fixed_sized(&data, static_cast<std::uint32_t>(sizeof(T)), meta) == send_result::ok;
   }
 
   template <typename Rep, typename Period>
   send_result send_fixed_sized_for(const void* data, std::uint32_t byte_length,
                                    const std::chrono::duration<Rep, Period>& timeout) {
+    return send_fixed_sized_for(data, byte_length, timeout, message_meta{});
+  }
+
+  template <typename Rep, typename Period>
+  send_result send_fixed_sized_for(const void* data, std::uint32_t byte_length,
+                                   const std::chrono::duration<Rep, Period>& timeout, const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::send_fixed_sized_for requires producer role");
     }
@@ -160,37 +191,67 @@ class channel : public endpoint {
       return send_result::invalid_argument;
     }
     auto* fw = static_cast<ringbuffer::fixed_writer*>(writer_.get());
-    auto rr = fw->reserve_for(opts_.item_size, timeout);
-    if (!rr) {
-      return map_reserve_status(rr.status);
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    // TODO: Add reserve_for(..., meta) to ring buffer writers to restore efficient OS-level waiting
+    while (true) {
+      auto rr = fw->try_reserve(opts_.item_size, meta);
+      if (rr) {
+        std::memcpy(rr.payload, data, static_cast<std::size_t>(byte_length));
+        if (byte_length < opts_.item_size) {
+          std::memset(static_cast<char*>(rr.payload) + byte_length, 0,
+                      static_cast<std::size_t>(opts_.item_size - byte_length));
+        }
+        fw->commit(rr.position);
+        return send_result::ok;
+      }
+      if (rr.status != ringbuffer::reserve_status::full) {
+        return map_reserve_status(rr.status);
+      }
+      if (std::chrono::steady_clock::now() >= deadline) {
+        return send_result::timeout;
+      }
+      std::this_thread::yield();
     }
-    std::memcpy(rr.payload, data, static_cast<std::size_t>(byte_length));
-    if (byte_length < opts_.item_size) {
-      std::memset(static_cast<char*>(rr.payload) + byte_length, 0,
-                  static_cast<std::size_t>(opts_.item_size - byte_length));
-    }
-    fw->commit(rr.position);
-    return send_result::ok;
   }
 
   template <typename T, typename Rep, typename Period>
   send_result send_fixed_for(const T& data, const std::chrono::duration<Rep, Period>& timeout) {
-    return send_fixed_sized_for(&data, static_cast<std::uint32_t>(sizeof(T)), timeout);
+    return send_fixed_sized_for(&data, static_cast<std::uint32_t>(sizeof(T)), timeout, message_meta{});
+  }
+
+  template <typename T, typename Rep, typename Period>
+  send_result send_fixed_for(const T& data, const std::chrono::duration<Rep, Period>& timeout,
+                             const message_meta& meta) {
+    return send_fixed_sized_for(&data, static_cast<std::uint32_t>(sizeof(T)), timeout, meta);
   }
 
   send_result try_send_fixed_bytes(const void* data, std::uint32_t payload_len) {
-    return try_send_fixed_sized(data, payload_len);
+    return try_send_fixed_sized(data, payload_len, message_meta{});
+  }
+
+  send_result try_send_fixed_bytes(const void* data, std::uint32_t payload_len, const message_meta& meta) {
+    return try_send_fixed_sized(data, payload_len, meta);
   }
 
   template <typename Rep, typename Period>
   send_result send_fixed_bytes_for(const void* data, std::uint32_t payload_len,
                                    const std::chrono::duration<Rep, Period>& timeout) {
-    return send_fixed_sized_for(data, payload_len, timeout);
+    return send_fixed_sized_for(data, payload_len, timeout, message_meta{});
+  }
+
+  template <typename Rep, typename Period>
+  send_result send_fixed_bytes_for(const void* data, std::uint32_t payload_len,
+                                   const std::chrono::duration<Rep, Period>& timeout, const message_meta& meta) {
+    return send_fixed_sized_for(data, payload_len, timeout, meta);
   }
 
   // ---- non-blocking and bounded-time varlen send ----
 
   send_result try_send_varlen(const void* data, std::uint32_t len) {
+    return try_send_varlen(data, len, message_meta{});
+  }
+
+  send_result try_send_varlen(const void* data, std::uint32_t len, const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::try_send_varlen requires producer role");
     }
@@ -198,7 +259,7 @@ class channel : public endpoint {
       throw std::logic_error("channel::try_send_varlen requires variable channel");
     }
     auto* vw = static_cast<ringbuffer::varlen_writer*>(writer_.get());
-    auto rr = vw->try_reserve(len);
+    auto rr = vw->try_reserve(len, meta);
     if (!rr) {
       return map_reserve_status(rr.status);
     }
@@ -209,6 +270,12 @@ class channel : public endpoint {
 
   template <typename Rep, typename Period>
   send_result send_varlen_for(const void* data, std::uint32_t len, const std::chrono::duration<Rep, Period>& timeout) {
+    return send_varlen_for(data, len, timeout, message_meta{});
+  }
+
+  template <typename Rep, typename Period>
+  send_result send_varlen_for(const void* data, std::uint32_t len, const std::chrono::duration<Rep, Period>& timeout,
+                              const message_meta& meta) {
     if (get_role() != role::producer) {
       throw std::logic_error("channel::send_varlen_for requires producer role");
     }
@@ -216,26 +283,36 @@ class channel : public endpoint {
       throw std::logic_error("channel::send_varlen_for requires variable channel");
     }
     auto* vw = static_cast<ringbuffer::varlen_writer*>(writer_.get());
-    auto rr = vw->reserve_for(len, timeout);
-    if (!rr) {
-      return map_reserve_status(rr.status);
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    // TODO: Add reserve_for(..., meta) to ring buffer writers to restore efficient OS-level waiting
+    while (true) {
+      auto rr = vw->try_reserve(len, meta);
+      if (rr) {
+        std::memcpy(rr.payload, data, len);
+        vw->commit(rr.position);
+        return send_result::ok;
+      }
+      if (rr.status != ringbuffer::reserve_status::full) {
+        return map_reserve_status(rr.status);
+      }
+      if (std::chrono::steady_clock::now() >= deadline) {
+        return send_result::timeout;
+      }
+      std::this_thread::yield();
     }
-    std::memcpy(rr.payload, data, len);
-    vw->commit(rr.position);
-    return send_result::ok;
   }
 
-  // Handler receives (payload_ptr, length). For fixed channels, length is always opts_.item_size.
+  // Handler receives (meta, payload_ptr, length). For fixed channels, length is always opts_.item_size.
   template <typename F>
   bool poll(F&& handler) {
     if (get_role() != role::consumer) {
       throw std::logic_error("channel::poll requires consumer role");
     }
-    auto invoke = [&](void* p, std::uint32_t len) { std::forward<F>(handler)(p, len); };
+    auto invoke = [&](const message_meta& meta, void* p, std::uint32_t len) { std::forward<F>(handler)(meta, p, len); };
     if (opts_.type == channel_type::fixed) {
       auto* fr = static_cast<ringbuffer::fixed_reader*>(reader_.get());
       const std::uint32_t item = opts_.item_size;
-      return fr->read(item, [&](void* p) { invoke(p, item); });
+      return fr->read(item, [&](const message_meta& meta, void* p) { invoke(meta, p, item); });
     }
     auto* vr = static_cast<ringbuffer::varlen_reader*>(reader_.get());
     return vr->read(invoke);

@@ -12,8 +12,7 @@ void diagnostics_tracker::update(const ring_snapshot& snap) {
 
 std::uint64_t diagnostics_tracker::idle_duration_ms() const {
   const auto elapsed = std::chrono::steady_clock::now() - last_progress_;
-  return static_cast<std::uint64_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
+  return static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
 }
 
-} // namespace xproc::ipc
+}  // namespace xproc::ipc
