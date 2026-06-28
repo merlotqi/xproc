@@ -191,27 +191,17 @@ class channel : public endpoint {
       return send_result::invalid_argument;
     }
     auto* fw = static_cast<ringbuffer::fixed_writer*>(writer_.get());
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-    // TODO: Add reserve_for(..., meta) to ring buffer writers to restore efficient OS-level waiting
-    while (true) {
-      auto rr = fw->try_reserve(opts_.item_size, meta);
-      if (rr) {
-        std::memcpy(rr.payload, data, static_cast<std::size_t>(byte_length));
-        if (byte_length < opts_.item_size) {
-          std::memset(static_cast<char*>(rr.payload) + byte_length, 0,
-                      static_cast<std::size_t>(opts_.item_size - byte_length));
-        }
-        fw->commit(rr.position);
-        return send_result::ok;
-      }
-      if (rr.status != ringbuffer::reserve_status::full) {
-        return map_reserve_status(rr.status);
-      }
-      if (std::chrono::steady_clock::now() >= deadline) {
-        return send_result::timeout;
-      }
-      std::this_thread::yield();
+    auto rr = fw->reserve_for(opts_.item_size, timeout, meta);
+    if (!rr) {
+      return map_reserve_status(rr.status);
     }
+    std::memcpy(rr.payload, data, static_cast<std::size_t>(byte_length));
+    if (byte_length < opts_.item_size) {
+      std::memset(static_cast<char*>(rr.payload) + byte_length, 0,
+                  static_cast<std::size_t>(opts_.item_size - byte_length));
+    }
+    fw->commit(rr.position);
+    return send_result::ok;
   }
 
   template <typename T, typename Rep, typename Period>
@@ -283,23 +273,13 @@ class channel : public endpoint {
       throw std::logic_error("channel::send_varlen_for requires variable channel");
     }
     auto* vw = static_cast<ringbuffer::varlen_writer*>(writer_.get());
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-    // TODO: Add reserve_for(..., meta) to ring buffer writers to restore efficient OS-level waiting
-    while (true) {
-      auto rr = vw->try_reserve(len, meta);
-      if (rr) {
-        std::memcpy(rr.payload, data, len);
-        vw->commit(rr.position);
-        return send_result::ok;
-      }
-      if (rr.status != ringbuffer::reserve_status::full) {
-        return map_reserve_status(rr.status);
-      }
-      if (std::chrono::steady_clock::now() >= deadline) {
-        return send_result::timeout;
-      }
-      std::this_thread::yield();
+    auto rr = vw->reserve_for(len, timeout, meta);
+    if (!rr) {
+      return map_reserve_status(rr.status);
     }
+    std::memcpy(rr.payload, data, len);
+    vw->commit(rr.position);
+    return send_result::ok;
   }
 
   // Handler receives (meta, payload_ptr, length). For fixed channels, length is always opts_.item_size.
