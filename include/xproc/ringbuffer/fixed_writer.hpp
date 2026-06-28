@@ -68,16 +68,39 @@ class fixed_writer : public ringbuffer_view {
 
   template <typename Rep, typename Period>
   reserve_result reserve_for(uint32_t item_size, const std::chrono::duration<Rep, Period>& timeout) {
+    return reserve_for(item_size, timeout, xproc::ipc::message_meta{});
+  }
+
+  template <typename Rep, typename Period>
+  reserve_result reserve_for(uint32_t item_size, const std::chrono::duration<Rep, Period>& timeout,
+                             const xproc::ipc::message_meta& meta) {
     const auto deadline = std::chrono::steady_clock::now() + timeout;
+    std::uint32_t iteration = 0;
     while (true) {
-      reserve_result rr = try_reserve(item_size);
+      reserve_result rr = try_reserve(item_size, meta);
       if (rr.status != reserve_status::full) {
         return rr;
       }
       if (std::chrono::steady_clock::now() >= deadline) {
         return {reserve_status::timeout, nullptr, 0};
       }
-      std::this_thread::yield();
+      ++iteration;
+      if (iteration <= 12) {
+        const std::uint32_t exp = (std::min)(iteration - 1, 8u);
+        const std::uint32_t delay = 1u << exp;
+        for (std::uint32_t i = 0; i < delay; ++i) {
+          XPROC_CPU_PAUSE();
+        }
+      } else if (iteration <= 22) {
+        std::this_thread::yield();
+      } else {
+        const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - std::chrono::steady_clock::now());
+        if (remaining.count() <= 0) {
+          return {reserve_status::timeout, nullptr, 0};
+        }
+        std::this_thread::sleep_for((std::min)(remaining, std::chrono::milliseconds(1)));
+      }
     }
   }
 
