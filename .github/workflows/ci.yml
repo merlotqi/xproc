@@ -79,7 +79,7 @@ jobs:
         working-directory: node
         run: npm run verify:pack
 
-  build-windows:
+  build-windows-vs2026:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +97,40 @@ jobs:
         working-directory: node
         run: npm run typecheck
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON
+        run: cmake -S . -B build -G "Visual Studio 18 2026" -A x64 -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure -LE xproc_benchmark
+      - name: Test Node package
+        working-directory: node
+        run: npm test
+      - name: Stage Windows prebuild
+        working-directory: node
+        run: npm run stage:prebuild -- --source ../build/node/Release/xproc.node
+      - name: Assert packaged file list
+        working-directory: node
+        run: npm run assert:packlist
+
+  build-windows-vs2022:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: node/package-lock.json
+      - name: Install Node binding deps
+        working-directory: node
+        run: npm ci
+      - name: Typecheck Node package
+        working-directory: node
+        run: npm run typecheck
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
