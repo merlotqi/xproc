@@ -83,6 +83,13 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux")
     find_package(Threads REQUIRED)
 endif()
 
+# VS2026 defaults to /EHs (SEH version 6) which produces COFF objects that
+# older linkers reject with LNK1386.  Force /EHsc so all third-party code
+# (including nlohmann_json fetched by taskflow) uses the classic model.
+if(MSVC)
+    add_compile_options(/EHsc)
+endif()
+
 option(XPROC_BUILD_SHARED "Build libxproc as a shared library" OFF)
 option(XPROC_BUILD_CAPI "Build xproc_c C ABI wrapper" ON)
 option(XPROC_BUILD_TESTS "Build unit tests" ON)
