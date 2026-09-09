@@ -91,13 +91,13 @@ TEST(IpcIntegration, ShmSizeRejected) {
 TEST(IpcIntegration, ValidateLayoutMismatch) {
   xproc::core::control_block h{};
   using lm = xproc::core::layout_manager;
-  h.magic = lm::expected_magic;
-  h.version_major = lm::version_major;
-  h.version_minor = lm::version_minor;
-  h.header_size = sizeof(xproc::core::control_block);
-  h.layout_type = 0;
-  h.data_capacity = 4096;
-  h.data_alignment = 8;
+  h.spscring_cb.magic = lm::expected_magic;
+  h.spscring_cb.version_major = lm::version_major;
+  h.spscring_cb.version_minor = lm::version_minor;
+  h.spscring_cb.header_size = sizeof(xproc::core::control_block);
+  h.spscring_cb.layout_type = 0;
+  h.spscring_cb.data_capacity = 4096;
+  h.spscring_cb.data_alignment = 8;
   h.is_ready.store(true, std::memory_order_release);
   EXPECT_FALSE(lm::validate(&h, 100, 1u, 8u));
 }
@@ -146,8 +146,8 @@ TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
       EXPECT_EQ(v, 0x2468ace0u);
     });
     if (!peeked) {
-      const std::uint32_t c = observer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&observer.header()->rb_meta.commit_seq, c);
+      const std::uint32_t c = observer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+      spscring::atomic_wait(&observer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 
@@ -160,8 +160,8 @@ TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
       EXPECT_EQ(v, 0x2468ace0u);
     });
     if (!consumed) {
-      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+      const std::uint32_t c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+      spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 
@@ -187,7 +187,7 @@ int cross_process_futex_block_main(const char* shm_path) {
     opts.create_if_missing = false;
     xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
 
-    xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, 0u);
+    spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, 0u);
 
     std::uint32_t val = 0;
     bool got = false;
@@ -197,8 +197,8 @@ int cross_process_futex_block_main(const char* shm_path) {
         std::memcpy(&val, p, sizeof(val));
       });
       if (!got) {
-        std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+        std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
     if (val != 0xdeadbeefu) {
@@ -253,8 +253,8 @@ int cross_process_varlen_main(const char* shm_path) {
         }
       });
       if (!got) {
-        std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+        std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
     _exit(0);
@@ -321,8 +321,8 @@ int consumer_creates_then_forked_producer_main(const char* shm_path) {
       std::memcpy(&value, p, sizeof(value));
     });
     if (!got) {
-      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+      const std::uint32_t c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+      spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 

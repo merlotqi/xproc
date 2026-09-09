@@ -18,8 +18,8 @@ inline embedded_version read_embedded_version(const control_block* h) noexcept {
   if (!h) {
     return v;
   }
-  v.major = h->version_major;
-  v.minor = h->version_minor;
+  v.major = h->spscring_cb.version_major;
+  v.minor = h->spscring_cb.version_minor;
   return v;
 }
 
@@ -88,9 +88,10 @@ class layout_manager {
   // Spin iterations waiting for creator to set is_ready (best-effort; see docs/design.md).
   static constexpr int is_ready_spin_limit = 1'000'000;
 
-  static constexpr uint32_t expected_magic = 0x58505243;
-  static constexpr uint16_t version_major = 0;
-  static constexpr uint32_t version_minor = 3;
+  // Use spscring's magic and version for the ring ABI.
+  static constexpr uint32_t expected_magic = spscring::expected_magic;
+  static constexpr uint16_t version_major = spscring::version_major;
+  static constexpr uint32_t version_minor = spscring::version_minor;
 
   static control_block* format(shm& sm, size_t capacity, bool is_creator, uint32_t layout_type, uint32_t data_alignment,
                                uint32_t fixed_item_size = 0u, std::uint64_t expected_schema_id = 0u,

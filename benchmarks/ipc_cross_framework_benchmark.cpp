@@ -11,6 +11,7 @@
 #include <thread>
 #include <vector>
 #include <xproc/xproc.hpp>
+#include <spscring/atomic_wait.hpp>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -420,8 +421,8 @@ void run_native_benchmark(benchmark::State& state, xproc::ipc::channel_type type
         benchmark::DoNotOptimize(sink.data());
       });
       if (!got) {
-        const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait<uint32_t>(&consumer.header()->rb_meta.commit_seq, c);
+        const auto c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
   }

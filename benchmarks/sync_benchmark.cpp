@@ -11,8 +11,8 @@
 #include <vector>
 #include <xproc/core/shm.hpp>
 #include <xproc/platform/process.hpp>
-#include <xproc/sync/atomic_backoff.hpp>
-#include <xproc/sync/atomic_wait.hpp>
+#include <spscring/atomic_backoff.hpp>
+#include <spscring/atomic_wait.hpp>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -141,11 +141,11 @@ int run_cross_process_wait_child(const char* shm_path) {
 
   auto* block = static_cast<cross_process_wait_block*>(mapping.addr());
   block->ready.store(1u, std::memory_order_release);
-  xproc::sync::atomic_notify_one(&block->ready);
+  spscring::atomic_notify_one(&block->ready);
 
   std::uint32_t seen = block->request.load(std::memory_order_acquire);
   while (true) {
-    xproc::sync::atomic_wait(&block->request, seen);
+    spscring::atomic_wait(&block->request, seen);
     const std::uint32_t next = block->request.load(std::memory_order_acquire);
     if (next == seen) {
       continue;
@@ -155,39 +155,8 @@ int run_cross_process_wait_child(const char* shm_path) {
     }
     seen = next;
     block->response.store(next, std::memory_order_release);
-    xproc::sync::atomic_notify_one(&block->response);
+    spscring::atomic_notify_one(&block->response);
   }
-}
-
-void publish_wait_delta_counters(benchmark::State& state, const xproc::sync::atomic_wait_win32_stats& before,
-                                 const xproc::sync::atomic_wait_win32_stats& after) {
-  const std::uint64_t wait_calls = after.wait_calls - before.wait_calls;
-  const std::uint64_t polling_wait_calls = after.polling_wait_calls - before.polling_wait_calls;
-  const std::uint64_t native_wait_calls = after.native_wait_calls - before.native_wait_calls;
-  const std::uint64_t native_timeout_count = after.native_timeout_count - before.native_timeout_count;
-  const std::uint64_t spin_iterations = after.spin_iterations - before.spin_iterations;
-  const std::uint64_t yield_iterations = after.yield_iterations - before.yield_iterations;
-  const std::uint64_t polling_sleep_calls = after.polling_sleep_calls - before.polling_sleep_calls;
-  const std::uint64_t notify_one_calls = after.notify_one_calls - before.notify_one_calls;
-  const std::uint64_t notify_all_calls = after.notify_all_calls - before.notify_all_calls;
-
-  const double ops = state.iterations() > 0 ? static_cast<double>(state.iterations()) : 1.0;
-
-  state.counters["win32_wait_calls"] = static_cast<double>(wait_calls);
-  state.counters["win32_polling_wait_calls"] = static_cast<double>(polling_wait_calls);
-  state.counters["win32_native_wait_calls"] = static_cast<double>(native_wait_calls);
-  state.counters["win32_native_timeout_count"] = static_cast<double>(native_timeout_count);
-  state.counters["win32_spin_iterations"] = static_cast<double>(spin_iterations);
-  state.counters["win32_yield_iterations"] = static_cast<double>(yield_iterations);
-  state.counters["win32_polling_sleep_calls"] = static_cast<double>(polling_sleep_calls);
-  state.counters["win32_notify_one_calls"] = static_cast<double>(notify_one_calls);
-  state.counters["win32_notify_all_calls"] = static_cast<double>(notify_all_calls);
-
-  state.counters["win32_wait_calls_per_op"] = static_cast<double>(wait_calls) / ops;
-  state.counters["win32_native_wait_calls_per_op"] = static_cast<double>(native_wait_calls) / ops;
-  state.counters["win32_native_timeout_per_op"] = static_cast<double>(native_timeout_count) / ops;
-  state.counters["win32_spin_iterations_per_op"] = static_cast<double>(spin_iterations) / ops;
-  state.counters["win32_yield_iterations_per_op"] = static_cast<double>(yield_iterations) / ops;
 }
 #endif
 
@@ -195,12 +164,12 @@ void publish_wait_delta_counters(benchmark::State& state, const xproc::sync::ato
 static void BM_AtomicBackoffSpinOnly(benchmark::State& state) {
   const int inner = static_cast<int>(state.range(0));
   std::atomic<std::uint32_t> seq{0};
-  xproc::sync::atomic_backoff backoff(1'000'000);
+  spscring::atomic_backoff backoff;
 
   for (auto _ : state) {
     backoff.reset();
     for (int i = 0; i < inner; ++i) {
-      backoff.pause(seq, seq.load(std::memory_order_relaxed));
+      backoff.pause();
     }
     benchmark::DoNotOptimize(seq.load(std::memory_order_relaxed));
   }
@@ -218,7 +187,7 @@ static void BM_AtomicWaitThreadPingPong(benchmark::State& state) {
   std::thread waiter([&] {
     std::uint32_t seen = 0;
     while (true) {
-      xproc::sync::atomic_wait(&request, seen);
+      spscring::atomic_wait(&request, seen);
       const std::uint32_t next = request.load(std::memory_order_acquire);
       if (next == seen) {
         continue;
@@ -228,39 +197,30 @@ static void BM_AtomicWaitThreadPingPong(benchmark::State& state) {
       }
       seen = next;
       response.store(next, std::memory_order_release);
-      xproc::sync::atomic_notify_one(&response);
+      spscring::atomic_notify_one(&response);
     }
   });
-
-#ifdef _WIN32
-  const xproc::sync::atomic_wait_win32_stats wait_stats_before = xproc::sync::atomic_wait_win32_get_stats();
-#endif
 
   for (auto _ : state) {
     const std::uint32_t next = request.load(std::memory_order_relaxed) + 1;
     request.store(next, std::memory_order_release);
-    xproc::sync::atomic_notify_one(&request);
+    spscring::atomic_notify_one(&request);
 
     while (true) {
       const std::uint32_t ack = response.load(std::memory_order_acquire);
       if (ack == next) {
         break;
       }
-      xproc::sync::atomic_wait(&response, ack);
+      spscring::atomic_wait(&response, ack);
     }
   }
 
   stop.store(true, std::memory_order_release);
   request.store(request.load(std::memory_order_relaxed) + 1, std::memory_order_release);
-  xproc::sync::atomic_notify_one(&request);
+  spscring::atomic_notify_one(&request);
   waiter.join();
 
   state.SetItemsProcessed(state.iterations());
-
-#ifdef _WIN32
-  const xproc::sync::atomic_wait_win32_stats wait_stats_after = xproc::sync::atomic_wait_win32_get_stats();
-  publish_wait_delta_counters(state, wait_stats_before, wait_stats_after);
-#endif
 }
 
 #ifdef _WIN32
@@ -285,31 +245,29 @@ static void BM_AtomicWaitCrossProcessPingPong(benchmark::State& state) {
   }
 
   while (block->ready.load(std::memory_order_acquire) == 0u) {
-    xproc::sync::atomic_wait(&block->ready, 0u);
+    spscring::atomic_wait(&block->ready, 0u);
   }
-
-  const xproc::sync::atomic_wait_win32_stats wait_stats_before = xproc::sync::atomic_wait_win32_get_stats();
 
   std::uint32_t next = 0;
   for (auto _ : state) {
     const auto begin = std::chrono::steady_clock::now();
     ++next;
     block->request.store(next, std::memory_order_release);
-    xproc::sync::atomic_notify_one(&block->request);
+    spscring::atomic_notify_one(&block->request);
 
     while (true) {
       const std::uint32_t ack = block->response.load(std::memory_order_acquire);
       if (ack == next) {
         break;
       }
-      xproc::sync::atomic_wait(&block->response, ack);
+      spscring::atomic_wait(&block->response, ack);
     }
     const auto end = std::chrono::steady_clock::now();
     state.SetIterationTime(std::chrono::duration<double>(end - begin).count());
   }
 
   block->request.store(k_stop_request, std::memory_order_release);
-  xproc::sync::atomic_notify_one(&block->request);
+  spscring::atomic_notify_one(&block->request);
   if (::WaitForSingleObject(child.process, 30000) != WAIT_OBJECT_0) {
     state.SkipWithError("BM_AtomicWaitCrossProcessPingPong: child did not exit");
     return;
@@ -321,8 +279,6 @@ static void BM_AtomicWaitCrossProcessPingPong(benchmark::State& state) {
   }
 
   state.SetItemsProcessed(state.iterations());
-  const xproc::sync::atomic_wait_win32_stats wait_stats_after = xproc::sync::atomic_wait_win32_get_stats();
-  publish_wait_delta_counters(state, wait_stats_before, wait_stats_after);
 }
 #endif
 

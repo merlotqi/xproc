@@ -97,6 +97,7 @@ typedef struct xproc_c_options {
 typedef struct xproc_c_snapshot {
   uint64_t write_pos;
   uint64_t read_pos;
+  uint64_t commit_pos;
   uint32_t commit_seq;
   uint32_t read_wake_seq;
   uint32_t attach_count;

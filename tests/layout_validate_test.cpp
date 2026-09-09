@@ -16,45 +16,45 @@ TEST(LayoutValidate, BadMagic) {
 
 TEST(LayoutValidate, NotReadyTimesOut) {
   xproc::core::control_block h{};
-  h.magic = lm::expected_magic;
+  h.spscring_cb.magic = lm::expected_magic;
   EXPECT_EQ(lm::validate_detailed(&h, 100, 0u, 8u), err::not_ready_timeout);
 }
 
 TEST(LayoutValidate, VersionMismatch) {
   xproc::core::control_block h{};
-  h.magic = lm::expected_magic;
-  h.version_major = lm::version_major;
-  h.version_minor = lm::version_minor + 999u;
-  h.header_size = sizeof(xproc::core::control_block);
-  h.layout_type = 0;
-  h.data_capacity = 4096;
-  h.data_alignment = 8;
+  h.spscring_cb.magic = lm::expected_magic;
+  h.spscring_cb.version_major = lm::version_major;
+  h.spscring_cb.version_minor = lm::version_minor + 999u;
+  h.spscring_cb.header_size = sizeof(xproc::core::control_block);
+  h.spscring_cb.layout_type = 0;
+  h.spscring_cb.data_capacity = 4096;
+  h.spscring_cb.data_alignment = 8;
   h.is_ready.store(true, std::memory_order_release);
   EXPECT_EQ(lm::validate_detailed(&h, 100, 0u, 8u), err::version_mismatch);
 }
 
 TEST(LayoutValidate, LayoutTypeMismatch) {
   xproc::core::control_block h{};
-  h.magic = lm::expected_magic;
-  h.version_major = lm::version_major;
-  h.version_minor = lm::version_minor;
-  h.header_size = sizeof(xproc::core::control_block);
-  h.layout_type = 0;
-  h.data_capacity = 4096;
-  h.data_alignment = 8;
+  h.spscring_cb.magic = lm::expected_magic;
+  h.spscring_cb.version_major = lm::version_major;
+  h.spscring_cb.version_minor = lm::version_minor;
+  h.spscring_cb.header_size = sizeof(xproc::core::control_block);
+  h.spscring_cb.layout_type = 0;
+  h.spscring_cb.data_capacity = 4096;
+  h.spscring_cb.data_alignment = 8;
   h.is_ready.store(true, std::memory_order_release);
   EXPECT_EQ(lm::validate_detailed(&h, 100, 1u, 8u), err::layout_type_mismatch);
 }
 
 TEST(LayoutValidate, Ok) {
   xproc::core::control_block h{};
-  h.magic = lm::expected_magic;
-  h.version_major = lm::version_major;
-  h.version_minor = lm::version_minor;
-  h.header_size = sizeof(xproc::core::control_block);
-  h.layout_type = 0;
-  h.data_capacity = 4096;
-  h.data_alignment = 8;
+  h.spscring_cb.magic = lm::expected_magic;
+  h.spscring_cb.version_major = lm::version_major;
+  h.spscring_cb.version_minor = lm::version_minor;
+  h.spscring_cb.header_size = sizeof(xproc::core::control_block);
+  h.spscring_cb.layout_type = 0;
+  h.spscring_cb.data_capacity = 4096;
+  h.spscring_cb.data_alignment = 8;
   h.is_ready.store(true, std::memory_order_release);
   EXPECT_EQ(lm::validate_detailed(&h, 100, 0u, 8u), err::ok);
   EXPECT_STREQ(lm::validate_cstr(err::ok), "ok");
@@ -146,8 +146,8 @@ TEST(LayoutValidate, LayoutExceptionCarriesCodeAndErrorCode) {
 
 TEST(LayoutValidate, ReadEmbeddedLayoutVersion) {
   xproc::core::control_block h{};
-  h.version_major = lm::version_major;
-  h.version_minor = lm::version_minor;
+  h.spscring_cb.version_major = lm::version_major;
+  h.spscring_cb.version_minor = lm::version_minor;
   const auto v = xproc::core::read_embedded_version(&h);
   EXPECT_EQ(v.major, lm::version_major);
   EXPECT_EQ(v.minor, lm::version_minor);
@@ -317,7 +317,7 @@ TEST(LayoutValidate, VersionMismatchOnAttach) {
 
   {
     xproc::ipc::producer producer(creator);
-    producer.header()->version_minor = lm::version_minor + 1u;
+    producer.header()->spscring_cb.version_minor = lm::version_minor + 1u;
 
     xproc::ipc::transport_options attach = creator;
     attach.shm_size = xproc::ipc::infer_existing_shm_size;
@@ -346,7 +346,7 @@ TEST(LayoutValidate, ObserverRejectsVersionMismatchOnAttach) {
 
   {
     xproc::ipc::producer producer(creator);
-    producer.header()->version_minor = lm::version_minor + 1u;
+    producer.header()->spscring_cb.version_minor = lm::version_minor + 1u;
 
     xproc::ipc::transport_options observer_opts = creator;
     observer_opts.shm_size = xproc::ipc::infer_existing_shm_size;

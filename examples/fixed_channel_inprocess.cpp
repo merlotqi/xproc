@@ -40,8 +40,8 @@ int main() {
         }
       });
       if (!got) {
-        const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+        const std::uint32_t c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
   });

@@ -14,17 +14,17 @@ struct alignas(xproc::core::control_block) ring_arena {
 void init_valid_header(xproc::core::control_block& h, std::uint64_t cap, std::uint32_t layout_type,
                        std::uint32_t data_align) {
   using xproc::core::layout_manager;
-  h.magic = layout_manager::expected_magic;
-  h.version_major = layout_manager::version_major;
-  h.version_minor = layout_manager::version_minor;
-  h.header_size = sizeof(xproc::core::control_block);
-  h.layout_type = layout_type;
-  h.rb_meta.write_pos.store(0, std::memory_order_relaxed);
-  h.rb_meta.read_pos.store(0, std::memory_order_relaxed);
-  h.rb_meta.commit_seq.store(0, std::memory_order_relaxed);
-  h.rb_meta.read_wake_seq.store(0, std::memory_order_relaxed);
-  h.data_capacity = cap;
-  h.data_alignment = data_align ? data_align : 8u;
+  h.spscring_cb.magic = layout_manager::expected_magic;
+  h.spscring_cb.version_major = layout_manager::version_major;
+  h.spscring_cb.version_minor = layout_manager::version_minor;
+  h.spscring_cb.header_size = sizeof(xproc::core::control_block);
+  h.spscring_cb.layout_type = layout_type;
+  h.spscring_cb.rb_meta.write_pos.store(0, std::memory_order_relaxed);
+  h.spscring_cb.rb_meta.read_pos.store(0, std::memory_order_relaxed);
+  h.spscring_cb.rb_meta.commit_seq.store(0, std::memory_order_relaxed);
+  h.spscring_cb.rb_meta.read_wake_seq.store(0, std::memory_order_relaxed);
+  h.spscring_cb.data_capacity = cap;
+  h.spscring_cb.data_alignment = data_align ? data_align : 8u;
   h.attach_count.store(1, std::memory_order_relaxed);
   h.is_ready.store(true, std::memory_order_release);
   h.producer_pid.store(0, std::memory_order_relaxed);

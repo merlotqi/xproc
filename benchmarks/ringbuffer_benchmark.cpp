@@ -3,21 +3,21 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
-#include <xproc/core/layout_manager.hpp>
-#include <xproc/ringbuffer/fixed_reader.hpp>
-#include <xproc/ringbuffer/fixed_writer.hpp>
-#include <xproc/ringbuffer/varlen_reader.hpp>
-#include <xproc/ringbuffer/varlen_writer.hpp>
+#include <spscring/fixed_reader.hpp>
+#include <spscring/fixed_writer.hpp>
+#include <spscring/varlen_reader.hpp>
+#include <spscring/varlen_writer.hpp>
 
 namespace {
 
-using xproc::core::control_block;
+using spscring::control_block;
 
 // ~1 MiB on the stack trips stack canaries when benchmarks run under CTest / worker threads.
 // Heap-backed storage with correct alignment for placement-new of control_block.
 class heap_ring_arena {
  public:
-  explicit heap_ring_arena(std::uint64_t data_cap, std::uint32_t layout_type, std::uint32_t data_align) {
+  explicit heap_ring_arena(std::uint64_t data_cap, spscring::layout_type layout, std::uint32_t data_align,
+                           std::uint32_t fixed_item_size = 0) {
     const std::size_t need = sizeof(control_block) + static_cast<std::size_t>(data_cap);
     const std::size_t align = alignof(control_block);
     storage_.resize(need + align - 1);
@@ -25,7 +25,7 @@ class heap_ring_arena {
     std::uintptr_t adj = (base + align - 1) & ~(align - 1);
     hdr_ = reinterpret_cast<control_block*>(adj);
     new (hdr_) control_block{};
-    init_header(*hdr_, data_cap, layout_type, data_align);
+    spscring::init_control_block(*hdr_, data_cap, layout, data_align, fixed_item_size);
   }
 
   heap_ring_arena(const heap_ring_arena&) = delete;
@@ -41,24 +41,6 @@ class heap_ring_arena {
   control_block* header() noexcept { return hdr_; }
 
  private:
-  static void init_header(control_block& h, std::uint64_t cap, std::uint32_t layout_type, std::uint32_t data_align) {
-    using xproc::core::layout_manager;
-    h.magic = layout_manager::expected_magic;
-    h.version_major = layout_manager::version_major;
-    h.version_minor = layout_manager::version_minor;
-    h.header_size = sizeof(control_block);
-    h.layout_type = layout_type;
-    h.rb_meta.write_pos.store(0, std::memory_order_relaxed);
-    h.rb_meta.read_pos.store(0, std::memory_order_relaxed);
-    h.rb_meta.commit_seq.store(0, std::memory_order_relaxed);
-    h.rb_meta.read_wake_seq.store(0, std::memory_order_relaxed);
-    h.data_capacity = cap;
-    h.data_alignment = data_align ? data_align : 8u;
-    h.attach_count.store(0, std::memory_order_relaxed);
-    h.is_ready.store(true, std::memory_order_release);
-    h.producer_pid.store(0, std::memory_order_relaxed);
-  }
-
   std::vector<std::uint8_t> storage_{};
   control_block* hdr_{nullptr};
 };
@@ -69,6 +51,7 @@ class heap_ring_arena {
 inline void bench_rewind_ring_positions(control_block* hdr) {
   hdr->rb_meta.write_pos.store(0, std::memory_order_relaxed);
   hdr->rb_meta.read_pos.store(0, std::memory_order_relaxed);
+  hdr->rb_meta.commit_pos.store(0, std::memory_order_relaxed);
   hdr->rb_meta.commit_seq.store(0, std::memory_order_relaxed);
   hdr->rb_meta.read_wake_seq.store(0, std::memory_order_relaxed);
 }
@@ -80,24 +63,26 @@ static void BM_FixedRingReserveCommit(benchmark::State& state) {
     return;
   }
   constexpr std::uint64_t cap = 1024 * 1024;
-  heap_ring_arena arena(cap, 0, 8);
+  heap_ring_arena arena(cap, spscring::layout_type::fixed, 8, item);
   control_block* hdr = arena.header();
 
-  xproc::ringbuffer::fixed_writer w(hdr);
-  xproc::ringbuffer::fixed_reader r(hdr);
+  spscring::fixed_writer w(hdr);
+  spscring::fixed_reader r(hdr);
   static const char pattern[4096]{};
-  std::uint64_t pos = 0;
 
   for (auto _ : state) {
     bench_rewind_ring_positions(hdr);
-    void* buf = w.reserve(item, pos);
+    void* buf = w.try_reserve();
     std::memcpy(buf, pattern, item);
-    w.commit(pos);
-    bool drained = r.read(item, [](const xproc::ipc::message_meta&, void* p) { benchmark::DoNotOptimize(p); });
+    w.commit();
+    const void* slot = r.try_read();
+    bool drained = (slot != nullptr);
     if (!drained) {
       state.SkipWithError("expected immediate read after same-thread commit");
       break;
     }
+    benchmark::DoNotOptimize(slot);
+    r.read_advance();
     benchmark::ClobberMemory();
   }
 
@@ -111,22 +96,26 @@ static void BM_VarlenRingReserveCommit(benchmark::State& state) {
     return;
   }
   constexpr std::uint64_t cap = 1024 * 1024;
-  heap_ring_arena arena(cap, 1, 8);
+  heap_ring_arena arena(cap, spscring::layout_type::varlen, 8);
   control_block* hdr = arena.header();
 
-  xproc::ringbuffer::varlen_writer w(hdr);
-  xproc::ringbuffer::varlen_reader rd(hdr);
+  spscring::varlen_writer w(hdr);
+  spscring::varlen_reader rd(hdr);
   std::vector<std::uint8_t> payload(len, std::uint8_t{0x7e});
-  std::uint64_t pos = 0;
 
   for (auto _ : state) {
     bench_rewind_ring_positions(hdr);
-    void* buf = w.reserve(len, pos);
-    std::memcpy(buf, payload.data(), len);
-    w.commit(pos);
-    bool drained = rd.read([&](const xproc::ipc::message_meta&, void* p, std::uint32_t n) {
+    auto rr = w.try_reserve(len);
+    if (rr.status != spscring::reserve_status::ok) {
+      state.SkipWithError("reserve failed");
+      break;
+    }
+    std::memcpy(rr.payload, payload.data(), len);
+    w.commit(rr.position);
+    bool drained = rd.read([&](std::uint8_t*& p, std::uint32_t& n, spscring::message_meta&, std::uint64_t&) {
       benchmark::DoNotOptimize(p);
       benchmark::DoNotOptimize(n);
+      return true;
     });
     if (!drained) {
       state.SkipWithError("expected immediate read after same-thread commit");

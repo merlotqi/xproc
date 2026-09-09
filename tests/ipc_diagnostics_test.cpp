@@ -135,7 +135,7 @@ TEST(ObserverDiagnostics, ObserverDiagnosticsMatchManualCalc) {
     prod.send_fixed<std::uint32_t>(42u);
 
     const auto snap = obs.snapshot();
-    const auto cap = static_cast<std::uint64_t>(obs.header()->data_capacity);
+    const auto cap = static_cast<std::uint64_t>(obs.header()->spscring_cb.data_capacity);
     const auto used = snap.write_pos - snap.read_pos;
     const auto expected = (used > cap) ? cap : used;
 
@@ -154,7 +154,7 @@ TEST(DiagnosticsTracker, ProducerAliveOnCommit) {
     xproc::ipc::observer obs(opts);
 
     auto snap = obs.snapshot();
-    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->data_capacity);
+    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->spscring_cb.data_capacity);
 
     prod.send_fixed<std::uint32_t>(42u);
     tracker.update(obs.snapshot());
@@ -171,7 +171,7 @@ TEST(DiagnosticsTracker, ProducerIdleNoActivity) {
     xproc::ipc::observer obs(opts);
 
     auto snap = obs.snapshot();
-    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->data_capacity);
+    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->spscring_cb.data_capacity);
 
     tracker.update(obs.snapshot());
     EXPECT_FALSE(tracker.producer_alive());
@@ -187,7 +187,7 @@ TEST(DiagnosticsTracker, IdleDurationIncreases) {
     xproc::ipc::observer obs(opts);
 
     auto snap = obs.snapshot();
-    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->data_capacity);
+    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->spscring_cb.data_capacity);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     EXPECT_GE(tracker.idle_duration_ms(), 40u);
@@ -203,7 +203,7 @@ TEST(DiagnosticsTracker, IdleDurationResetsOnProgress) {
     xproc::ipc::observer obs(opts);
 
     auto snap = obs.snapshot();
-    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->data_capacity);
+    xproc::ipc::diagnostics_tracker tracker(snap, obs.header()->spscring_cb.data_capacity);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -222,7 +222,7 @@ TEST(DiagnosticsTracker, MultipleUpdates) {
     xproc::ipc::observer obs(opts);
 
     auto snap0 = obs.snapshot();
-    xproc::ipc::diagnostics_tracker tracker(snap0, obs.header()->data_capacity);
+    xproc::ipc::diagnostics_tracker tracker(snap0, obs.header()->spscring_cb.data_capacity);
 
     prod.send_fixed<std::uint32_t>(1u);
     tracker.update(obs.snapshot());

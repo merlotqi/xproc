@@ -11,7 +11,7 @@
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/endpoint.hpp>
 #include <xproc/ipc/shm_builders.hpp>
-#include <xproc/sync/atomic_wait.hpp>
+#include <spscring/atomic_wait.hpp>
 
 #include "process.hpp"
 
@@ -41,8 +41,8 @@ int child_main(const char* shm_path) {
         }
       });
       if (!got) {
-        std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+        std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
   }

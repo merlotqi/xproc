@@ -1,3 +1,6 @@
 [submodule "examples/extern/taskflow"]
 	path = examples/extern/taskflow
 	url = https://github.com/merlotqi/taskflow.git
+[submodule "thirdparty/spscring"]
+	path = thirdparty/spscring
+	url = https://github.com/merlotqi/spscring.git

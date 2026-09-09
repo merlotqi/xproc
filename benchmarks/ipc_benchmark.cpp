@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <xproc/xproc.hpp>
+#include <spscring/atomic_wait.hpp>
 
 namespace {
 
@@ -41,8 +42,8 @@ static void BM_FixedSendPoll(benchmark::State& state) {
     while (!got) {
       got = consumer.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
-        const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+        const auto c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
   }
@@ -77,8 +78,8 @@ static void BM_VarlenSendPoll(benchmark::State& state) {
     while (!got) {
       got = consumer.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
-        const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+        const auto c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
   }
@@ -118,8 +119,8 @@ static void BM_FixedTrySendPoll(benchmark::State& state) {
     while (!got) {
       got = consumer.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
-        const auto c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+        const auto c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
   }

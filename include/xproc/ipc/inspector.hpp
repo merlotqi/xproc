@@ -8,6 +8,7 @@ namespace xproc::ipc {
 struct ring_snapshot {
   std::uint64_t write_pos{0};
   std::uint64_t read_pos{0};
+  std::uint64_t commit_pos{0};
   std::uint32_t commit_seq{0};
   std::uint32_t read_wake_seq{0};
   std::uint32_t attach_count{0};

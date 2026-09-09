@@ -18,6 +18,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <spscring/atomic_wait.hpp>
 #include <xproc/xproc.hpp>
 
 namespace {
@@ -34,7 +35,7 @@ int run_win_ipc_child(const char* shm_path) {
   opts.create_if_missing = false;
   xproc::ipc::consumer ch(opts);
 
-  xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, 0u);
+  spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, 0u);
 
   std::uint32_t val = 0;
   bool got = false;
@@ -44,8 +45,8 @@ int run_win_ipc_child(const char* shm_path) {
       std::memcpy(&val, p, sizeof(val));
     });
     if (!got) {
-      const std::uint32_t c = ch.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&ch.header()->rb_meta.commit_seq, c);
+      const std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+      spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
   return (val == 0xdeadbeefu) ? 0 : 2;
@@ -55,12 +56,12 @@ void test_atomic_wait_notify_thread() {
   alignas(8) std::atomic<std::uint32_t> word{0u};
   bool progressed = false;
   std::thread waiter([&] {
-    xproc::sync::atomic_wait(&word, 0u);
+    spscring::atomic_wait(&word, 0u);
     progressed = true;
   });
   std::this_thread::sleep_for(std::chrono::milliseconds(20));
   word.store(1u, std::memory_order_release);
-  xproc::sync::atomic_notify_one(&word);
+  spscring::atomic_notify_one(&word);
   waiter.join();
   EXPECT_TRUE(progressed);
 }

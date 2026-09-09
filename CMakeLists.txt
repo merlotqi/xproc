@@ -97,6 +97,7 @@ option(XPROC_BUILD_EXAMPLES "Build examples" ON)
 option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
 option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
 
+add_subdirectory(thirdparty/spscring EXCLUDE_FROM_ALL)
 xproc_add_subdirectory(src)
 
 if(XPROC_BUILD_CAPI)

@@ -5,33 +5,10 @@
 #include <cstdint>
 #include <cstring>
 #include <thread>
-#include <xproc/xproc.hpp>
-
-namespace {
-
-void init_header(xproc::core::control_block& h, std::uint64_t cap, std::uint32_t layout_type,
-                 std::uint32_t data_align) {
-  using xproc::core::layout_manager;
-  h.magic = layout_manager::expected_magic;
-  h.version_major = layout_manager::version_major;
-  h.version_minor = layout_manager::version_minor;
-  h.header_size = sizeof(xproc::core::control_block);
-  h.layout_type = layout_type;
-  h.rb_meta.write_pos.store(0, std::memory_order_relaxed);
-  h.rb_meta.read_pos.store(0, std::memory_order_relaxed);
-  h.rb_meta.commit_seq.store(0, std::memory_order_relaxed);
-  h.rb_meta.read_wake_seq.store(0, std::memory_order_relaxed);
-  h.data_capacity = cap;
-  h.data_alignment = data_align ? data_align : 8u;
-  h.attach_count.store(0, std::memory_order_relaxed);
-  h.is_ready.store(true, std::memory_order_release);
-  h.producer_pid.store(0, std::memory_order_relaxed);
-}
-
-}  // namespace
+#include <spscring/spscring.hpp>
 
 template <std::size_t N>
-struct alignas(xproc::core::control_block) ring_arena {
+struct alignas(spscring::control_block) ring_arena {
   std::array<std::uint8_t, N> bytes{};
 };
 
@@ -40,37 +17,37 @@ TEST(RingbufferSpsc, FixedSpsc) {
   // With a small capacity, a full ring can wedge: the producer waits on read_wake_seq while the
   // consumer waits on commit_seq for progress that cannot happen until space is freed.
   constexpr std::uint64_t cap = 65536;
-  constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
+  constexpr std::size_t total = sizeof(spscring::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
-  new (hdr) xproc::core::control_block{};
-  init_header(*hdr, cap, 0, 8);
+  auto* hdr = reinterpret_cast<spscring::control_block*>(arena.bytes.data());
+  ASSERT_TRUE(spscring::init_control_block(*hdr, cap, spscring::layout_type::fixed, 8u, 16));
 
-  xproc::ringbuffer::fixed_writer w(hdr);
-  xproc::ringbuffer::fixed_reader r(hdr);
+  spscring::fixed_writer w(hdr);
+  spscring::fixed_reader r(hdr);
 
-  constexpr std::uint32_t item = 16;
   constexpr int n = 500;
   std::atomic<int> received{0};
 
   std::thread consumer([&] {
     while (received.load(std::memory_order_relaxed) < n) {
-      if (r.read(item, [&](const xproc::ipc::message_meta&, void* p) {
-            EXPECT_EQ(std::memcmp(p, "0123456789abcdef", item), 0);
-            received.fetch_add(1, std::memory_order_relaxed);
-          })) {
+      std::uint32_t out_size = 0;
+      const void* slot = r.try_read(&out_size);
+      if (slot) {
+        EXPECT_EQ(std::memcmp(slot, "0123456789abcdef", 16), 0);
+        received.fetch_add(1, std::memory_order_relaxed);
+        r.read_advance();
         continue;
       }
       std::uint32_t last = hdr->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&hdr->rb_meta.commit_seq, last);
+      spscring::atomic_wait(&hdr->rb_meta.commit_seq, last);
     }
   });
 
   for (int i = 0; i < n; ++i) {
-    std::uint64_t pos = 0;
-    void* buf = w.reserve(item, pos);
-    std::memcpy(buf, "0123456789abcdef", item);
-    w.commit(pos);
+    void* buf = w.try_reserve();
+    ASSERT_NE(buf, nullptr);
+    std::memcpy(buf, "0123456789abcdef", 16);
+    w.commit();
   }
 
   consumer.join();
@@ -79,32 +56,31 @@ TEST(RingbufferSpsc, FixedSpsc) {
 
 TEST(RingbufferSpsc, VarlenSpscWrap) {
   constexpr std::uint64_t cap = 128;
-  constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
+  constexpr std::size_t total = sizeof(spscring::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
-  new (hdr) xproc::core::control_block{};
-  init_header(*hdr, cap, 1, 8);
+  auto* hdr = reinterpret_cast<spscring::control_block*>(arena.bytes.data());
+  ASSERT_TRUE(spscring::init_control_block(*hdr, cap, spscring::layout_type::varlen, 8u));
 
-  xproc::ringbuffer::varlen_writer w(hdr);
-  xproc::ringbuffer::varlen_reader rd(hdr);
+  spscring::varlen_writer w(hdr);
+  spscring::varlen_reader rd(hdr);
 
   const char* a = "hello";
   const char* b = "variable-length";
   std::size_t strlen_a = std::strlen(a);
   std::size_t strlen_b = std::strlen(b);
-  std::uint64_t p0 = 0;
-  void* b0 = w.reserve(static_cast<std::uint32_t>(strlen_a), p0);
-  std::memcpy(b0, a, strlen_a);
-  w.commit(p0);
+  auto rr0 = w.try_reserve(static_cast<std::uint32_t>(strlen_a));
+  ASSERT_TRUE(rr0);
+  std::memcpy(rr0.payload, a, strlen_a);
+  w.commit(rr0.position);
 
-  std::uint64_t p1 = 0;
-  void* b1 = w.reserve(static_cast<std::uint32_t>(strlen_b), p1);
-  std::memcpy(b1, b, strlen_b);
-  w.commit(p1);
+  auto rr1 = w.try_reserve(static_cast<std::uint32_t>(strlen_b));
+  ASSERT_TRUE(rr1);
+  std::memcpy(rr1.payload, b, strlen_b);
+  w.commit(rr1.position);
 
   int msgs = 0;
   while (msgs < 2) {
-    if (rd.read([&](const xproc::ipc::message_meta&, void* ptr, std::uint32_t len) {
+    if (rd.read([&](std::uint8_t*& ptr, std::uint32_t& len, spscring::message_meta&, std::uint64_t&) {
           if (msgs == 0) {
             EXPECT_EQ(len, strlen_a);
             EXPECT_EQ(std::memcmp(ptr, a, len), 0);
@@ -113,11 +89,12 @@ TEST(RingbufferSpsc, VarlenSpscWrap) {
             EXPECT_EQ(std::memcmp(ptr, b, len), 0);
           }
           ++msgs;
+          return true;
         })) {
       continue;
     }
     std::uint32_t last = hdr->rb_meta.commit_seq.load(std::memory_order_acquire);
-    xproc::sync::atomic_wait(&hdr->rb_meta.commit_seq, last);
+    spscring::atomic_wait(&hdr->rb_meta.commit_seq, last);
   }
   EXPECT_EQ(msgs, 2);
 }

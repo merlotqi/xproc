@@ -1,6 +1,7 @@
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/shm_channel.hpp>
-#include <xproc/sync/atomic_wait.hpp>
+
+#include <spscring/atomic_wait.hpp>
 
 namespace xproc::ipc {
 
@@ -39,8 +40,8 @@ void shm_consumer::wait() {
   if (!h) {
     return;
   }
-  const std::uint32_t last = h->rb_meta.commit_seq.load(std::memory_order_acquire);
-  sync::atomic_wait(&h->rb_meta.commit_seq, last);
+  const std::uint32_t last = h->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+  spscring::atomic_wait(&h->spscring_cb.rb_meta.commit_seq, last);
 }
 
 }  // namespace xproc::ipc

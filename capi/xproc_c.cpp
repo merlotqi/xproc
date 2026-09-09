@@ -754,6 +754,7 @@ xproc_c_status xproc_c_observer_snapshot(const xproc_c_observer* observer, xproc
     const xproc::ipc::ring_snapshot snapshot = observer->impl->snapshot();
     out_snapshot->write_pos = snapshot.write_pos;
     out_snapshot->read_pos = snapshot.read_pos;
+    out_snapshot->commit_pos = snapshot.commit_pos;
     out_snapshot->commit_seq = snapshot.commit_seq;
     out_snapshot->read_wake_seq = snapshot.read_wake_seq;
     out_snapshot->attach_count = snapshot.attach_count;
@@ -928,7 +929,7 @@ xproc_c_status xproc_c_diagnostics_tracker_create(const xproc_c_observer* observ
   return catch_status([&]() -> xproc_c_status {
     auto handle = std::make_unique<xproc_c_diagnostics_tracker>();
     const auto snap = observer->impl->snapshot();
-    const auto cap = static_cast<std::uint64_t>(observer->impl->header()->data_capacity);
+    const auto cap = static_cast<std::uint64_t>(observer->impl->header()->spscring_cb.data_capacity);
     handle->impl = std::make_unique<xproc::ipc::diagnostics_tracker>(snap, cap);
     handle->owner = observer;
     *out = handle.release();

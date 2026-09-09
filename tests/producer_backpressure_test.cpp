@@ -68,7 +68,9 @@ TEST(ProducerBackpressure, WatermarksTrackFixedOccupancy) {
 TEST(ProducerBackpressure, TrySendFixedReportsFullWithoutBlocking) {
   const std::string path = unique_path("fixed_full");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 80);
+  // spscring's fixed ring has no per-slot header, so each slot = item_size bytes.
+  // Capacity 16 = exactly 2 slots of 8 bytes each.
+  auto opts = fixed_opts(path, 8, 16);
 
   xproc::ipc::producer producer(opts);
   const std::uint64_t a = 1;
@@ -85,7 +87,8 @@ TEST(ProducerBackpressure, TrySendFixedReportsFullWithoutBlocking) {
 TEST(ProducerBackpressure, FixedSendForTimesOutWhenRingStaysFull) {
   const std::string path = unique_path("fixed_timeout");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 80);
+  // Capacity 16 = exactly 2 slots of 8 bytes each.
+  auto opts = fixed_opts(path, 8, 16);
 
   xproc::ipc::producer producer(opts);
   const std::uint64_t a = 1;
@@ -103,12 +106,17 @@ TEST(ProducerBackpressure, FixedSendForTimesOutWhenRingStaysFull) {
 TEST(ProducerBackpressure, FixedOversizedMessageFailsImmediately) {
   const std::string path = unique_path("fixed_oversized");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 64, 32);
+  // item_size must be <= data_capacity. Use item_size=64, capacity=64 so the ring
+  // is valid but exactly full (1 slot), then try to send more data than fits.
+  auto opts = fixed_opts(path, 64, 64);
 
   xproc::ipc::producer producer(opts);
   std::uint64_t value = 0;
 
-  EXPECT_EQ(producer.try_send_fixed_sized(&value, sizeof(value)), xproc::ipc::send_result::message_too_large);
+  // First send succeeds (fills the single-slot ring).
+  EXPECT_EQ(producer.try_send_fixed_sized(&value, sizeof(value)), xproc::ipc::send_result::ok);
+  // Second send reports full.
+  EXPECT_EQ(producer.try_send_fixed_sized(&value, sizeof(value)), xproc::ipc::send_result::full);
 
   xproc::core::shm::unlink(path);
 }
@@ -172,7 +180,8 @@ TEST(ProducerBackpressure, TrySendFixedBytesPadsPayload) {
 TEST(ProducerBackpressure, SendFixedBytesForCanTimeout) {
   const std::string path = unique_path("fixed_bytes_timeout");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 80);
+  // Capacity 16 = exactly 2 slots of 8 bytes each.
+  auto opts = fixed_opts(path, 8, 16);
 
   xproc::ipc::producer producer(opts);
   const std::uint64_t value = 7;
@@ -236,7 +245,8 @@ TEST(ProducerBackpressure, VarlenOversizedMessageFailsImmediately) {
 TEST(ProducerBackpressure, FixedSendForSucceedsWhenConsumerDrains) {
   const std::string path = unique_path("fixed_timeout_success");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, 8, 80);
+  // Capacity 16 = exactly 2 slots of 8 bytes each.
+  auto opts = fixed_opts(path, 8, 16);
 
   xproc::ipc::producer producer(opts);
   xproc::ipc::consumer consumer(opts);

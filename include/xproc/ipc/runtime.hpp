@@ -10,7 +10,8 @@
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/message_meta.hpp>
-#include <xproc/sync/atomic_wait.hpp>
+
+#include <spscring/atomic_wait.hpp>
 
 namespace xproc::ipc {
 
@@ -134,13 +135,13 @@ class runtime {
   void stop() {
     running_.store(false, std::memory_order_release);
     if (shm_ != nullptr && shm_->header() != nullptr) {
-      shm_->header()->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
-      sync::atomic_notify_all(&shm_->header()->rb_meta.commit_seq);
+      shm_->header()->spscring_cb.rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
+      spscring::atomic_notify_all(&shm_->header()->spscring_cb.rb_meta.commit_seq);
     }
     if (iface_ != nullptr) {
       if (auto* header = iface_->shared_header(); header != nullptr) {
-        header->rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
-        sync::atomic_notify_all(&header->rb_meta.commit_seq);
+        header->spscring_cb.rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
+        spscring::atomic_notify_all(&header->spscring_cb.rb_meta.commit_seq);
       }
       iface_->interrupt_wait();
     }
@@ -173,11 +174,11 @@ class runtime {
     if (header == nullptr) {
       return;
     }
-    const uint32_t last_commit = header->rb_meta.commit_seq.load(std::memory_order_acquire);
+    const uint32_t last_commit = header->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
     if (!running_.load(std::memory_order_acquire)) {
       return;
     }
-    sync::atomic_wait(&header->rb_meta.commit_seq, last_commit);
+    spscring::atomic_wait(&header->spscring_cb.rb_meta.commit_seq, last_commit);
   }
 
   // ---- dispatch helpers for channel* path ----

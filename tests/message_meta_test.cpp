@@ -51,10 +51,12 @@ TEST(Meta, DefaultValues) {
 }
 
 // ============================================================
-// Fixed channel: meta is delivered in poll callback
+// Fixed channel: spscring's fixed ring has no per-slot header,
+// so message_meta is not carried through fixed channels.
+// Only payload round-trips; poll() returns a default meta.
 // ============================================================
 
-TEST(Meta, FixedSlotContainsMeta) {
+TEST(Meta, FixedChannelPayloadRoundtrip) {
   const std::string path = unique_path("fixed_meta");
   xproc::core::shm::unlink(path);
   auto opts = fixed_opts(path, sizeof(std::uint32_t), 256);
@@ -67,9 +69,8 @@ TEST(Meta, FixedSlotContainsMeta) {
     producer.send_fixed(value);
 
     bool got = false;
-    ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& meta, void* p, std::uint32_t len) {
+    ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& /*meta*/, void* p, std::uint32_t len) {
       got = true;
-      EXPECT_NE(meta.timestamp_ns, 0u);
       EXPECT_EQ(len, sizeof(std::uint32_t));
       std::uint32_t v = 0;
       std::memcpy(&v, p, sizeof(v));
@@ -81,7 +82,8 @@ TEST(Meta, FixedSlotContainsMeta) {
 }
 
 // ============================================================
-// Varlen channel: meta is delivered in poll callback
+// Varlen channel: meta IS delivered in poll callback
+// (spscring's varlen ring has per-slot headers with message_meta)
 // ============================================================
 
 TEST(Meta, VarlenSlotContainsMeta) {
@@ -109,13 +111,13 @@ TEST(Meta, VarlenSlotContainsMeta) {
 }
 
 // ============================================================
-// user_data round-trip
+// user_data round-trip (varlen only — fixed has no per-slot meta)
 // ============================================================
 
-TEST(Meta, UserDataRoundtrip) {
+TEST(Meta, UserDataRoundtripVarlen) {
   const std::string path = unique_path("user_data");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, sizeof(std::uint32_t), 256);
+  auto opts = varlen_opts(path, 4096);
 
   {
     xproc::ipc::producer producer(opts);
@@ -124,8 +126,8 @@ TEST(Meta, UserDataRoundtrip) {
     xproc::ipc::message_meta send_meta;
     send_meta.user_data = 42;
 
-    const std::uint32_t value = 0xDEAD;
-    producer.send_fixed(value, send_meta);
+    const char payload[] = "user-data-test";
+    producer.send_varlen(payload, static_cast<std::uint32_t>(sizeof(payload)), send_meta);
 
     bool got = false;
     ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& meta, void*, std::uint32_t) {
@@ -139,13 +141,13 @@ TEST(Meta, UserDataRoundtrip) {
 }
 
 // ============================================================
-// flags round-trip
+// flags round-trip (varlen only)
 // ============================================================
 
-TEST(Meta, FlagsRoundtrip) {
+TEST(Meta, FlagsRoundtripVarlen) {
   const std::string path = unique_path("flags");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, sizeof(std::uint32_t), 256);
+  auto opts = varlen_opts(path, 4096);
 
   {
     xproc::ipc::producer producer(opts);
@@ -154,8 +156,8 @@ TEST(Meta, FlagsRoundtrip) {
     xproc::ipc::message_meta send_meta;
     send_meta.flags = xproc::ipc::flag_priority_high | xproc::ipc::flag_compressed;
 
-    const std::uint32_t value = 0xBEAD;
-    producer.send_fixed(value, send_meta);
+    const char payload[] = "flags-test";
+    producer.send_varlen(payload, static_cast<std::uint32_t>(sizeof(payload)), send_meta);
 
     bool got = false;
     ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& meta, void*, std::uint32_t) {
@@ -169,13 +171,13 @@ TEST(Meta, FlagsRoundtrip) {
 }
 
 // ============================================================
-// schema_id round-trip
+// schema_id round-trip (varlen only)
 // ============================================================
 
-TEST(Meta, SchemaIdRoundtrip) {
+TEST(Meta, SchemaIdRoundtripVarlen) {
   const std::string path = unique_path("schema_id");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, sizeof(std::uint32_t), 256);
+  auto opts = varlen_opts(path, 4096);
 
   {
     xproc::ipc::producer producer(opts);
@@ -184,8 +186,8 @@ TEST(Meta, SchemaIdRoundtrip) {
     xproc::ipc::message_meta send_meta;
     send_meta.schema_id = 99;
 
-    const std::uint32_t value = 0xCAFE;
-    producer.send_fixed(value, send_meta);
+    const char payload[] = "schema-test";
+    producer.send_varlen(payload, static_cast<std::uint32_t>(sizeof(payload)), send_meta);
 
     bool got = false;
     ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& meta, void*, std::uint32_t) {
@@ -199,20 +201,20 @@ TEST(Meta, SchemaIdRoundtrip) {
 }
 
 // ============================================================
-// Default meta: timestamp is auto-filled by the writer
+// Default meta: timestamp is auto-filled by the varlen writer
 // ============================================================
 
-TEST(Meta, DefaultMetaHasTimestamp) {
+TEST(Meta, DefaultMetaHasTimestampVarlen) {
   const std::string path = unique_path("default_ts");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, sizeof(std::uint32_t), 256);
+  auto opts = varlen_opts(path, 4096);
 
   {
     xproc::ipc::producer producer(opts);
     xproc::ipc::consumer consumer(opts);
 
-    const std::uint32_t value = 1;
-    producer.send_fixed(value, xproc::ipc::message_meta{});
+    const char payload[] = "ts-test";
+    producer.send_varlen(payload, static_cast<std::uint32_t>(sizeof(payload)), xproc::ipc::message_meta{});
 
     bool got = false;
     ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& meta, void*, std::uint32_t) {
@@ -225,20 +227,20 @@ TEST(Meta, DefaultMetaHasTimestamp) {
 }
 
 // ============================================================
-// Default meta: user_data, flags, schema_id stay zero
+// Default meta: user_data, flags, schema_id stay zero (varlen)
 // ============================================================
 
-TEST(Meta, DefaultMetaHasZeroUserData) {
+TEST(Meta, DefaultMetaHasZeroUserDataVarlen) {
   const std::string path = unique_path("default_zero");
   xproc::core::shm::unlink(path);
-  auto opts = fixed_opts(path, sizeof(std::uint32_t), 256);
+  auto opts = varlen_opts(path, 4096);
 
   {
     xproc::ipc::producer producer(opts);
     xproc::ipc::consumer consumer(opts);
 
-    const std::uint32_t value = 1;
-    producer.send_fixed(value, xproc::ipc::message_meta{});
+    const char payload[] = "zero-test";
+    producer.send_varlen(payload, static_cast<std::uint32_t>(sizeof(payload)), xproc::ipc::message_meta{});
 
     bool got = false;
     ASSERT_TRUE(consumer.poll([&](const xproc::ipc::message_meta& meta, void*, std::uint32_t) {
@@ -254,7 +256,7 @@ TEST(Meta, DefaultMetaHasZeroUserData) {
 }
 
 // ============================================================
-// Concurrent stress: single writer + single reader (fixed)
+// Concurrent stress: single writer + single reader (fixed, payload only)
 // ============================================================
 
 TEST(Meta, ConcurrentSingleWriterMultipleReaders) {
@@ -274,11 +276,8 @@ TEST(Meta, ConcurrentSingleWriterMultipleReaders) {
 
     std::thread writer([&]() {
       for (int i = 0; i < kCount; ++i) {
-        xproc::ipc::message_meta meta;
-        meta.user_data = static_cast<std::uint64_t>(i);
-        meta.flags = xproc::ipc::flag_priority_high;
         const std::uint32_t payload = static_cast<std::uint32_t>(i);
-        producer.send_fixed(payload, meta);
+        producer.send_fixed(payload);
       }
     });
 
@@ -286,20 +285,13 @@ TEST(Meta, ConcurrentSingleWriterMultipleReaders) {
       int local_count = 0;
       auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
       while (local_count < kCount) {
-        bool got = consumer.poll([&](const xproc::ipc::message_meta& meta, void* p, std::uint32_t len) {
+        bool got = consumer.poll([&](const xproc::ipc::message_meta& /*meta*/, void* p, std::uint32_t len) {
           if (len != sizeof(std::uint32_t)) {
             ++errors;
             return;
           }
           std::uint32_t payload = 0;
           std::memcpy(&payload, p, sizeof(payload));
-
-          if (meta.user_data != static_cast<std::uint64_t>(payload)) {
-            ++errors;
-          }
-          if (!(meta.flags & xproc::ipc::flag_priority_high)) {
-            ++errors;
-          }
           ++local_count;
         });
         if (!got) {
@@ -322,7 +314,7 @@ TEST(Meta, ConcurrentSingleWriterMultipleReaders) {
 }
 
 // ============================================================
-// Concurrent stress: 3 writers + 2 readers (varlen)
+// Concurrent stress: 3 writers + 2 readers (varlen, with meta)
 // ============================================================
 
 TEST(Meta, ConcurrentMultiWriterMultiReader) {

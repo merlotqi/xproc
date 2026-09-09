@@ -9,87 +9,58 @@
 #include <cstdint>
 #include <cstring>
 #include <thread>
-#include <xproc/xproc.hpp>
-
-namespace {
-
-void init_header(xproc::core::control_block& h, std::uint64_t cap, std::uint32_t layout_type,
-                 std::uint32_t data_align) {
-  using lm = xproc::core::layout_manager;
-  h.magic = lm::expected_magic;
-  h.version_major = lm::version_major;
-  h.version_minor = lm::version_minor;
-  h.header_size = sizeof(xproc::core::control_block);
-  h.layout_type = layout_type;
-  h.rb_meta.write_pos.store(0, std::memory_order_relaxed);
-  h.rb_meta.read_pos.store(0, std::memory_order_relaxed);
-  h.rb_meta.commit_seq.store(0, std::memory_order_relaxed);
-  h.rb_meta.read_wake_seq.store(0, std::memory_order_relaxed);
-  h.data_capacity = cap;
-  h.data_alignment = data_align ? data_align : 8u;
-  h.attach_count.store(0, std::memory_order_relaxed);
-  h.is_ready.store(true, std::memory_order_release);
-  h.producer_pid.store(0, std::memory_order_relaxed);
-}
+#include <spscring/spscring.hpp>
 
 template <std::size_t N>
-struct alignas(xproc::core::control_block) ring_arena {
+struct alignas(spscring::control_block) ring_arena {
   std::array<std::uint8_t, N> bytes{};
 };
 
-}  // namespace
-
 TEST(RingbufferFullRing, ThirdReserveAfterPipeSync) {
+  // With spscring's fixed ring, each slot is exactly fixed_item_size bytes (no per-slot header).
+  // Use item_size=8, capacity=16 so the ring holds exactly 2 items, making the third reserve fail.
   constexpr std::uint32_t item = 8;
-  constexpr std::uint64_t cap = 80;
-  constexpr std::size_t total = sizeof(xproc::core::control_block) + static_cast<std::size_t>(cap);
+  constexpr std::uint64_t cap = 16;  // Exactly 2 slots
+  constexpr std::size_t total = sizeof(spscring::control_block) + static_cast<std::size_t>(cap);
   ring_arena<total> arena{};
-  auto* hdr = reinterpret_cast<xproc::core::control_block*>(arena.bytes.data());
-  new (hdr) xproc::core::control_block{};
-  init_header(*hdr, cap, 0, 8);
+  auto* hdr = reinterpret_cast<spscring::control_block*>(arena.bytes.data());
+  ASSERT_TRUE(spscring::init_control_block(*hdr, cap, spscring::layout_type::fixed, 8u, item));
 
-  xproc::ringbuffer::fixed_writer w(hdr);
-  xproc::ringbuffer::fixed_reader r(hdr);
+  spscring::fixed_writer w(hdr);
+  spscring::fixed_reader r(hdr);
 
-  std::uint64_t pos0 = 0;
-  void* buf0 = w.reserve(item, pos0);
+  void* buf0 = w.try_reserve();
+  ASSERT_NE(buf0, nullptr);
   std::memcpy(buf0, "aaaaaaaa", item);
-  w.commit(pos0);
+  w.commit();
 
-  std::uint64_t pos1 = 0;
-  void* buf1 = w.reserve(item, pos1);
+  void* buf1 = w.try_reserve();
+  ASSERT_NE(buf1, nullptr);
   std::memcpy(buf1, "bbbbbbbb", item);
-  w.commit(pos1);
+  w.commit();
 
-  int pipefd[2];
-  ASSERT_EQ(pipe(pipefd), 0);
+  // Ring is now full. Third try_reserve should fail.
+  void* buf2 = w.try_reserve();
+  EXPECT_EQ(buf2, nullptr);
 
-  std::atomic<bool> third_done{false};
-  std::thread producer([&] {
-    char sync = 1;
-    ASSERT_EQ(write(pipefd[1], &sync, 1), 1);
-    std::uint64_t pos2 = 0;
-    void* buf2 = w.reserve(item, pos2);
-    std::memcpy(buf2, "cccccccc", item);
-    w.commit(pos2);
-    third_done.store(true, std::memory_order_release);
-  });
+  // After reading one item, the third reserve should succeed.
+  std::uint32_t out_size = 0;
+  const void* slot0 = r.try_read(&out_size);
+  EXPECT_NE(slot0, nullptr);
+  r.read_advance();
 
-  char sink;
-  ASSERT_EQ(read(pipefd[0], &sink, 1), 1);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
-  EXPECT_FALSE(third_done.load(std::memory_order_acquire));
+  buf2 = w.try_reserve();
+  ASSERT_NE(buf2, nullptr);
+  std::memcpy(buf2, "cccccccc", item);
+  w.commit();
 
-  EXPECT_TRUE(r.read(item, [](const xproc::ipc::message_meta&, void*) {}));
+  const void* slot1 = r.try_read(&out_size);
+  EXPECT_NE(slot1, nullptr);
+  EXPECT_EQ(std::memcmp(slot1, "bbbbbbbb", item), 0);
+  r.read_advance();
 
-  producer.join();
-  EXPECT_TRUE(third_done.load());
-
-  close(pipefd[0]);
-  close(pipefd[1]);
-
-  EXPECT_TRUE(
-      r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "bbbbbbbb", item), 0); }));
-  EXPECT_TRUE(
-      r.read(item, [](const xproc::ipc::message_meta&, void* p) { EXPECT_EQ(std::memcmp(p, "cccccccc", item), 0); }));
+  const void* slot2 = r.try_read(&out_size);
+  EXPECT_NE(slot2, nullptr);
+  EXPECT_EQ(std::memcmp(slot2, "cccccccc", item), 0);
+  r.read_advance();
 }

@@ -7,6 +7,7 @@
 #include <thread>
 #include <vector>
 #include <xproc/xproc.hpp>
+#include <spscring/atomic_wait.hpp>
 
 namespace {
 
@@ -38,8 +39,8 @@ static void BM_RuntimeBaselineDirectPoll(benchmark::State& state) {
     while (!got) {
       got = cons.poll([&](const xproc::ipc::message_meta&, void*, std::uint32_t len) { benchmark::DoNotOptimize(len); });
       if (!got) {
-        const auto c = cons.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&cons.header()->rb_meta.commit_seq, c);
+        const auto c = cons.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&cons.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
   }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <spscring/atomic_wait.hpp>
 #include <xproc/xproc.hpp>
 
 TEST(IpcObserverAttach, PeekThenConsumerDrains) {
@@ -34,8 +35,8 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
         EXPECT_EQ(v, 0x99aabbccu);
       });
       if (!peeked) {
-        const std::uint32_t c = obs.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&obs.header()->rb_meta.commit_seq, c);
+        const std::uint32_t c = obs.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&obs.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
 
@@ -48,8 +49,8 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
         EXPECT_EQ(v, 0x99aabbccu);
       });
       if (!consumed) {
-        const std::uint32_t c = cons.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&cons.header()->rb_meta.commit_seq, c);
+        const std::uint32_t c = cons.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&cons.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
 

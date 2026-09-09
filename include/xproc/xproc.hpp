@@ -20,14 +20,8 @@
 #include <xproc/platform/platform.hpp>
 #include <xproc/platform/process.hpp>
 
-
-// ringbuffer include files.
-#include <xproc/ringbuffer/fixed_reader.hpp>
-#include <xproc/ringbuffer/fixed_writer.hpp>
-#include <xproc/ringbuffer/reserve_result.hpp>
-#include <xproc/ringbuffer/ringbuffer_error.hpp>
-#include <xproc/ringbuffer/varlen_reader.hpp>
-#include <xproc/ringbuffer/varlen_writer.hpp>
+// spscring (ringbuffer replacement).
+#include <spscring/spscring.hpp>
 
 // shm include files.
 #include <xproc/core/layout_exception.hpp>
@@ -36,16 +30,10 @@
 #include <xproc/core/shm.hpp>
 #include <xproc/core/shm_open_mode.hpp>
 
-// sync include files.
-#include <xproc/sync/atomic_backoff.hpp>
-#include <xproc/sync/atomic_wait.hpp>
-
 namespace xproc {
 
 using namespace ipc;
 using namespace platform;
-using namespace ringbuffer;
 using namespace core;
-using namespace sync;
 
 }  // namespace xproc

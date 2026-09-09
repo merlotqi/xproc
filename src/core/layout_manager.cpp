@@ -72,7 +72,9 @@ validate_error layout_manager::validate_detailed(const control_block* header, si
     return validate_error::not_attached;
   }
 
-  if (header->magic != expected_magic) {
+  // Validate ring-level fields. We can't use spscring::validate_control_block() directly because
+  // xproc's control_block is larger (header_size differs from spscring's sizeof).
+  if (header->spscring_cb.magic != expected_magic) {
     return validate_error::bad_magic;
   }
 
@@ -84,19 +86,19 @@ validate_error layout_manager::validate_detailed(const control_block* header, si
     }
   }
 
-  if (header->version_major != version_major || header->version_minor != version_minor) {
+  if (header->spscring_cb.version_major != version_major || header->spscring_cb.version_minor != version_minor) {
     return validate_error::version_mismatch;
   }
 
-  if (header->header_size != sizeof(control_block)) {
+  if (header->spscring_cb.header_size != sizeof(control_block)) {
     return validate_error::header_size_mismatch;
   }
 
-  if (header->layout_type != expected_layout_type) {
+  if (header->spscring_cb.layout_type != expected_layout_type) {
     return validate_error::layout_type_mismatch;
   }
 
-  if (header->fixed_item_size != expected_fixed_item_size) {
+  if (header->spscring_cb.fixed_item_size != expected_fixed_item_size) {
     return validate_error::fixed_item_size_mismatch;
   }
 
@@ -105,11 +107,11 @@ validate_error layout_manager::validate_detailed(const control_block* header, si
   }
 
   const uint32_t want_align = expected_data_alignment ? expected_data_alignment : 8u;
-  if (header->data_alignment != want_align || !is_power_of_two_uint32(header->data_alignment)) {
+  if (header->spscring_cb.data_alignment != want_align || !is_power_of_two_uint32(header->spscring_cb.data_alignment)) {
     return validate_error::alignment_invalid;
   }
 
-  if (header->data_capacity < expected_capacity) {
+  if (header->spscring_cb.data_capacity < expected_capacity) {
     return validate_error::capacity_insufficient;
   }
 
@@ -126,24 +128,19 @@ bool layout_manager::validate(control_block* header, size_t expected_capacity, u
 void layout_manager::_init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
                                   uint32_t fixed_item_size, std::uint64_t schema_id, std::uint64_t creator_timestamp_ns,
                                   std::uint64_t creator_flags) {
-  header->magic = expected_magic;
-  header->version_major = version_major;
-  header->version_minor = version_minor;
-  header->header_size = sizeof(control_block);
-  header->layout_type = layout_type;
+  // Initialize the ring part via spscring.
+  auto layout = static_cast<spscring::layout_type>(layout_type);
+  spscring::init_control_block(header->spscring_cb, capacity, layout, data_alignment ? data_alignment : 8u,
+                               fixed_item_size);
 
-  header->rb_meta.write_pos.store(0, std::memory_order_relaxed);
-  header->rb_meta.read_pos.store(0, std::memory_order_relaxed);
-  header->rb_meta.commit_seq.store(0, std::memory_order_relaxed);
-  header->rb_meta.read_wake_seq.store(0, std::memory_order_relaxed);
+  // Override header_size to cover the full xproc control_block.
+  header->spscring_cb.header_size = sizeof(control_block);
 
-  header->data_capacity = capacity;
-  header->data_alignment = data_alignment ? data_alignment : 8u;
-  header->fixed_item_size = fixed_item_size;
+  // xproc-specific fields.
   header->schema_id = schema_id;
   header->creator_timestamp_ns = creator_timestamp_ns;
   header->creator_flags = creator_flags;
-  std::memset(header->reserved, 0, sizeof(header->reserved));
+  std::memset(header->reserved_xproc, 0, sizeof(header->reserved_xproc));
 
   header->producer_pid.store(xproc::platform::current_process_id(), std::memory_order_relaxed);
   header->attach_count.store(1, std::memory_order_relaxed);

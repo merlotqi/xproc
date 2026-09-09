@@ -58,9 +58,9 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
   std::uint64_t creator_flags = 0u;
 
   if (header != nullptr) {
-    layout_type = header->layout_type;
-    data_align = header->data_alignment ? header->data_alignment : 8u;
-    fixed_item_size = header->fixed_item_size;
+    layout_type = header->spscring_cb.layout_type;
+    data_align = header->spscring_cb.data_alignment ? header->spscring_cb.data_alignment : 8u;
+    fixed_item_size = header->spscring_cb.fixed_item_size;
     schema_id = header->schema_id;
     creator_timestamp_ns = header->creator_timestamp_ns;
     creator_flags = header->creator_flags;
@@ -78,7 +78,7 @@ inline transport_options read_existing_shm_options(const std::string& path, cons
     throw core::layout_exception(context, core::validate_error::fixed_item_size_mismatch);
   }
 
-  const std::size_t logical_shm_size = shm_size_for_data_capacity(static_cast<std::size_t>(header->data_capacity));
+  const std::size_t logical_shm_size = shm_size_for_data_capacity(static_cast<std::size_t>(header->spscring_cb.data_capacity));
 
   transport_options opts;
   opts.path = path;

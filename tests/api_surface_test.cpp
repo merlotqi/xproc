@@ -7,6 +7,8 @@
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <spscring/atomic_backoff.hpp>
+#include <spscring/atomic_wait.hpp>
 #include <xproc/xproc.hpp>
 
 TEST(ApiSurface, PlatformInfoAndProcessId) {
@@ -19,12 +21,12 @@ TEST(ApiSurface, AtomicWaitNotifyOne) {
   alignas(8) std::atomic<std::uint32_t> word{0u};
   std::atomic<bool> progressed{false};
   std::thread waiter([&] {
-    xproc::sync::atomic_wait(&word, 0u);
+    spscring::atomic_wait(&word, 0u);
     progressed.store(true, std::memory_order_release);
   });
   std::this_thread::sleep_for(std::chrono::milliseconds(20));
   word.store(1u, std::memory_order_release);
-  xproc::sync::atomic_notify_one(&word);
+  spscring::atomic_notify_one(&word);
   waiter.join();
   EXPECT_TRUE(progressed.load(std::memory_order_acquire));
 }
@@ -33,25 +35,24 @@ TEST(ApiSurface, AtomicWaitNotifyAll) {
   alignas(8) std::atomic<std::uint32_t> word{0u};
   std::atomic<int> progressed{0};
   std::thread w1([&] {
-    xproc::sync::atomic_wait(&word, 0u);
+    spscring::atomic_wait(&word, 0u);
     progressed.fetch_add(1, std::memory_order_release);
   });
   std::thread w2([&] {
-    xproc::sync::atomic_wait(&word, 0u);
+    spscring::atomic_wait(&word, 0u);
     progressed.fetch_add(1, std::memory_order_release);
   });
   std::this_thread::sleep_for(std::chrono::milliseconds(20));
   word.store(1u, std::memory_order_release);
-  xproc::sync::atomic_notify_all(&word);
+  spscring::atomic_notify_all(&word);
   w1.join();
   w2.join();
   EXPECT_EQ(progressed.load(std::memory_order_acquire), 2);
 }
 
 TEST(ApiSurface, AtomicBackoffPauseAndReset) {
-  std::atomic<std::uint32_t> v{0u};
-  xproc::sync::atomic_backoff backoff(/*spin_threshold=*/0);
-  backoff.pause(v, 1u);
+  spscring::atomic_backoff backoff(/*max_pauses=*/0);
+  backoff.pause();
   backoff.reset();
   SUCCEED();
 }
@@ -228,8 +229,8 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
       EXPECT_EQ(value, 0xA1B2C3D4u);
     });
     if (!peeked) {
-      const std::uint32_t c = observer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&observer.header()->rb_meta.commit_seq, c);
+      const std::uint32_t c = observer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+      spscring::atomic_wait(&observer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 
@@ -242,8 +243,8 @@ TEST(ApiSurface, FixedChannelBuildersInferManifestAndRoundTrip) {
       EXPECT_EQ(value, 0xA1B2C3D4u);
     });
     if (!consumed) {
-      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+      const std::uint32_t c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+      spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 
@@ -287,8 +288,8 @@ TEST(ApiSurface, VarlenChannelBuildersInferManifestAndRoundTrip) {
       EXPECT_EQ(actual, expected);
     });
     if (!consumed) {
-      const std::uint32_t c = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-      xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, c);
+      const std::uint32_t c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+      spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 

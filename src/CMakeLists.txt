@@ -35,6 +35,7 @@ else()
     add_library(xproc STATIC ${XPROC_HEADERS} ${XPROC_SOURCES})
 endif()
 add_library(xproc::xproc ALIAS xproc)
+target_link_libraries(xproc PUBLIC spscring::spscring)
 
 if(XPROC_BUILD_SHARED AND WIN32)
     set_target_properties(xproc PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)

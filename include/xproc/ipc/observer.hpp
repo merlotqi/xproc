@@ -12,8 +12,9 @@
 #include <xproc/ipc/inspector.hpp>
 #include <xproc/ipc/message_meta.hpp>
 #include <xproc/ipc/options.hpp>
-#include <xproc/ringbuffer/fixed_reader.hpp>
-#include <xproc/ringbuffer/varlen_reader.hpp>
+
+#include <spscring/fixed_reader.hpp>
+#include <spscring/varlen_reader.hpp>
 
 namespace xproc::ipc {
 
@@ -49,14 +50,15 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
       throw core::layout_exception("observer: ", err);
     }
 
-    opts_.shm_size = shm_size_for_data_capacity(static_cast<std::size_t>(header_->data_capacity));
+    opts_.shm_size = shm_size_for_data_capacity(static_cast<std::size_t>(header_->spscring_cb.data_capacity));
     opts_.creator_timestamp_ns = header_->creator_timestamp_ns;
     opts_.creator_flags = header_->creator_flags;
 
+    auto* scb = reinterpret_cast<spscring::control_block*>(header_);
     if (opts_.type == channel_type::fixed) {
-      fixed_reader_ = std::make_unique<ringbuffer::fixed_reader>(header_);
+      fixed_reader_ = std::make_unique<spscring::fixed_reader>(scb);
     } else {
-      varlen_reader_ = std::make_unique<ringbuffer::varlen_reader>(header_);
+      varlen_reader_ = std::make_unique<spscring::varlen_reader>(scb);
     }
   }
 
@@ -75,10 +77,11 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
     if (!header_) {
       return s;
     }
-    s.write_pos = header_->rb_meta.write_pos.load(std::memory_order_acquire);
-    s.read_pos = header_->rb_meta.read_pos.load(std::memory_order_acquire);
-    s.commit_seq = header_->rb_meta.commit_seq.load(std::memory_order_acquire);
-    s.read_wake_seq = header_->rb_meta.read_wake_seq.load(std::memory_order_acquire);
+    s.write_pos = header_->spscring_cb.rb_meta.write_pos.load(std::memory_order_acquire);
+    s.read_pos = header_->spscring_cb.rb_meta.read_pos.load(std::memory_order_acquire);
+    s.commit_seq = header_->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+    s.read_wake_seq = header_->spscring_cb.rb_meta.read_wake_seq.load(std::memory_order_acquire);
+    s.commit_pos = header_->spscring_cb.rb_meta.commit_pos.load(std::memory_order_acquire);
     s.attach_count = header_->attach_count.load(std::memory_order_acquire);
     s.producer_pid = header_->producer_pid.load(std::memory_order_relaxed);
     return s;
@@ -90,17 +93,39 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
   }
 
   // Handler receives (meta, payload, len). Fixed channels pass item_size as len.
+  // Implemented via spscring's try_read() without read_advance() for peek semantics.
   template <typename F>
   bool peek(F&& handler) {
     if (opts_.type == channel_type::fixed) {
-      return fixed_reader_->peek(opts_.item_size, std::forward<F>(handler));
+      if (!fixed_reader_) return false;
+      std::uint32_t size = 0;
+      const void* slot = fixed_reader_->try_read(&size);
+      if (!slot) return false;
+      handler(message_meta{}, const_cast<void*>(slot), size);
+      return true;
     }
-    return varlen_reader_->peek(std::forward<F>(handler));
+    if (!varlen_reader_) return false;
+    // For varlen peek: use spscring's read() with a handler that returns false
+    // to keep the message unconsumed. We need to copy the data out since the
+    // handler pointer is only valid during the call.
+    bool found = false;
+    varlen_reader_->read([&](std::uint8_t*& payload, std::uint32_t& size, spscring::message_meta& smeta,
+                             std::uint64_t& /*reserved*/) {
+      message_meta mmeta;
+      mmeta.user_data = smeta.user_data;
+      mmeta.timestamp_ns = smeta.timestamp_ns;
+      mmeta.schema_id = smeta.schema_id;
+      mmeta.flags = smeta.flags;
+      std::forward<F>(handler)(mmeta, static_cast<void*>(payload), size);
+      found = true;
+      return false;  // Don't consume — peek only.
+    });
+    return found;
   }
 
   double occupancy_ratio() const {
     if (!header_) return 0.0;
-    const auto cap = header_->data_capacity;
+    const auto cap = header_->spscring_cb.data_capacity;
     if (cap == 0) return 0.0;
     return static_cast<double>(used_bytes_()) / static_cast<double>(cap);
   }
@@ -109,7 +134,7 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
 
   std::uint64_t available_bytes() const {
     if (!header_) return 0;
-    return header_->data_capacity - used_bytes_();
+    return header_->spscring_cb.data_capacity - used_bytes_();
   }
 
   std::uint64_t consumer_lag_bytes() const {
@@ -122,17 +147,17 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
  private:
   std::uint64_t used_bytes_() const {
     if (!header_) return 0;
-    const auto cap = header_->data_capacity;
-    const auto wp = header_->rb_meta.write_pos.load(std::memory_order_acquire);
-    const auto rp = header_->rb_meta.read_pos.load(std::memory_order_acquire);
+    const auto cap = header_->spscring_cb.data_capacity;
+    const auto wp = header_->spscring_cb.rb_meta.write_pos.load(std::memory_order_acquire);
+    const auto rp = header_->spscring_cb.rb_meta.read_pos.load(std::memory_order_acquire);
     return wp >= rp ? (std::min)(wp - rp, cap) : 0;
   }
 
   transport_options opts_;
   core::shm shm_;
   core::control_block* header_{nullptr};
-  std::unique_ptr<ringbuffer::fixed_reader> fixed_reader_;
-  std::unique_ptr<ringbuffer::varlen_reader> varlen_reader_;
+  std::unique_ptr<spscring::fixed_reader> fixed_reader_;
+  std::unique_ptr<spscring::varlen_reader> varlen_reader_;
 };
 
 }  // namespace xproc::ipc

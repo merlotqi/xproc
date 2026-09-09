@@ -161,8 +161,8 @@ int main() {
 
       if (!received) {
         // Block on atomic wait until new data arrives (no busy waiting)
-        const std::uint32_t current_seq = consumer.header()->rb_meta.commit_seq.load(std::memory_order_acquire);
-        xproc::sync::atomic_wait(&consumer.header()->rb_meta.commit_seq, current_seq);
+        const std::uint32_t current_seq = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
+        spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, current_seq);
       }
     }
   });
