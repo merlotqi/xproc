@@ -869,7 +869,7 @@ TEST(CApiSmoke, CTrackerProducerAlive) {
 
 TEST(CApiSmoke, CMetaStructSize) { EXPECT_EQ(sizeof(xproc_c_message_meta), 24u); }
 
-TEST(CApiSmoke, CSendFixedSizedWithMeta) {
+TEST(CApiSmoke, CSendFixedSizedWithMetaReturnsDefaultMeta) {
   const std::string path = "/xproc_capi_fixed_with_meta";
   ASSERT_EQ(xproc_c_shm_unlink(path.c_str()), XPROC_C_STATUS_OK);
 
@@ -913,8 +913,13 @@ TEST(CApiSmoke, CSendFixedSizedWithMeta) {
   ASSERT_EQ(status, XPROC_C_STATUS_OK);
   EXPECT_EQ(out_len, sizeof(actual));
   EXPECT_EQ(actual, expected);
-  EXPECT_EQ(received_meta.user_data, 123u);
-  EXPECT_EQ(received_meta.flags, 0x5u);
+  // Fixed rings contain payload-only slots, so per-message metadata is not
+  // transported. The compatibility overload accepts meta but readers receive
+  // the default value, matching the C++ fixed-channel contract.
+  EXPECT_EQ(received_meta.user_data, 0u);
+  EXPECT_EQ(received_meta.timestamp_ns, 0u);
+  EXPECT_EQ(received_meta.schema_id, 0u);
+  EXPECT_EQ(received_meta.flags, 0u);
 
   std::uint32_t consumed = 0;
   std::uint32_t consumed_len = 0;

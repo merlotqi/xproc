@@ -313,6 +313,13 @@ XPROC_C_API xproc_c_status xproc_c_producer_send_fixed_sized(xproc_c_producer* p
  */
 XPROC_C_API xproc_c_status xproc_c_producer_send_varlen(xproc_c_producer* producer, const void* data, uint32_t len);
 
+/**
+ * @brief Sends one fixed-channel message through the metadata-compatible API.
+ *
+ * Fixed channels use payload-only slots, so @p meta is accepted for API
+ * compatibility but is not transported; fixed-channel readers receive
+ * zero-initialized per-message metadata.
+ */
 XPROC_C_API xproc_c_status xproc_c_producer_send_fixed_sized_with_meta(
     xproc_c_producer* producer, const void* data, uint32_t byte_length,
     const xproc_c_message_meta* meta);
