@@ -31,6 +31,7 @@ set(XPROC_GTEST_TEST_FILES_COMMON
     socket_transport_test.cpp
     runtime_allocation_test.cpp
     producer_backpressure_test.cpp
+    subprocess_test.cpp
 )
 
 # Linux-only (fork, pipe, POSIX paths). Not built on Windows or other OSes.
