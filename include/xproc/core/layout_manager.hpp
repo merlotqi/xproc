@@ -40,6 +40,7 @@ enum class validate_error {
   schema_id_mismatch,
   alignment_invalid,
   capacity_insufficient,
+  fixed_item_size_incompatible,
 };
 
 inline const std::error_category& layout_error_category() noexcept {
@@ -70,6 +71,8 @@ inline const std::error_category& layout_error_category() noexcept {
           return "data_alignment invalid or does not match expected value";
         case validate_error::capacity_insufficient:
           return "data_capacity smaller than expected for this endpoint";
+        case validate_error::fixed_item_size_incompatible:
+          return "data_capacity is not a multiple of fixed_item_size";
         default:
           return "unknown layout validation error";
       }
@@ -116,7 +119,7 @@ class layout_manager {
   static const char* validate_cstr(validate_error e) noexcept;
 
  private:
-  static void _init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
+  static bool _init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
                            uint32_t fixed_item_size, std::uint64_t schema_id, std::uint64_t creator_timestamp_ns,
                            std::uint64_t creator_flags);
 };

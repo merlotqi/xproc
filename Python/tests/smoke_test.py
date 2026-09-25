@@ -43,7 +43,7 @@ def run_smoke_checks(xproc: object) -> None:
     assert "creator_timestamp_ns=0" in repr(defaults)
     assert "creator_flags=0" in repr(defaults)
 
-    payload = b"hello from python"
+    payload = b"hello from pytho"  # 16 bytes: must evenly divide data_capacity (4096)
     shm_path = f"/xproc_py_smoke_{os.getpid()}_{uuid.uuid4().hex}"
     persisted_creator_timestamp_ns = 0x1122334455667788
     persisted_creator_flags = 0x8877665544332211

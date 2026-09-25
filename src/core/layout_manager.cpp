@@ -17,8 +17,10 @@ control_block* layout_manager::format(shm& sm, size_t capacity, bool is_creator,
 
   auto* header = static_cast<control_block*>(sm.addr());
   if (is_creator) {
-    _init_header(header, capacity, layout_type, data_alignment, fixed_item_size, expected_schema_id,
-                 creator_timestamp_ns, creator_flags);
+    if (!_init_header(header, capacity, layout_type, data_alignment, fixed_item_size, expected_schema_id,
+                      creator_timestamp_ns, creator_flags)) {
+      return nullptr;
+    }
   } else {
     if (!validate(header, capacity, layout_type, data_alignment, fixed_item_size, expected_schema_id)) {
       return nullptr;
@@ -102,6 +104,11 @@ validate_error layout_manager::validate_detailed(const control_block* header, si
     return validate_error::fixed_item_size_mismatch;
   }
 
+  if (header->spscring_cb.fixed_item_size != 0 &&
+      header->spscring_cb.data_capacity % header->spscring_cb.fixed_item_size != 0) {
+    return validate_error::fixed_item_size_incompatible;
+  }
+
   if (header->schema_id != expected_schema_id) {
     return validate_error::schema_id_mismatch;
   }
@@ -125,13 +132,21 @@ bool layout_manager::validate(control_block* header, size_t expected_capacity, u
                            expected_fixed_item_size, expected_schema_id) == validate_error::ok;
 }
 
-void layout_manager::_init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
+bool layout_manager::_init_header(control_block* header, size_t capacity, uint32_t layout_type, uint32_t data_alignment,
                                   uint32_t fixed_item_size, std::uint64_t schema_id, std::uint64_t creator_timestamp_ns,
                                   std::uint64_t creator_flags) {
+  // Validate fixed_item_size compatibility before initializing: spscring::fixed_writer
+  // requires data_capacity to be an exact multiple of fixed_item_size.
+  if (fixed_item_size != 0 && capacity % fixed_item_size != 0) {
+    return false;
+  }
+
   // Initialize the ring part via spscring.
   auto layout = static_cast<spscring::layout_type>(layout_type);
-  spscring::init_control_block(header->spscring_cb, capacity, layout, data_alignment ? data_alignment : 8u,
-                               fixed_item_size);
+  if (!spscring::init_control_block(header->spscring_cb, capacity, layout, data_alignment ? data_alignment : 8u,
+                                    fixed_item_size)) {
+    return false;
+  }
 
   // Override header_size to cover the full xproc control_block.
   header->spscring_cb.header_size = sizeof(control_block);
@@ -146,6 +161,7 @@ void layout_manager::_init_header(control_block* header, size_t capacity, uint32
   header->attach_count.store(1, std::memory_order_relaxed);
 
   header->is_ready.store(true, std::memory_order_release);
+  return true;
 }
 
 }  // namespace xproc::core

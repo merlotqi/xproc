@@ -114,7 +114,7 @@ TEST(LayoutValidate, WindowsInferExistingShmSizeReturnsExactSectionSize) {
 
   xproc::ipc::transport_options creator{};
   creator.path = path;
-  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(12345);
+  creator.shm_size = xproc::ipc::shm_size_for_data_capacity(12344);  // must be divisible by item_size (4)
   creator.type = xproc::ipc::channel_type::fixed;
   creator.item_size = sizeof(std::uint32_t);
 

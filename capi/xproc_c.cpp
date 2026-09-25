@@ -87,6 +87,8 @@ xproc_c_layout_error to_c_layout_error(xproc::core::validate_error error) {
       return XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID;
     case xproc::core::validate_error::capacity_insufficient:
       return XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT;
+    case xproc::core::validate_error::fixed_item_size_incompatible:
+      return XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE;
   }
   return XPROC_C_LAYOUT_ERROR_NONE;
 }
@@ -412,6 +414,8 @@ const char* xproc_c_layout_error_string(xproc_c_layout_error error) {
       return "alignment_invalid";
     case XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT:
       return "capacity_insufficient";
+    case XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE:
+      return "fixed_item_size_incompatible";
   }
   return "unknown_layout_error";
 }
