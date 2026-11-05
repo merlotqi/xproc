@@ -1,7 +1,7 @@
 #include <xproc/ipc/channel.hpp>
 #include <xproc/ipc/shm_channel.hpp>
 
-#include <spscring/atomic_wait.hpp>
+#include <spscring/notify_word.hpp>
 
 namespace xproc::ipc {
 
@@ -40,8 +40,10 @@ void shm_consumer::wait() {
   if (!h) {
     return;
   }
+  // Register on the notify word while blocking so a conditional producer wake
+  // (bump_notify_word) sees this waiter instead of skipping the syscall.
   const std::uint32_t last = h->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-  spscring::atomic_wait(&h->spscring_cb.rb_meta.commit_seq, last);
+  spscring::wait_for_seq_change(h->spscring_cb.rb_meta.commit_seq, last);
 }
 
 }  // namespace xproc::ipc

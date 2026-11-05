@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <spscring/atomic_wait.hpp>
+#include <spscring/notify_word.hpp>
 #include <xproc/xproc.hpp>
 
 TEST(IpcObserverAttach, PeekThenConsumerDrains) {
@@ -36,7 +36,7 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
       });
       if (!peeked) {
         const std::uint32_t c = obs.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&obs.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(obs.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
 
@@ -50,7 +50,7 @@ TEST(IpcObserverAttach, PeekThenConsumerDrains) {
       });
       if (!consumed) {
         const std::uint32_t c = cons.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&cons.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(cons.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
 

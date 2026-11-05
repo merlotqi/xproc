@@ -12,6 +12,8 @@
 #include <thread>
 #include <xproc/xproc.hpp>
 
+#include <spscring/notify_word.hpp>
+
 TEST(IpcIntegration, FixedItemSizeZeroRejected) {
   xproc::ipc::transport_options opts;
   opts.path = "/xproc_test_item_zero";
@@ -147,7 +149,7 @@ TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
     });
     if (!peeked) {
       const std::uint32_t c = observer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-      spscring::atomic_wait(&observer.header()->spscring_cb.rb_meta.commit_seq, c);
+      spscring::wait_for_seq_change(observer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 
@@ -161,7 +163,7 @@ TEST(IpcIntegration, AttachersCanInferExistingShmSize) {
     });
     if (!consumed) {
       const std::uint32_t c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-      spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
+      spscring::wait_for_seq_change(consumer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 
@@ -322,7 +324,7 @@ int consumer_creates_then_forked_producer_main(const char* shm_path) {
     });
     if (!got) {
       const std::uint32_t c = consumer.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-      spscring::atomic_wait(&consumer.header()->spscring_cb.rb_meta.commit_seq, c);
+      spscring::wait_for_seq_change(consumer.header()->spscring_cb.rb_meta.commit_seq, c);
     }
   }
 

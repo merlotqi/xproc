@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <thread>
+#include <spscring/notify_word.hpp>
 #include <spscring/spscring.hpp>
 
 template <std::size_t N>
@@ -39,7 +40,7 @@ TEST(RingbufferSpsc, FixedSpsc) {
         continue;
       }
       std::uint32_t last = hdr->rb_meta.commit_seq.load(std::memory_order_acquire);
-      spscring::atomic_wait(&hdr->rb_meta.commit_seq, last);
+      spscring::wait_for_seq_change(hdr->rb_meta.commit_seq, last);
     }
   });
 
@@ -94,7 +95,7 @@ TEST(RingbufferSpsc, VarlenSpscWrap) {
       continue;
     }
     std::uint32_t last = hdr->rb_meta.commit_seq.load(std::memory_order_acquire);
-    spscring::atomic_wait(&hdr->rb_meta.commit_seq, last);
+    spscring::wait_for_seq_change(hdr->rb_meta.commit_seq, last);
   }
   EXPECT_EQ(msgs, 2);
 }

@@ -119,7 +119,8 @@ class channel : public endpoint {
     auto* vw = static_cast<spscring::varlen_writer*>(writer_.get());
     auto rr = vw->try_reserve(len, to_spscring_meta(meta));
     if (!rr) {
-      throw std::runtime_error("channel::send_varlen: reserve failed");
+      throw std::runtime_error(std::string("channel::send_varlen: reserve failed: ") +
+                               spscring::reserve_status_cstr(rr.status));
     }
     std::memcpy(rr.payload, data, len);
     vw->commit(rr.position);

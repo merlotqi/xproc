@@ -9,7 +9,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <spscring/atomic_wait.hpp>
+#include <spscring/notify_word.hpp>
 #include <xproc/xproc.hpp>
 
 namespace {
@@ -119,7 +119,8 @@ class SharedHeaderInterfaceConsumer final : public xproc::ipc::consumer_channel_
   void wait() override {
     entered_wait_.store(true, std::memory_order_release);
     const auto last_commit = header_.spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-    spscring::atomic_wait(&header_.spscring_cb.rb_meta.commit_seq, last_commit);
+    // Register on the notify word so conditional wakes (bump_notify_word) see us.
+    spscring::wait_for_seq_change(header_.spscring_cb.rb_meta.commit_seq, last_commit);
   }
 
   bool wait_entered_for(std::chrono::milliseconds timeout) const { return wait_for_true(entered_wait_, timeout); }
@@ -138,8 +139,10 @@ class SharedHeaderInterfaceConsumer final : public xproc::ipc::consumer_channel_
   }
 
   void force_wake() noexcept {
-    header_.spscring_cb.rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
-    spscring::atomic_notify_all(&header_.spscring_cb.rb_meta.commit_seq);
+    // Bump + wake only when a waiter is registered on the notify word.
+    if (spscring::bump_notify_word(header_.spscring_cb.rb_meta.commit_seq)) {
+      spscring::atomic_notify_all(&header_.spscring_cb.rb_meta.commit_seq);
+    }
   }
 
   void request_exit_message() noexcept {

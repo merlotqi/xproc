@@ -11,7 +11,7 @@
 #include <xproc/ipc/channel_interface.hpp>
 #include <xproc/ipc/message_meta.hpp>
 
-#include <spscring/atomic_wait.hpp>
+#include <spscring/notify_word.hpp>
 
 namespace xproc::ipc {
 
@@ -134,14 +134,18 @@ class runtime {
 
   void stop() {
     running_.store(false, std::memory_order_release);
+    // Wake blocked consumers: the bump reports whether anyone registered on
+    // the notify word; only then is the wake syscall issued.
     if (shm_ != nullptr && shm_->header() != nullptr) {
-      shm_->header()->spscring_cb.rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
-      spscring::atomic_notify_all(&shm_->header()->spscring_cb.rb_meta.commit_seq);
+      if (spscring::bump_notify_word(shm_->header()->spscring_cb.rb_meta.commit_seq)) {
+        spscring::atomic_notify_all(&shm_->header()->spscring_cb.rb_meta.commit_seq);
+      }
     }
     if (iface_ != nullptr) {
       if (auto* header = iface_->shared_header(); header != nullptr) {
-        header->spscring_cb.rb_meta.commit_seq.fetch_add(1, std::memory_order_release);
-        spscring::atomic_notify_all(&header->spscring_cb.rb_meta.commit_seq);
+        if (spscring::bump_notify_word(header->spscring_cb.rb_meta.commit_seq)) {
+          spscring::atomic_notify_all(&header->spscring_cb.rb_meta.commit_seq);
+        }
       }
       iface_->interrupt_wait();
     }
@@ -178,7 +182,10 @@ class runtime {
     if (!running_.load(std::memory_order_acquire)) {
       return;
     }
-    spscring::atomic_wait(&header->spscring_cb.rb_meta.commit_seq, last_commit);
+    // Register on the notify word while blocking so a conditional wake (ring
+    // commit or runtime::stop) sees this waiter instead of skipping the
+    // syscall.
+    spscring::wait_for_seq_change(header->spscring_cb.rb_meta.commit_seq, last_commit);
   }
 
   // ---- dispatch helpers for channel* path ----

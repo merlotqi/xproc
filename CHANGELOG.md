@@ -7,6 +7,29 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded the bundled `spscring` (0.2.0): ring commits and reads now wake the
+  peer **only when a waiter is registered** on the notify word (waiter flag in
+  bit 31 of `commit_seq` / `read_wake_seq`, in-segment `version_minor` 2).
+  shm channel end-to-end benchmarks on Apple M2 improve ~17x (fixed 64B
+  reserve/commit ~1.0 µs → ~55 ns per message). Diagnostic snapshots
+  (`ring_snapshot`, `xproc_c_snapshot`) mask the waiter flag, so sequence
+  counters keep their previous meaning.
+- Blocking consumers (`shm_consumer::wait`, `ipc_runtime`, `runtime::stop`)
+  register on the notify word while blocked via `spscring::wait_for_seq_change`;
+  `stop()` wakes only registered waiters. Custom code that blocks directly on
+  `atomic_wait(commit_seq, ...)` must migrate to `wait_for_seq_change`
+  (or set the waiter bit) or it will miss wakes.
+- `channel::send_varlen` failure messages now include the reserve status.
+
+### Fixed
+
+- `Meta.ConcurrentMultiWriterMultiReader` no longer aborts on transient ring
+  backpressure: readers spawn before writers and writers retry with
+  `send_varlen_for` inside a deadline instead of throwing on the first `full`
+  reserve. (Concurrent multi-writer attach remains out of the SPSC contract.)
+
 ## [1.2.0] - 2026-09-09
 
 ### Added

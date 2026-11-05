@@ -16,7 +16,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <spscring/atomic_wait.hpp>
+#include <spscring/notify_word.hpp>
 #include <xproc/xproc.hpp>
 
 namespace {
@@ -53,7 +53,7 @@ TEST(ProtocolCodec, RawVarlenShm) {
           continue;
         }
         std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     });
     consumer_attached.wait();
@@ -101,7 +101,7 @@ TEST(ProtocolCodec, RawFixedShm) {
           continue;
         }
         std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     });
     consumer_attached.wait();
@@ -147,7 +147,7 @@ TEST(ProtocolCodec, RawVarlenTypedChannels) {
           break;
         }
         std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     });
     consumer_attached.wait();
@@ -228,7 +228,7 @@ TEST(ProtocolCodec, UserInlineSerialization) {
           continue;
         }
         std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     });
     consumer_attached.wait();
@@ -281,7 +281,7 @@ TEST(ProtocolCodec, TriviallyCopyablePOD) {
           continue;
         }
         std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     });
     consumer_attached.wait();

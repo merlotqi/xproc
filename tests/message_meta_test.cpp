@@ -335,25 +335,10 @@ TEST(Meta, ConcurrentMultiWriterMultiReader) {
   std::atomic<int> total_received{0};
   std::mutex consumer_mtx;
 
-  // Writers — each uses its own producer instance to exercise concurrent CAS on write_pos.
-  std::vector<std::thread> writers;
-  writers.reserve(kWriters);
-  for (int w = 0; w < kWriters; ++w) {
-    writers.emplace_back([&opts, w, kMsgsPerWriter]() {
-      xproc::ipc::producer prod(opts);
-      for (int i = 0; i < kMsgsPerWriter; ++i) {
-        char buf[32];
-        const int n = std::snprintf(buf, sizeof(buf), "w%d_msg_%d", w, i);
-        xproc::ipc::message_meta meta;
-        meta.user_data = static_cast<std::uint64_t>(w * kMsgsPerWriter + i);
-        meta.schema_id = static_cast<std::uint32_t>(w);
-        prod.send_varlen(buf, static_cast<std::uint32_t>(n) + 1, meta);
-      }
-    });
-  }
-
   // Readers — share a single consumer (via mutex) to serialise SPSC read_pos
-  // advancement.
+  // advancement. Spawned BEFORE the writers: writers start filling as soon as
+  // they are created, and every message of every writer together fits in the
+  // ring, so a late reader turns transient backpressure into a stall.
   std::vector<std::thread> readers;
   readers.reserve(kReaders);
   for (int r = 0; r < kReaders; ++r) {
@@ -378,6 +363,38 @@ TEST(Meta, ConcurrentMultiWriterMultiReader) {
             break;
           }
           std::this_thread::yield();
+        }
+      }
+    });
+  }
+
+  // Writers — each uses its own producer instance to exercise concurrent CAS
+  // on write_pos. Bounded-time sends: the SPSC ring legitimately reports
+  // `full` under concurrent writers, so retry within a deadline instead of
+  // throwing on transient backpressure. A genuine stall (e.g. a corrupted
+  // ring from out-of-contract concurrency) still fails via `errors`.
+  std::vector<std::thread> writers;
+  writers.reserve(kWriters);
+  for (int w = 0; w < kWriters; ++w) {
+    writers.emplace_back([&opts, w, kMsgsPerWriter, &errors]() {
+      xproc::ipc::producer prod(opts);
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+      for (int i = 0; i < kMsgsPerWriter; ++i) {
+        char buf[32];
+        const int n = std::snprintf(buf, sizeof(buf), "w%d_msg_%d", w, i);
+        xproc::ipc::message_meta meta;
+        meta.user_data = static_cast<std::uint64_t>(w * kMsgsPerWriter + i);
+        meta.schema_id = static_cast<std::uint32_t>(w);
+        for (;;) {
+          const auto rc = prod.send_varlen_for(buf, static_cast<std::uint32_t>(n) + 1,
+                                               std::chrono::milliseconds(100), meta);
+          if (rc == xproc::ipc::send_result::ok) {
+            break;
+          }
+          if (std::chrono::steady_clock::now() > deadline) {
+            errors.fetch_add(1, std::memory_order_relaxed);
+            return;
+          }
         }
       }
     });

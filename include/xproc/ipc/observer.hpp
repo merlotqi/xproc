@@ -14,6 +14,7 @@
 #include <xproc/ipc/options.hpp>
 
 #include <spscring/fixed_reader.hpp>
+#include <spscring/notify_word.hpp>
 #include <spscring/varlen_reader.hpp>
 
 namespace xproc::ipc {
@@ -79,8 +80,11 @@ class observer : public ring_inspector_interface, public attach_count_view_inter
     }
     s.write_pos = header_->spscring_cb.rb_meta.write_pos.load(std::memory_order_acquire);
     s.read_pos = header_->spscring_cb.rb_meta.read_pos.load(std::memory_order_acquire);
-    s.commit_seq = header_->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-    s.read_wake_seq = header_->spscring_cb.rb_meta.read_wake_seq.load(std::memory_order_acquire);
+    // Notify words pack a waiter flag into bit 31 (see spscring::notify_word.hpp);
+    // snapshots expose the wake-sequence counters only.
+    s.commit_seq = spscring::notify_seq_value(header_->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire));
+    s.read_wake_seq =
+        spscring::notify_seq_value(header_->spscring_cb.rb_meta.read_wake_seq.load(std::memory_order_acquire));
     s.commit_pos = header_->spscring_cb.rb_meta.commit_pos.load(std::memory_order_acquire);
     s.attach_count = header_->attach_count.load(std::memory_order_acquire);
     s.producer_pid = header_->producer_pid.load(std::memory_order_relaxed);
