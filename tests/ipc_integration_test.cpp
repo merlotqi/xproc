@@ -189,7 +189,7 @@ int cross_process_futex_block_main(const char* shm_path) {
     opts.create_if_missing = false;
     xproc::ipc::channel ch(opts, xproc::ipc::endpoint::role::consumer);
 
-    spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, 0u);
+    spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, 0u);
 
     std::uint32_t val = 0;
     bool got = false;
@@ -200,7 +200,7 @@ int cross_process_futex_block_main(const char* shm_path) {
       });
       if (!got) {
         std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
     if (val != 0xdeadbeefu) {
@@ -256,7 +256,7 @@ int cross_process_varlen_main(const char* shm_path) {
       });
       if (!got) {
         std::uint32_t c = ch.header()->spscring_cb.rb_meta.commit_seq.load(std::memory_order_acquire);
-        spscring::atomic_wait(&ch.header()->spscring_cb.rb_meta.commit_seq, c);
+        spscring::wait_for_seq_change(ch.header()->spscring_cb.rb_meta.commit_seq, c);
       }
     }
     _exit(0);

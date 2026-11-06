@@ -25,7 +25,7 @@ jobs:
         working-directory: node
         run: npm run typecheck
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5
       - name: Build
         run: cmake --build build --parallel
       - name: Test
@@ -130,7 +130,7 @@ jobs:
         working-directory: node
         run: npm run typecheck
       - name: Configure
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DXPROC_BUILD_TESTS=ON -DXPROC_BUILD_EXAMPLES=ON -DXPROC_BUILD_NODE=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
