@@ -153,6 +153,45 @@ cmake --build ../build --target xproc_node_cpp_child_struct_writer xproc_node
 npm run example:node-parent-cpp-child-struct-monitor
 ```
 
+## Message metadata
+
+Variable-length channels transport per-message metadata; fixed channels accept
+`meta` for API compatibility but always deliver zeroed metadata to readers.
+
+```ts
+const xproc = require("@merlotqi/xproc");
+
+const created = xproc.shm.createVarlenChannel({ path: "/demo-meta", dataCapacity: 32768n });
+const producer = created.openProducer();
+const observer = xproc.shm.attachVarlenChannel({ path: "/demo-meta" }).openObserver();
+
+producer.sendVarlen("hello", { userData: 42n, flags: 1 });
+
+const peeked = observer.peekCopyWithMeta();
+if (peeked !== null) {
+  peeked.payload; // Buffer with "hello"
+  peeked.meta;    // { userData: 42n, timestampNs: 0n, schemaId: 0, flags: 1 }
+}
+```
+
+## Diagnostics
+
+```ts
+const observer = xproc.shm.attachVarlenChannel({ path: "/demo-meta" }).openObserver();
+
+observer.occupancyRatio(); // number in [0, 1]
+observer.occupancyBytes(); // bigint
+observer.availableBytes(); // bigint
+observer.consumerLagBytes(); // bigint
+
+const tracker = observer.createDiagnosticsTracker();
+// ... later, after the producer has been active:
+tracker.update();
+tracker.producerAlive(); // true when commit_seq advanced since the last update
+tracker.idleMs(); // bigint milliseconds without ring progress
+tracker.close(); // required before observer.close()
+```
+
 ## Development
 
 Build from the repository root:

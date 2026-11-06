@@ -7,6 +7,15 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Node binding parity with the C API: optional per-message metadata on
+  `Producer.sendFixedSized`/`sendVarlen`, `Observer.peekCopyWithMeta`,
+  observer diagnostics getters (`occupancyRatio`, `occupancyBytes`,
+  `availableBytes`, `consumerLagBytes`), `Observer.createDiagnosticsTracker()`
+  (with an `Observer.close()` guard while a tracker is open), and the
+  `LAYOUT_ERROR.fixedItemSizeIncompatible` constant.
+
 ### Changed
 
 - Upgraded the bundled `spscring` (0.2.0): ring commits and reads now wake the
