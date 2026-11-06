@@ -255,6 +255,26 @@ declare namespace xproc {
     producerPid: number;
   }
 
+  /** Per-message metadata accepted by sends. Missing fields default to 0. */
+  interface MessageMetaInput {
+    userData?: IntegerLike;
+    timestampNs?: IntegerLike;
+    schemaId?: IntegerLike;
+    flags?: IntegerLike;
+  }
+
+  /**
+   * Per-message metadata attached to a received payload.
+   * u64 fields are bigint; u32 fields are number (`schemaId` is therefore a
+   * number here, unlike `Snapshot.schemaId`).
+   */
+  interface MessageMeta {
+    userData: bigint;
+    timestampNs: bigint;
+    schemaId: number;
+    flags: number;
+  }
+
   /** Error shape used by xproc layout and transport failures. */
   interface XprocError extends Error {
     /** High-level status enum value such as `STATUS.layoutError`. */
@@ -283,10 +303,14 @@ declare namespace xproc {
     options(): ResolvedTransportOptions;
     /** Sends a fixed-size payload without requiring an exact item-size match. */
     sendFixedBytes(data: ByteSource): void;
-    /** Sends one fixed-size frame and validates that `data.length === itemSize`. */
-    sendFixedSized(data: ByteSource): void;
-    /** Sends one variable-length payload. */
-    sendVarlen(data: ByteSource): void;
+    /**
+     * Sends one fixed-size frame and validates that `data.length === itemSize`.
+     * On fixed channels `meta` is accepted for API compatibility but is not
+     * transported: readers observe zero-initialized metadata.
+     */
+    sendFixedSized(data: ByteSource, meta?: MessageMetaInput): void;
+    /** Sends one variable-length payload with optional per-message metadata. */
+    sendVarlen(data: ByteSource, meta?: MessageMetaInput): void;
     /** Returns the bound or connected socket port for socket-backed producers. */
     socketPort(): number;
   }
@@ -327,6 +351,11 @@ declare namespace xproc {
     peekCopy(): Uint8Array | null;
     /** Peeks into a caller-owned buffer and returns copied bytes, or `null` when empty. */
     peekCopyInto(buffer: Buffer | Uint8Array | ArrayBuffer): number | null;
+    /**
+     * Peeks the latest visible payload with its per-message metadata, or
+     * `null` when the channel is empty.
+     */
+    peekCopyWithMeta(): { payload: Uint8Array; meta: MessageMeta } | null;
   }
 
   /** Converts requested payload capacity into the shared-memory size expected by xproc. */

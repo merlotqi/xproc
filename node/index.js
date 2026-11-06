@@ -148,6 +148,22 @@ function normalizeOptions(options = {}) {
   return normalized;
 }
 
+function normalizeMeta(meta) {
+  if (meta === undefined) {
+    return undefined;
+  }
+  if (meta == null || typeof meta !== "object" || Array.isArray(meta)) {
+    throw new TypeError("meta must be an object");
+  }
+  const normalized = {};
+  for (const key of ["userData", "timestampNs", "schemaId", "flags"]) {
+    if (meta[key] !== undefined) {
+      normalized[key] = normalizeIntegerLike(meta[key], `meta.${key}`);
+    }
+  }
+  return normalized;
+}
+
 function decorateOptions(options) {
   if (!options || typeof options !== "object") {
     return options;
@@ -206,12 +222,12 @@ class Producer extends native.Producer {
     return super.sendFixedBytes(coerceBuffer(data));
   }
 
-  sendFixedSized(data) {
-    return super.sendFixedSized(coerceBuffer(data));
+  sendFixedSized(data, meta) {
+    return super.sendFixedSized(coerceBuffer(data), normalizeMeta(meta));
   }
 
-  sendVarlen(data) {
-    return super.sendVarlen(coerceBuffer(data));
+  sendVarlen(data, meta) {
+    return super.sendVarlen(coerceBuffer(data), normalizeMeta(meta));
   }
 
   options() {

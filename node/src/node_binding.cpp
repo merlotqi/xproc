@@ -410,6 +410,37 @@ Napi::Object snapshot_to_js(Napi::Env env, const xproc_c_snapshot& snapshot) {
   return object;
 }
 
+bool message_meta_from_js(Napi::Env env, const Napi::Value& value, xproc_c_message_meta* out) {
+  if (!value.IsObject() || value.IsArray()) {
+    return throw_type_error(env, "meta must be an object");
+  }
+  const Napi::Object object = value.As<Napi::Object>();
+  *out = xproc_c_message_meta{};
+  if (object.Has("userData") && !parse_uint64(env, object.Get("userData"), "meta.userData", &out->user_data)) {
+    return false;
+  }
+  if (object.Has("timestampNs") &&
+      !parse_uint64(env, object.Get("timestampNs"), "meta.timestampNs", &out->timestamp_ns)) {
+    return false;
+  }
+  if (object.Has("schemaId") && !parse_uint32(env, object.Get("schemaId"), "meta.schemaId", &out->schema_id)) {
+    return false;
+  }
+  if (object.Has("flags") && !parse_uint32(env, object.Get("flags"), "meta.flags", &out->flags)) {
+    return false;
+  }
+  return true;
+}
+
+Napi::Object message_meta_to_js(Napi::Env env, const xproc_c_message_meta& meta) {
+  Napi::Object object = Napi::Object::New(env);
+  object.Set("userData", js_bigint_from_u64(env, meta.user_data));
+  object.Set("timestampNs", js_bigint_from_u64(env, meta.timestamp_ns));
+  object.Set("schemaId", Napi::Number::New(env, meta.schema_id));
+  object.Set("flags", Napi::Number::New(env, meta.flags));
+  return object;
+}
+
 bool byte_span_from_js(Napi::Env env, const Napi::Value& value, const char* field_name, byte_span* out) {
   if (value.IsBuffer()) {
     const Napi::Buffer<std::uint8_t> buffer = value.As<Napi::Buffer<std::uint8_t>>();
@@ -551,6 +582,19 @@ class producer_wrap final : public Napi::ObjectWrap<producer_wrap> {
       return env.Undefined();
     }
 
+    if (info.Length() > 1 && !info[1].IsUndefined() && !info[1].IsNull()) {
+      xproc_c_message_meta meta{};
+      if (!message_meta_from_js(env, info[1], &meta)) {
+        return env.Undefined();
+      }
+      const xproc_c_status status =
+          xproc_c_producer_send_fixed_sized_with_meta(handle_, bytes.data, bytes.len, &meta);
+      if (status != XPROC_C_STATUS_OK) {
+        throw_xproc_status(env, status, "Producer.sendFixedSized");
+      }
+      return env.Undefined();
+    }
+
     const xproc_c_status status = xproc_c_producer_send_fixed_sized(handle_, bytes.data, bytes.len);
     if (status != XPROC_C_STATUS_OK) {
       throw_xproc_status(env, status, "Producer.sendFixedSized");
@@ -570,6 +614,18 @@ class producer_wrap final : public Napi::ObjectWrap<producer_wrap> {
 
     byte_span bytes;
     if (!byte_span_from_js(env, info[0], "data", &bytes)) {
+      return env.Undefined();
+    }
+
+    if (info.Length() > 1 && !info[1].IsUndefined() && !info[1].IsNull()) {
+      xproc_c_message_meta meta{};
+      if (!message_meta_from_js(env, info[1], &meta)) {
+        return env.Undefined();
+      }
+      const xproc_c_status status = xproc_c_producer_send_varlen_with_meta(handle_, bytes.data, bytes.len, &meta);
+      if (status != XPROC_C_STATUS_OK) {
+        throw_xproc_status(env, status, "Producer.sendVarlen");
+      }
       return env.Undefined();
     }
 
@@ -843,6 +899,7 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
                            InstanceMethod("snapshot", &observer_wrap::snapshot),
                            InstanceMethod("peekCopy", &observer_wrap::peek_copy),
                            InstanceMethod("peekCopyInto", &observer_wrap::peek_copy_into),
+                           InstanceMethod("peekCopyWithMeta", &observer_wrap::peek_copy_with_meta),
                        });
   }
 
@@ -964,6 +1021,43 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
       return env.Undefined();
     }
     return Napi::Number::New(env, out_len);
+  }
+
+  Napi::Value peek_copy_with_meta(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+
+    xproc_c_message_meta meta{};
+    std::uint32_t required_len = 0;
+    xproc_c_status status = xproc_c_observer_peek_copy_with_meta(handle_, &meta, nullptr, 0, &required_len);
+    if (status == XPROC_C_STATUS_AGAIN) {
+      return env.Null();
+    }
+    if (status == XPROC_C_STATUS_OK) {
+      Napi::Object result = Napi::Object::New(env);
+      result.Set("payload", empty_buffer(env));
+      result.Set("meta", message_meta_to_js(env, meta));
+      return result;
+    }
+    if (status != XPROC_C_STATUS_BUFFER_TOO_SMALL) {
+      throw_xproc_status(env, status, "Observer.peekCopyWithMeta");
+      return env.Undefined();
+    }
+
+    Napi::Buffer<std::uint8_t> buffer = Napi::Buffer<std::uint8_t>::New(env, required_len);
+    status = xproc_c_observer_peek_copy_with_meta(handle_, &meta, required_len == 0 ? nullptr : buffer.Data(),
+                                                  required_len, &required_len);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "Observer.peekCopyWithMeta");
+      return env.Undefined();
+    }
+
+    Napi::Object result = Napi::Object::New(env);
+    result.Set("payload", buffer);
+    result.Set("meta", message_meta_to_js(env, meta));
+    return result;
   }
 
   xproc_c_observer* handle_{nullptr};
