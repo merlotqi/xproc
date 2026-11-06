@@ -904,6 +904,7 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
                            InstanceMethod("occupancyBytes", &observer_wrap::occupancy_bytes),
                            InstanceMethod("availableBytes", &observer_wrap::available_bytes),
                            InstanceMethod("consumerLagBytes", &observer_wrap::consumer_lag_bytes),
+                           InstanceMethod("createDiagnosticsTracker", &observer_wrap::create_diagnostics_tracker),
                        });
   }
 
@@ -923,6 +924,17 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
 
   ~observer_wrap() override { reset(); }
 
+ public:
+  // Used by diagnostics_tracker_wrap to keep this observer alive and to
+  // enforce the C contract that the observer outlives its trackers.
+  xproc_c_observer* native_handle() const { return handle_; }
+  void retain_tracker() { ++active_trackers_; }
+  void release_tracker() {
+    if (active_trackers_ > 0u) {
+      --active_trackers_;
+    }
+  }
+
  private:
   void reset() {
     if (handle_ != nullptr) {
@@ -932,8 +944,13 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
   }
 
   Napi::Value close(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (active_trackers_ > 0u) {
+      throw_type_error(env, "Observer.close cannot be called while a diagnostics tracker is active");
+      return env.Undefined();
+    }
     reset();
-    return info.Env().Undefined();
+    return env.Undefined();
   }
 
   Napi::Value options(const Napi::CallbackInfo& info) {
@@ -1120,8 +1137,145 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
     return js_bigint_from_u64(env, out);
   }
 
+  Napi::Value create_diagnostics_tracker(const Napi::CallbackInfo& info);
+
   xproc_c_observer* handle_{nullptr};
+  std::uint32_t active_trackers_{0};
 };
+
+class diagnostics_tracker_wrap final : public Napi::ObjectWrap<diagnostics_tracker_wrap> {
+ public:
+  static Napi::Function init(Napi::Env env) {
+    Napi::Function ctor = DefineClass(env, "DiagnosticsTracker",
+                                      {
+                                          InstanceMethod("close", &diagnostics_tracker_wrap::close),
+                                          InstanceMethod("update", &diagnostics_tracker_wrap::update),
+                                          InstanceMethod("producerAlive", &diagnostics_tracker_wrap::producer_alive),
+                                          InstanceMethod("idleMs", &diagnostics_tracker_wrap::idle_ms),
+                                      });
+    constructor = Napi::Persistent(ctor);
+    constructor.SuppressDestruct();
+    return ctor;
+  }
+
+  static Napi::Object NewInstance(Napi::Env env, Napi::Object observer_object) {
+    return constructor.New({observer_object});
+  }
+
+  explicit diagnostics_tracker_wrap(const Napi::CallbackInfo& info)
+      : Napi::ObjectWrap<diagnostics_tracker_wrap>(info) {
+    Napi::Env env = info.Env();
+    if (info.Length() < 1 || !info[0].IsObject()) {
+      throw_type_error(env, "DiagnosticsTracker requires an Observer argument");
+      return;
+    }
+    Napi::Object observer_object = info[0].As<Napi::Object>();
+    observer_wrap* observer = Napi::ObjectWrap<observer_wrap>::Unwrap(observer_object);
+    if (observer == nullptr || observer->native_handle() == nullptr) {
+      throw_type_error(env, "DiagnosticsTracker requires an open Observer");
+      return;
+    }
+
+    const xproc_c_status status = xproc_c_diagnostics_tracker_create(observer->native_handle(), &handle_);
+    if (status != XPROC_C_STATUS_OK) {
+      handle_ = nullptr;
+      throw_xproc_status(env, status, "DiagnosticsTracker");
+      return;
+    }
+    observer_ = Napi::Persistent(observer_object);
+    observer_raw_ = observer;
+    observer->retain_tracker();
+  }
+
+  ~diagnostics_tracker_wrap() override { reset(); }
+
+ private:
+  static Napi::FunctionReference constructor;
+
+  void reset() {
+    if (handle_ != nullptr) {
+      xproc_c_diagnostics_tracker_destroy(handle_);
+      handle_ = nullptr;
+      if (observer_raw_ != nullptr) {
+        observer_raw_->release_tracker();
+        observer_raw_ = nullptr;
+      }
+      observer_.Reset();
+    }
+  }
+
+  Napi::Value close(const Napi::CallbackInfo& info) {
+    reset();
+    return info.Env().Undefined();
+  }
+
+  // NOTE: the closed-handle checks below intentionally use throw_type_error
+  // (TypeError), not ensure_open (which throws a plain Error). The design spec
+  // requires tracker methods called after close() to throw TypeError.
+  Napi::Value update(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (handle_ == nullptr) {
+      throw_type_error(env, "DiagnosticsTracker is closed");
+      return env.Undefined();
+    }
+    const xproc_c_status status = xproc_c_diagnostics_tracker_update(handle_);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "DiagnosticsTracker.update");
+    }
+    return env.Undefined();
+  }
+
+  Napi::Value producer_alive(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (handle_ == nullptr) {
+      throw_type_error(env, "DiagnosticsTracker is closed");
+      return env.Undefined();
+    }
+    bool out = false;
+    const xproc_c_status status = xproc_c_diagnostics_tracker_producer_alive(handle_, &out);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "DiagnosticsTracker.producerAlive");
+      return env.Undefined();
+    }
+    return Napi::Boolean::New(env, out);
+  }
+
+  Napi::Value idle_ms(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (handle_ == nullptr) {
+      throw_type_error(env, "DiagnosticsTracker is closed");
+      return env.Undefined();
+    }
+    std::uint64_t out = 0;
+    const xproc_c_status status = xproc_c_diagnostics_tracker_idle_ms(handle_, &out);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "DiagnosticsTracker.idleMs");
+      return env.Undefined();
+    }
+    return js_bigint_from_u64(env, out);
+  }
+
+  xproc_c_diagnostics_tracker* handle_{nullptr};
+  Napi::ObjectReference observer_;
+  observer_wrap* observer_raw_{nullptr};
+};
+
+Napi::FunctionReference diagnostics_tracker_wrap::constructor;
+
+Napi::Value observer_wrap::create_diagnostics_tracker(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  if (!ensure_open(env, handle_)) {
+    return env.Undefined();
+  }
+
+  Napi::Object instance = diagnostics_tracker_wrap::NewInstance(env, info.This().As<Napi::Object>());
+  bool exception_pending = false;
+  napi_is_exception_pending(env, &exception_pending);
+  if (exception_pending) {
+    return env.Undefined();
+  }
+  return instance;
+}
 
 Napi::Value shm_size_for_data_capacity_callback(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
@@ -1316,6 +1470,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("Producer", producer_wrap::init(env));
   exports.Set("Consumer", consumer_wrap::init(env));
   exports.Set("Observer", observer_wrap::init(env));
+  exports.Set("DiagnosticsTracker", diagnostics_tracker_wrap::init(env));
 
   return exports;
 }

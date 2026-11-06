@@ -137,3 +137,39 @@ test("observer diagnostics getters report sane values", () => {
     cleanupShm(path);
   }
 });
+
+test("diagnostics tracker detects producer activity and guards observer close", () => {
+  const path = uniqueShmPath("tracker");
+  cleanupShm(path);
+
+  const created = xproc.shm.createFixedChannel({ path, itemSize: 4, dataCapacity: 4096n });
+  const producer = created.openProducer();
+  const observer = xproc.shm.attachFixedChannel({ path }).openObserver();
+  let tracker: import("@merlotqi/xproc").DiagnosticsTracker | undefined;
+
+  try {
+    tracker = observer.createDiagnosticsTracker();
+    producer.sendFixedSized(Buffer.from([1, 2, 3, 4]));
+    tracker.update();
+
+    assert.equal(tracker.producerAlive(), true);
+    assert.ok(tracker.idleMs() >= 0n);
+
+    // The observer must outlive the tracker: closing it early is a TypeError.
+    assert.throws(
+      () => observer.close(),
+      (err: unknown) => err instanceof TypeError && String(err).includes("diagnostics tracker"),
+    );
+
+    // The observer is still usable while the tracker is open.
+    observer.snapshot();
+
+    tracker.close();
+    observer.close(); // now succeeds
+  } finally {
+    tracker?.close(); // idempotent — releases the observer close guard if the body failed early
+    observer.close(); // no-op when already closed above
+    producer.close();
+    cleanupShm(path);
+  }
+});

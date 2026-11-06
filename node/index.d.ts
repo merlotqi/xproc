@@ -364,6 +364,24 @@ declare namespace xproc {
     availableBytes(): bigint;
     /** Returns bytes committed but not yet consumed. */
     consumerLagBytes(): bigint;
+    /**
+     * Creates a diagnostics tracker bound to this observer. The observer must
+     * outlive the tracker: `close()` throws while a tracker is active.
+     */
+    createDiagnosticsTracker(): DiagnosticsTracker;
+  }
+
+  /** Samples observer state to detect producer activity and idle periods. */
+  class DiagnosticsTracker {
+    private constructor();
+    /** Samples the observer's current snapshot into the tracker. */
+    update(): void;
+    /** Whether the producer committed new messages since the previous update. */
+    producerAlive(): boolean;
+    /** Milliseconds since the last ring progress (bigint). */
+    idleMs(): bigint;
+    /** Destroys the native tracker and releases the observer close guard. */
+    close(): void;
   }
 
   /** Converts requested payload capacity into the shared-memory size expected by xproc. */
