@@ -1162,10 +1162,16 @@ class diagnostics_tracker_wrap final : public Napi::ObjectWrap<diagnostics_track
     return constructor.New({observer_object});
   }
 
+  static void set_observer_ctor(Napi::Function ctor) {
+    observer_ctor = Napi::Persistent(ctor);
+    observer_ctor.SuppressDestruct();
+  }
+
   explicit diagnostics_tracker_wrap(const Napi::CallbackInfo& info)
       : Napi::ObjectWrap<diagnostics_tracker_wrap>(info) {
     Napi::Env env = info.Env();
-    if (info.Length() < 1 || !info[0].IsObject()) {
+    if (info.Length() < 1 || !info[0].IsObject() ||
+        !info[0].As<Napi::Object>().InstanceOf(observer_ctor.Value())) {
       throw_type_error(env, "DiagnosticsTracker requires an Observer argument");
       return;
     }
@@ -1191,6 +1197,7 @@ class diagnostics_tracker_wrap final : public Napi::ObjectWrap<diagnostics_track
 
  private:
   static Napi::FunctionReference constructor;
+  static Napi::FunctionReference observer_ctor;
 
   void reset() {
     if (handle_ != nullptr) {
@@ -1261,6 +1268,7 @@ class diagnostics_tracker_wrap final : public Napi::ObjectWrap<diagnostics_track
 };
 
 Napi::FunctionReference diagnostics_tracker_wrap::constructor;
+Napi::FunctionReference diagnostics_tracker_wrap::observer_ctor;
 
 Napi::Value observer_wrap::create_diagnostics_tracker(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
@@ -1469,7 +1477,9 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
 
   exports.Set("Producer", producer_wrap::init(env));
   exports.Set("Consumer", consumer_wrap::init(env));
-  exports.Set("Observer", observer_wrap::init(env));
+  Napi::Function observer_ctor = observer_wrap::init(env);
+  exports.Set("Observer", observer_ctor);
+  diagnostics_tracker_wrap::set_observer_ctor(observer_ctor);
   exports.Set("DiagnosticsTracker", diagnostics_tracker_wrap::init(env));
 
   return exports;
