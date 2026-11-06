@@ -44,7 +44,7 @@ interface MessageMeta {
 
 - Input normalization happens in `index.js` via the existing `normalizeIntegerLike` (same pattern as transport options). The native layer strictly validates types and throws `TypeError` otherwise.
 - `LayoutError` union gains `| 11`; the constant is exported at all three layers: native `export_constants` → `index.js` `LAYOUT_ERROR` map → `index.d.ts`.
-  - `schemaId` in `MessageMeta` output is `number` (width-based mapping), which differs from `Snapshot.schemaId: bigint`; this is intentional and documented in JSDoc.
+  - `schemaId` in `MessageMeta` output is `number` (width-based mapping), which differs from `ResolvedTransportOptions.schemaId: bigint`; this is intentional and documented in JSDoc.
 
 ## Producer
 

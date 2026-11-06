@@ -266,7 +266,7 @@ declare namespace xproc {
   /**
    * Per-message metadata attached to a received payload.
    * u64 fields are bigint; u32 fields are number (`schemaId` is therefore a
-   * number here, unlike `Snapshot.schemaId`).
+   * number here, unlike `ResolvedTransportOptions.schemaId`).
    */
   interface MessageMeta {
     userData: bigint;
