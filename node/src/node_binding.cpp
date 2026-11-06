@@ -900,6 +900,10 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
                            InstanceMethod("peekCopy", &observer_wrap::peek_copy),
                            InstanceMethod("peekCopyInto", &observer_wrap::peek_copy_into),
                            InstanceMethod("peekCopyWithMeta", &observer_wrap::peek_copy_with_meta),
+                           InstanceMethod("occupancyRatio", &observer_wrap::occupancy_ratio),
+                           InstanceMethod("occupancyBytes", &observer_wrap::occupancy_bytes),
+                           InstanceMethod("availableBytes", &observer_wrap::available_bytes),
+                           InstanceMethod("consumerLagBytes", &observer_wrap::consumer_lag_bytes),
                        });
   }
 
@@ -1058,6 +1062,62 @@ class observer_wrap final : public Napi::ObjectWrap<observer_wrap> {
     result.Set("payload", buffer);
     result.Set("meta", message_meta_to_js(env, meta));
     return result;
+  }
+
+  Napi::Value occupancy_ratio(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+    double out = 0.0;
+    const xproc_c_status status = xproc_c_observer_occupancy_ratio(handle_, &out);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "Observer.occupancyRatio");
+      return env.Undefined();
+    }
+    return Napi::Number::New(env, out);
+  }
+
+  Napi::Value occupancy_bytes(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+    std::uint64_t out = 0;
+    const xproc_c_status status = xproc_c_observer_occupancy_bytes(handle_, &out);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "Observer.occupancyBytes");
+      return env.Undefined();
+    }
+    return js_bigint_from_u64(env, out);
+  }
+
+  Napi::Value available_bytes(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+    std::uint64_t out = 0;
+    const xproc_c_status status = xproc_c_observer_available_bytes(handle_, &out);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "Observer.availableBytes");
+      return env.Undefined();
+    }
+    return js_bigint_from_u64(env, out);
+  }
+
+  Napi::Value consumer_lag_bytes(const Napi::CallbackInfo& info) {
+    Napi::Env env = info.Env();
+    if (!ensure_open(env, handle_)) {
+      return env.Undefined();
+    }
+    std::uint64_t out = 0;
+    const xproc_c_status status = xproc_c_observer_consumer_lag_bytes(handle_, &out);
+    if (status != XPROC_C_STATUS_OK) {
+      throw_xproc_status(env, status, "Observer.consumerLagBytes");
+      return env.Undefined();
+    }
+    return js_bigint_from_u64(env, out);
   }
 
   xproc_c_observer* handle_{nullptr};

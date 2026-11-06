@@ -356,6 +356,14 @@ declare namespace xproc {
      * `null` when the channel is empty.
      */
     peekCopyWithMeta(): { payload: Uint8Array; meta: MessageMeta } | null;
+    /** Returns ring occupancy in [0, 1] as visible to this observer. */
+    occupancyRatio(): number;
+    /** Returns occupied ring bytes. */
+    occupancyBytes(): bigint;
+    /** Returns free ring bytes. */
+    availableBytes(): bigint;
+    /** Returns bytes committed but not yet consumed. */
+    consumerLagBytes(): bigint;
   }
 
   /** Converts requested payload capacity into the shared-memory size expected by xproc. */

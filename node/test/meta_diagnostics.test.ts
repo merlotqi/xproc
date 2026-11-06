@@ -102,3 +102,38 @@ test("fixed-channel send with meta transports zero meta", () => {
     cleanupShm(path);
   }
 });
+
+test("observer diagnostics getters report sane values", () => {
+  const path = uniqueShmPath("diagnostics");
+  cleanupShm(path);
+
+  const dataCapacity = 4096n;
+  const created = xproc.shm.createFixedChannel({ path, itemSize: 4, dataCapacity });
+  const producer = created.openProducer();
+  const observer = xproc.shm.attachFixedChannel({ path }).openObserver();
+
+  try {
+    producer.sendFixedSized(Buffer.from([1, 2, 3, 4]));
+
+    const ratio = observer.occupancyRatio();
+    assert.ok(ratio >= 0 && ratio <= 1);
+
+    const occupied = observer.occupancyBytes();
+    assert.equal(typeof occupied, "bigint");
+    assert.ok(occupied > 0n);
+    assert.ok(occupied <= dataCapacity);
+
+    const available = observer.availableBytes();
+    assert.equal(typeof available, "bigint");
+    assert.ok(available >= 0n);
+    assert.ok(available <= dataCapacity);
+
+    const lag = observer.consumerLagBytes();
+    assert.equal(typeof lag, "bigint");
+    assert.ok(lag >= 0n);
+  } finally {
+    observer.close();
+    producer.close();
+    cleanupShm(path);
+  }
+});
