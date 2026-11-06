@@ -1176,8 +1176,14 @@ class diagnostics_tracker_wrap final : public Napi::ObjectWrap<diagnostics_track
       return;
     }
     Napi::Object observer_object = info[0].As<Napi::Object>();
-    observer_wrap* observer = Napi::ObjectWrap<observer_wrap>::Unwrap(observer_object);
-    if (observer == nullptr || observer->native_handle() == nullptr) {
+    void* instance = nullptr;
+    const napi_status unwrap_status = napi_unwrap(env, observer_object, &instance);
+    if (unwrap_status != napi_ok || instance == nullptr) {
+      throw_type_error(env, "DiagnosticsTracker requires an Observer argument");
+      return;
+    }
+    observer_wrap* observer = static_cast<observer_wrap*>(instance);
+    if (observer->native_handle() == nullptr) {
       throw_type_error(env, "DiagnosticsTracker requires an open Observer");
       return;
     }
