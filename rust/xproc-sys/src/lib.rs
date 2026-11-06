@@ -54,6 +54,16 @@ pub enum xproc_c_layout_error {
     XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH = 8,
     XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID = 9,
     XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT = 10,
+    XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE = 11,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct xproc_c_message_meta {
+    pub user_data: u64,
+    pub timestamp_ns: u64,
+    pub schema_id: u32,
+    pub flags: u32,
 }
 
 #[repr(C)]
@@ -82,6 +92,7 @@ pub struct xproc_c_options {
 pub struct xproc_c_snapshot {
     pub write_pos: u64,
     pub read_pos: u64,
+    pub commit_pos: u64,
     pub commit_seq: u32,
     pub read_wake_seq: u32,
     pub attach_count: u32,
@@ -100,6 +111,11 @@ pub struct xproc_c_consumer {
 
 #[repr(C)]
 pub struct xproc_c_observer {
+    _private: [u8; 0],
+}
+
+#[repr(C)]
+pub struct xproc_c_diagnostics_tracker {
     _private: [u8; 0],
 }
 
@@ -199,4 +215,53 @@ unsafe extern "C" {
         buffer_capacity: u32,
         out_len: *mut u32,
     ) -> xproc_c_status;
+    pub fn xproc_c_producer_send_fixed_sized_with_meta(
+        producer: *mut xproc_c_producer,
+        data: *const c_void,
+        byte_length: u32,
+        meta: *const xproc_c_message_meta,
+    ) -> xproc_c_status;
+    pub fn xproc_c_producer_send_varlen_with_meta(
+        producer: *mut xproc_c_producer,
+        data: *const c_void,
+        byte_length: u32,
+        meta: *const xproc_c_message_meta,
+    ) -> xproc_c_status;
+    pub fn xproc_c_observer_peek_copy_with_meta(
+        observer: *mut xproc_c_observer,
+        out_meta: *mut xproc_c_message_meta,
+        buffer: *mut c_void,
+        buffer_capacity: u32,
+        out_len: *mut u32,
+    ) -> xproc_c_status;
+    pub fn xproc_c_observer_occupancy_ratio(
+        observer: *const xproc_c_observer,
+        out: *mut f64,
+    ) -> xproc_c_status;
+    pub fn xproc_c_observer_occupancy_bytes(
+        observer: *const xproc_c_observer,
+        out: *mut u64,
+    ) -> xproc_c_status;
+    pub fn xproc_c_observer_available_bytes(
+        observer: *const xproc_c_observer,
+        out: *mut u64,
+    ) -> xproc_c_status;
+    pub fn xproc_c_observer_consumer_lag_bytes(
+        observer: *const xproc_c_observer,
+        out: *mut u64,
+    ) -> xproc_c_status;
+    pub fn xproc_c_diagnostics_tracker_create(
+        observer: *const xproc_c_observer,
+        out: *mut *mut xproc_c_diagnostics_tracker,
+    ) -> xproc_c_status;
+    pub fn xproc_c_diagnostics_tracker_update(tracker: *mut xproc_c_diagnostics_tracker) -> xproc_c_status;
+    pub fn xproc_c_diagnostics_tracker_producer_alive(
+        tracker: *mut xproc_c_diagnostics_tracker,
+        out: *mut u8,
+    ) -> xproc_c_status;
+    pub fn xproc_c_diagnostics_tracker_idle_ms(
+        tracker: *mut xproc_c_diagnostics_tracker,
+        out: *mut u64,
+    ) -> xproc_c_status;
+    pub fn xproc_c_diagnostics_tracker_destroy(tracker: *mut xproc_c_diagnostics_tracker);
 }

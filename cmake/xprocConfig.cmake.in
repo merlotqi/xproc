@@ -2,6 +2,11 @@
 
 include(CMakeFindDependencyMacro)
 
+# Bundled spscring submodule, installed alongside xproc.  Resolve it before
+# xprocTargets.cmake, whose INTERFACE_LINK_LIBRARIES references
+# spscring::spscring.
+find_dependency(spscring CONFIG)
+
 if("@CMAKE_SYSTEM_NAME@" STREQUAL "Linux")
   find_dependency(Threads)
   find_library(LIB_RT rt)

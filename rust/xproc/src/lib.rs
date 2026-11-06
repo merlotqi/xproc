@@ -51,6 +51,7 @@ pub enum LayoutError {
     SchemaIdMismatch,
     AlignmentInvalid,
     CapacityInsufficient,
+    FixedItemSizeIncompatible,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -92,10 +93,19 @@ pub struct Options {
 pub struct Snapshot {
     pub write_pos: u64,
     pub read_pos: u64,
+    pub commit_pos: u64,
     pub commit_seq: u32,
     pub read_wake_seq: u32,
     pub attach_count: u32,
     pub producer_pid: i32,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MessageMeta {
+    pub user_data: u64,
+    pub timestamp_ns: u64,
+    pub schema_id: u32,
+    pub flags: u32,
 }
 
 impl Default for Options {
@@ -279,6 +289,42 @@ impl Producer {
         into_result(status)
     }
 
+    pub fn send_fixed_sized_with_meta(&self, payload: &[u8], meta: &MessageMeta) -> Result<(), XprocError> {
+        let raw_meta = sys::xproc_c_message_meta {
+            user_data: meta.user_data,
+            timestamp_ns: meta.timestamp_ns,
+            schema_id: meta.schema_id,
+            flags: meta.flags,
+        };
+        let status = unsafe {
+            sys::xproc_c_producer_send_fixed_sized_with_meta(
+                self.handle,
+                payload.as_ptr().cast(),
+                payload.len() as u32,
+                &raw_meta,
+            )
+        };
+        into_result(status)
+    }
+
+    pub fn send_varlen_with_meta(&self, payload: &[u8], meta: &MessageMeta) -> Result<(), XprocError> {
+        let raw_meta = sys::xproc_c_message_meta {
+            user_data: meta.user_data,
+            timestamp_ns: meta.timestamp_ns,
+            schema_id: meta.schema_id,
+            flags: meta.flags,
+        };
+        let status = unsafe {
+            sys::xproc_c_producer_send_varlen_with_meta(
+                self.handle,
+                payload.as_ptr().cast(),
+                payload.len() as u32,
+                &raw_meta,
+            )
+        };
+        into_result(status)
+    }
+
     pub fn socket_port(&self) -> Result<u16, XprocError> {
         let mut out = 0;
         let status = unsafe { sys::xproc_c_producer_socket_port(self.handle, &mut out) };
@@ -368,6 +414,7 @@ impl Observer {
         Ok(Snapshot {
             write_pos: raw.write_pos,
             read_pos: raw.read_pos,
+            commit_pos: raw.commit_pos,
             commit_seq: raw.commit_seq,
             read_wake_seq: raw.read_wake_seq,
             attach_count: raw.attach_count,
@@ -379,6 +426,121 @@ impl Observer {
         poll_copy_impl(|buffer, buffer_capacity, out_len| unsafe {
             sys::xproc_c_observer_peek_copy(self.handle, buffer, buffer_capacity, out_len)
         })
+    }
+
+    pub fn peek_copy_with_meta(&self) -> Result<Option<(MessageMeta, Vec<u8>)>, XprocError> {
+        let mut raw_meta = std::mem::MaybeUninit::<sys::xproc_c_message_meta>::uninit();
+        let mut required_len = 0;
+        match unsafe {
+            sys::xproc_c_observer_peek_copy_with_meta(
+                self.handle,
+                raw_meta.as_mut_ptr(),
+                std::ptr::null_mut(),
+                0,
+                &mut required_len,
+            )
+        } {
+            sys::xproc_c_status::XPROC_C_STATUS_AGAIN => return Ok(None),
+            sys::xproc_c_status::XPROC_C_STATUS_OK => return Ok(Some((MessageMeta::default(), Vec::new()))),
+            sys::xproc_c_status::XPROC_C_STATUS_BUFFER_TOO_SMALL => {}
+            status => return into_result(status).map(|_| None),
+        }
+
+        let mut payload = vec![0u8; required_len as usize];
+        let status = unsafe {
+            sys::xproc_c_observer_peek_copy_with_meta(
+                self.handle,
+                raw_meta.as_mut_ptr(),
+                payload.as_mut_ptr().cast(),
+                required_len,
+                &mut required_len,
+            )
+        };
+        into_result(status)?;
+        let meta = unsafe { raw_meta.assume_init() };
+        payload.truncate(required_len as usize);
+        Ok(Some((
+            MessageMeta {
+                user_data: meta.user_data,
+                timestamp_ns: meta.timestamp_ns,
+                schema_id: meta.schema_id,
+                flags: meta.flags,
+            },
+            payload,
+        )))
+    }
+
+    pub fn occupancy_ratio(&self) -> Result<f64, XprocError> {
+        let mut out = 0.0;
+        let status = unsafe { sys::xproc_c_observer_occupancy_ratio(self.handle, &mut out) };
+        into_result(status)?;
+        Ok(out)
+    }
+
+    pub fn occupancy_bytes(&self) -> Result<u64, XprocError> {
+        let mut out = 0;
+        let status = unsafe { sys::xproc_c_observer_occupancy_bytes(self.handle, &mut out) };
+        into_result(status)?;
+        Ok(out)
+    }
+
+    pub fn available_bytes(&self) -> Result<u64, XprocError> {
+        let mut out = 0;
+        let status = unsafe { sys::xproc_c_observer_available_bytes(self.handle, &mut out) };
+        into_result(status)?;
+        Ok(out)
+    }
+
+    pub fn consumer_lag_bytes(&self) -> Result<u64, XprocError> {
+        let mut out = 0;
+        let status = unsafe { sys::xproc_c_observer_consumer_lag_bytes(self.handle, &mut out) };
+        into_result(status)?;
+        Ok(out)
+    }
+}
+
+// ===========================================================================
+// Diagnostics tracker
+// ===========================================================================
+
+pub struct DiagnosticsTracker {
+    handle: *mut sys::xproc_c_diagnostics_tracker,
+}
+
+impl DiagnosticsTracker {
+    pub fn create(observer: &Observer) -> Result<Self, XprocError> {
+        let mut handle = ptr::null_mut();
+        let status =
+            unsafe { sys::xproc_c_diagnostics_tracker_create(observer.handle, &mut handle) };
+        into_result(status)?;
+        Ok(Self { handle })
+    }
+
+    pub fn update(&mut self) -> Result<(), XprocError> {
+        let status = unsafe { sys::xproc_c_diagnostics_tracker_update(self.handle) };
+        into_result(status)
+    }
+
+    pub fn producer_alive(&self) -> Result<bool, XprocError> {
+        let mut out: u8 = 0;
+        let status = unsafe { sys::xproc_c_diagnostics_tracker_producer_alive(self.handle, &mut out) };
+        into_result(status)?;
+        Ok(out != 0)
+    }
+
+    pub fn idle_ms(&self) -> Result<u64, XprocError> {
+        let mut out = 0;
+        let status = unsafe { sys::xproc_c_diagnostics_tracker_idle_ms(self.handle, &mut out) };
+        into_result(status)?;
+        Ok(out)
+    }
+}
+
+impl Drop for DiagnosticsTracker {
+    fn drop(&mut self) {
+        if !self.handle.is_null() {
+            unsafe { sys::xproc_c_diagnostics_tracker_destroy(self.handle) };
+        }
     }
 }
 
@@ -541,6 +703,9 @@ fn layout_error_from_raw(error: sys::xproc_c_layout_error) -> LayoutError {
         sys::xproc_c_layout_error::XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID => LayoutError::AlignmentInvalid,
         sys::xproc_c_layout_error::XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT => {
             LayoutError::CapacityInsufficient
+        }
+        sys::xproc_c_layout_error::XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE => {
+            LayoutError::FixedItemSizeIncompatible
         }
     }
 }

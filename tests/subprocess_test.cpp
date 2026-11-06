@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 
+#include <xproc/platform/platform.hpp>
 #include <xproc/platform/subprocess.hpp>
 
 using namespace xproc::platform;
@@ -158,6 +159,7 @@ TEST(Subprocess, NullDevRedirect) {
 // Environment variables
 // ===========================================================================
 
+#ifndef XPROC_PLATFORM_WINDOWS
 TEST(Subprocess, EnvironmentVariable) {
   // Preserve PATH so execvp can locate /usr/bin/env, plus add our test var.
   const char* path_val = std::getenv("PATH");
@@ -185,6 +187,9 @@ TEST(Subprocess, EnvironmentVariable) {
 // Working directory
 // ===========================================================================
 
+#endif  // XPROC_PLATFORM_WINDOWS
+
+#ifndef XPROC_PLATFORM_WINDOWS
 TEST(Subprocess, WorkingDirectory) {
   process_options opts;
   opts.cwd = "/tmp";
@@ -198,3 +203,4 @@ TEST(Subprocess, WorkingDirectory) {
   EXPECT_NE(output.find("/tmp"), std::string::npos);
   p.wait();
 }
+#endif  // XPROC_PLATFORM_WINDOWS

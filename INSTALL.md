@@ -9,9 +9,11 @@ source, see [BUILD.md](BUILD.md).
 
 - C++ public headers under `include/xproc/...`
 - C API header as `include/xproc_c.h`
+- `spscring` public headers under `include/spscring/...` (bundled submodule;
+  required by xproc's public headers)
 - `xproc` and `xproc_c` libraries under `lib/` (or platform equivalent)
-- CMake package files under `lib/cmake/xproc/`
-- `pkg-config` file at `lib/pkgconfig/xproc.pc`
+- CMake package files under `lib/cmake/xproc/` and `lib/cmake/spscring/`
+- `pkg-config` files at `lib/pkgconfig/xproc.pc` and `lib/pkgconfig/spscring.pc`
 
 ## Install to a Prefix
 
@@ -71,5 +73,7 @@ pkg-config --libs --static xproc
 ## Notes
 
 - On Linux, downstream CMake consumers automatically pick up `Threads`.
+- `find_package(xproc)` automatically resolves the bundled `spscring` CMake
+  package; consumers do not need to find it themselves.
 - `xproc_c.h` is installed at the include root by design so bindings can use a
   short include path.

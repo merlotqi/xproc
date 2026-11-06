@@ -20,7 +20,9 @@ fn main() {
     {
         println!("cargo:rustc-link-arg-examples=-Wl,-rpath,{}", build_dir.display());
         println!("cargo:rustc-link-arg-examples=-Wl,-rpath,{}", capi_dir.display());
+        println!("cargo:rustc-link-arg-examples=-Wl,-rpath,{}", build_dir.join("src").display());
         println!("cargo:rustc-link-arg-tests=-Wl,-rpath,{}", build_dir.display());
         println!("cargo:rustc-link-arg-tests=-Wl,-rpath,{}", capi_dir.display());
+        println!("cargo:rustc-link-arg-tests=-Wl,-rpath,{}", build_dir.join("src").display());
     }
 }

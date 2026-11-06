@@ -25,6 +25,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Installed CMake packages work again after the `spscring` submodule split:
+  `spscring` headers and its CMake/pkg-config files now install alongside
+  xproc, and `xprocConfig.cmake` resolves `spscring::spscring` via
+  `find_dependency(spscring CONFIG)` before loading `xprocTargets.cmake`
+  (previously `find_package(xproc)` failed with "imported targets are
+  referenced, but are missing: spscring::spscring"). Wheel builds are
+  unaffected: spscring stays `EXCLUDE_FROM_ALL` when
+  `XPROC_SKBUILD_WHEEL_INSTALL` is set.
 - `Meta.ConcurrentMultiWriterMultiReader` no longer aborts on transient ring
   backpressure: readers spawn before writers and writers retry with
   `send_varlen_for` inside a deadline instead of throwing on the first `full`

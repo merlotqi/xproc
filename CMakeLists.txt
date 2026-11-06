@@ -97,7 +97,16 @@ option(XPROC_BUILD_EXAMPLES "Build examples" ON)
 option(XPROC_BUILD_BENCHMARKS "Build benchmarks with Google Benchmark" ON)
 option(XPROC_BUILD_NODE "Build JavaScript binding" ON)
 
-add_subdirectory(thirdparty/spscring EXCLUDE_FROM_ALL)
+# spscring must ship with a normal install: the exported xprocTargets.cmake
+# references the spscring::spscring target and xproc's public headers include
+# <spscring/...>, so an installed package needs spscring's headers and CMake
+# package files.  Wheel builds skip xproc's own install rules
+# (XPROC_SKBUILD_WHEEL_INSTALL); keep spscring out of the wheel the same way.
+if(XPROC_SKBUILD_WHEEL_INSTALL)
+    add_subdirectory(thirdparty/spscring EXCLUDE_FROM_ALL)
+else()
+    add_subdirectory(thirdparty/spscring)
+endif()
 xproc_add_subdirectory(src)
 
 if(XPROC_BUILD_CAPI)

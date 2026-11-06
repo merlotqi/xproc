@@ -21,6 +21,7 @@ fn main() {
     );
     println!("cargo:rustc-link-search=native={}", build_dir.display());
     println!("cargo:rustc-link-search=native={}", capi_dir.display());
+    println!("cargo:rustc-link-search=native={}", build_dir.join("src").display());
     println!("cargo:rustc-link-lib=dylib=xproc_c");
     println!("cargo:rustc-link-lib=dylib=xproc");
 }
