@@ -1140,6 +1140,8 @@ void export_constants(Napi::Env env, Napi::Object exports) {
   exports.Set("XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID", Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID));
   exports.Set("XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT",
               Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT));
+  exports.Set("XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE",
+              Napi::Number::New(env, XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE));
 }
 
 }  // namespace

@@ -17,7 +17,7 @@ declare namespace xproc {
   type EndpointKind = 0 | 1 | 2;
   type Backend = 0 | 1;
   type ChannelType = 0 | 1;
-  type LayoutError = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  type LayoutError = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
   type BackendName = "shared_memory" | "shared-memory" | "sharedmemory" | "shm" | "socket" | "tcp";
   type ChannelTypeName = "fixed" | "varlen" | "variable" | "variable_length" | "variable-length";
@@ -383,6 +383,7 @@ declare namespace xproc {
   const XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH: 8;
   const XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID: 9;
   const XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT: 10;
+  const XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE: 11;
 
   const STATUS: Readonly<{
     ok: typeof XPROC_C_STATUS_OK;
@@ -424,6 +425,7 @@ declare namespace xproc {
     schemaIdMismatch: typeof XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH;
     alignmentInvalid: typeof XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID;
     capacityInsufficient: typeof XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT;
+    fixedItemSizeIncompatible: typeof XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE;
   }>;
 }
 

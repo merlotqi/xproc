@@ -45,6 +45,7 @@ const LAYOUT_ERROR = Object.freeze({
   schemaIdMismatch: native.XPROC_C_LAYOUT_ERROR_SCHEMA_ID_MISMATCH,
   alignmentInvalid: native.XPROC_C_LAYOUT_ERROR_ALIGNMENT_INVALID,
   capacityInsufficient: native.XPROC_C_LAYOUT_ERROR_CAPACITY_INSUFFICIENT,
+  fixedItemSizeIncompatible: native.XPROC_C_LAYOUT_ERROR_FIXED_ITEM_SIZE_INCOMPATIBLE,
 });
 
 function normalizeBackend(value) {
