@@ -145,7 +145,7 @@ test("diagnostics tracker detects producer activity and guards observer close", 
   const created = xproc.shm.createFixedChannel({ path, itemSize: 4, dataCapacity: 4096n });
   const producer = created.openProducer();
   const observer = xproc.shm.attachFixedChannel({ path }).openObserver();
-  let tracker: import("@merlotqi/xproc").DiagnosticsTracker | undefined;
+  let tracker: import("../index").DiagnosticsTracker | undefined;
 
   try {
     tracker = observer.createDiagnosticsTracker();

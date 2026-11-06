@@ -484,7 +484,4 @@ declare namespace xproc {
   }>;
 }
 
-declare module "@merlotqi/xproc" {
-  export = xproc;
-}
 export = xproc;
