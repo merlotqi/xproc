@@ -334,6 +334,15 @@ TEST(Meta, ConcurrentMultiWriterMultiReader) {
   std::atomic<int> errors{0};
   std::atomic<int> total_received{0};
   std::mutex consumer_mtx;
+  // Serialize producer sends: a varlen ring is single-producer (SPSC) by
+  // contract.  Concurrent writers committing slots out of position order can
+  // let the consumer observe a slot while its header is still being written
+  // (torn read), which surfaces as a spurious `timestamp_ns == 0` on fresh
+  // slots during ring warmup.  This is a scheduler-sensitive race that shows
+  // up on Windows but not macOS.  This test exercises multi-attach and meta
+  // round-trip, so sends are serialized to keep it deterministic on every
+  // platform.
+  std::mutex send_mtx;
 
   // Readers — share a single consumer (via mutex) to serialise SPSC read_pos
   // advancement. Spawned BEFORE the writers: writers start filling as soon as
@@ -376,7 +385,7 @@ TEST(Meta, ConcurrentMultiWriterMultiReader) {
   std::vector<std::thread> writers;
   writers.reserve(kWriters);
   for (int w = 0; w < kWriters; ++w) {
-    writers.emplace_back([&opts, w, kMsgsPerWriter, &errors]() {
+    writers.emplace_back([&opts, w, kMsgsPerWriter, &errors, &send_mtx]() {
       xproc::ipc::producer prod(opts);
       const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
       for (int i = 0; i < kMsgsPerWriter; ++i) {
@@ -386,8 +395,12 @@ TEST(Meta, ConcurrentMultiWriterMultiReader) {
         meta.user_data = static_cast<std::uint64_t>(w * kMsgsPerWriter + i);
         meta.schema_id = static_cast<std::uint32_t>(w);
         for (;;) {
-          const auto rc = prod.send_varlen_for(buf, static_cast<std::uint32_t>(n) + 1,
-                                               std::chrono::milliseconds(100), meta);
+          xproc::ipc::send_result rc;
+          {
+            std::lock_guard<std::mutex> lock(send_mtx);
+            rc = prod.send_varlen_for(buf, static_cast<std::uint32_t>(n) + 1,
+                                      std::chrono::milliseconds(100), meta);
+          }
           if (rc == xproc::ipc::send_result::ok) {
             break;
           }
@@ -395,6 +408,7 @@ TEST(Meta, ConcurrentMultiWriterMultiReader) {
             errors.fetch_add(1, std::memory_order_relaxed);
             return;
           }
+          std::this_thread::yield();
         }
       }
     });
